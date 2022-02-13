@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="chat_red">#ff0000</color>
+    <color name="chat_green">#32CD21</color>
+    <color name="chat_white">#ffffff</color>
+
+    <color name="room_bg">#4A4A4A</color>
+    <dimen name="peer_state_icon_size">20dp</dimen>
+</resources>

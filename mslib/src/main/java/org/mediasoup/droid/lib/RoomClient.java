@@ -22,8 +22,8 @@ import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.RecvTransport;
 import org.mediasoup.droid.SendTransport;
 import org.mediasoup.droid.Transport;
-import org.mediasoup.droid.lib.lv.RoomStore;
 import org.mediasoup.droid.lib.socket.WebSocketTransport;
+import org.mediasoup.droid.lib.lv.RoomStore;
 import org.protoojs.droid.Message;
 import org.protoojs.droid.ProtooException;
 import org.webrtc.AudioTrack;
@@ -381,6 +381,7 @@ public class RoomClient extends RoomMessageHandler {
   }
 
   @Async
+  @Deprecated
   public void changeDisplayName(String displayName) {
     Logger.d(TAG, "changeDisplayName()");
 
