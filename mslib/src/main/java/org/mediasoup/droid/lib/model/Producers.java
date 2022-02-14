@@ -78,6 +78,10 @@ public class Producers {
     wrapper.mScore = score;
   }
 
+  public ProducersWrapper getProducer(String producerId) {
+    return mProducers.get(producerId);
+  }
+
   public ProducersWrapper filter(@NonNull String kind) {
     for (ProducersWrapper wrapper : mProducers.values()) {
       if (wrapper.mProducer == null) {

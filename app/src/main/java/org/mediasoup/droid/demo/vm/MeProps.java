@@ -153,7 +153,7 @@ public class MeProps extends PeerViewProps {
             roomInfo -> {
               mFaceDetection.set(roomInfo.isFaceDetection());
               mConnected.set(
-                  RoomClient.ConnectionState.CONNECTED.equals(roomInfo.getConnectionState()));
+                  RoomClient.ConnectionState.JOINED.equals(roomInfo.getConnectionState()));
             });
     mStateComposer.connect(owner, getRoomStore());
   }

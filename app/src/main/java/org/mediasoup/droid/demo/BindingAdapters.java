@@ -28,7 +28,7 @@ public class BindingAdapters {
     if (RoomClient.ConnectionState.CONNECTING.equals(state)) {
       view.setImageResource(R.drawable.ic_state_connecting);
       view.startAnimation(animation);
-    } else if (RoomClient.ConnectionState.CONNECTED.equals(state)) {
+    } else if (RoomClient.ConnectionState.JOINED.equals(state)) {
       view.setImageResource(R.drawable.ic_state_connected);
       animation.cancel();
       view.clearAnimation();

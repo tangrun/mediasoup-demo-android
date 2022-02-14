@@ -2,64 +2,46 @@ package org.mediasoup.droid.lib;
 
 import androidx.annotation.NonNull;
 
+import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.DeviceInfo;
+
+import java.util.Locale;
 
 public class RoomOptions {
 
-  // Device info.
-  @NonNull private DeviceInfo mDevice = DeviceInfo.androidDevice();
-  // Whether we want to force RTC over TCP.
-  private boolean mForceTcp = false;
-  // Whether we want to produce audio/video.
-  private boolean mProduce = true;
-  // Whether we should consume.
-  private boolean mConsume = true;
-  // Whether we want DataChannels.
-  private boolean mUseDataChannel;
+    public String serverHost;
+    public String serverPort;
+    public String roomId;
+    public Buddy me;
+    // Whether we want to force RTC over TCP.
+    public boolean mForceTcp = false;
+    // Whether we want to produce audio/video.
+    public boolean mProduce = true;
+    public boolean mProduceAudio = true;
+    public boolean mProduceVideo = true;
+    // Whether we should consume.
+    public boolean mConsume = true;
+    public boolean mConsumeAudio = true;
+    public boolean mConsumeVideo = true;
+    // Whether we want DataChannels.
+    public boolean mUseDataChannel =false;
 
-  public RoomOptions setDevice(@NonNull DeviceInfo device) {
-    this.mDevice = device;
-    return this;
-  }
+    public boolean forceH264 = false;
+    public boolean forceVP9 = false;
 
-  public RoomOptions setForceTcp(boolean forceTcp) {
-    this.mForceTcp = forceTcp;
-    return this;
-  }
+    public void setMe(String  id,String name,String avatar) {
+        me = new Buddy(true, id,name,avatar, DeviceInfo.androidDevice());
+    }
 
-  public RoomOptions setProduce(boolean produce) {
-    this.mProduce = produce;
-    return this;
-  }
-
-  public RoomOptions setConsume(boolean consume) {
-    this.mConsume = consume;
-    return this;
-  }
-
-  public RoomOptions setUseDataChannel(boolean useDataChannel) {
-    this.mUseDataChannel = useDataChannel;
-    return this;
-  }
-
-  @NonNull
-  public DeviceInfo getDevice() {
-    return mDevice;
-  }
-
-  public boolean isForceTcp() {
-    return mForceTcp;
-  }
-
-  public boolean isProduce() {
-    return mProduce;
-  }
-
-  public boolean isConsume() {
-    return mConsume;
-  }
-
-  public boolean isUseDataChannel() {
-    return mUseDataChannel;
-  }
+    public String getProtooUrl() {
+        String url =
+                String.format(
+                        Locale.US, "wss://%s:%d/?roomId=%s&peerId=%s", serverHost, serverPort, roomId, me.getId());
+        if (forceH264) {
+            url += "&forceH264=true";
+        } else if (forceVP9) {
+            url += "&forceVP9=true";
+        }
+        return url;
+    }
 }

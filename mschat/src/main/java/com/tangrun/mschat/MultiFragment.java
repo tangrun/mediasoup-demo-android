@@ -1,5 +1,6 @@
 package com.tangrun.mschat;
 
+import android.app.Application;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,11 +11,28 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.appcompat.widget.AppCompatTextView;
+import androidx.databinding.BaseObservable;
+import androidx.databinding.DataBindingUtil;
+import androidx.databinding.ObservableField;
+import androidx.databinding.ViewDataBinding;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mschat.BR;
 import com.example.mschat.R;
+import com.example.mschat.databinding.FragmentRoomMultiBinding;
+import com.example.mschat.databinding.ItemPeerBinding;
 
+import org.mediasoup.droid.lib.RoomClient;
+import org.mediasoup.droid.lib.lv.RoomStore;
+import org.mediasoup.droid.lib.model.Buddy;
+import org.mediasoup.droid.lib.model.Buddys;
+import org.mediasoup.droid.lib.model.Peers;
+import org.mediasoup.droid.lib.model.RoomInfo;
 import org.webrtc.SurfaceViewRenderer;
 
 import java.util.ArrayList;
@@ -26,82 +44,191 @@ import java.util.List;
  * @date :2022/2/13 21:35
  */
 public class MultiFragment extends Fragment {
-    private AppCompatImageView ivMin;
-    private AppCompatTextView tvTitle;
-    private AppCompatImageView ivAdd;
-    private RecyclerView remotePeers;
-    private LinearLayout llAction;
 
-    public static class MultiAdapter extends RecyclerView.Adapter<MultiAdapter.ViewHolder> {
+    public static MultiFragment newInstance() {
 
-        List<Object> list = new ArrayList<>();
+        Bundle args = new Bundle();
 
-        @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_peer, parent, false);
-            return new ViewHolder(view);
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-
-        }
-
-        @Override
-        public int getItemCount() {
-            return 0;
-        }
-
-
-        public static class ViewHolder extends RecyclerView.ViewHolder {
-            private SurfaceViewRenderer vRenderer;
-            private AppCompatImageView ivCover;
-            private AppCompatTextView tvDisplayName;
-            private AppCompatImageView ivMicDisable;
-            private AppCompatImageView ivCamDisable;
-            private AppCompatImageView ivVoiceOn;
-
-            public ViewHolder(@NonNull View itemView) {
-                super(itemView);
-                initView(this, itemView);
-            }
-
-            private void initView(ViewHolder viewHolder, View convertView) {
-                viewHolder.vRenderer = (SurfaceViewRenderer) convertView.findViewById(R.id.v_renderer);
-                viewHolder.ivCover = (AppCompatImageView) convertView.findViewById(R.id.iv_cover);
-                viewHolder.tvDisplayName = (AppCompatTextView) convertView.findViewById(R.id.tv_display_name);
-                viewHolder.ivMicDisable = (AppCompatImageView) convertView.findViewById(R.id.iv_mic_disable);
-                viewHolder.ivCamDisable = (AppCompatImageView) convertView.findViewById(R.id.iv_cam_disable);
-                viewHolder.ivVoiceOn = (AppCompatImageView) convertView.findViewById(R.id.iv_voice_on);
-            }
-        }
+        MultiFragment fragment = new MultiFragment();
+        fragment.setArguments(args);
+        return fragment;
     }
+
+
+    FragmentRoomMultiBinding binding;
+
 
     @Nullable
     @Override
 
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_room_multi, container, false);
-        return view;
+        binding = DataBindingUtil.inflate(inflater, R.layout.fragment_room_multi, container, false);
+        return binding.getRoot();
     }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        initView();
+
+        RoomViewModel roomViewModel = ViewModelProviders.of(this).get(RoomViewModel.class);
+
+        MultiAdapter adapter = new MultiAdapter(roomViewModel.getRoomClient(),this);
+        binding.rvBuddys.setAdapter(adapter);
+        GridLayoutManager layout = new GridLayoutManager(getContext(), 2);
+        binding.rvBuddys.setLayoutManager(layout);
+        roomViewModel.getRoomStore().getBuddys().observe(this, new Observer<Buddys>() {
+            @Override
+            public void onChanged(Buddys buddys) {
+
+            }
+        });
 
     }
 
-    protected <T> T findViewById(int id) {
-        return (T) getView().findViewById(id);
+
+    public static class MultiAdapter extends RecyclerView.Adapter<MultiAdapter.ViewHolder<ItemPeerBinding>> {
+
+        List<Buddy> list = new ArrayList<>();
+        RoomClient roomClient;
+        LifecycleOwner lifecycleOwner;
+
+        public MultiAdapter(RoomClient roomClient, LifecycleOwner lifecycleOwner) {
+            this.roomClient = roomClient;
+            this.lifecycleOwner = lifecycleOwner;
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder<ItemPeerBinding> onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            ItemPeerBinding binding = DataBindingUtil.inflate(LayoutInflater.from(parent.getContext()), R.layout.item_peer, parent, false);
+            return new ViewHolder<>(binding);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder<ItemPeerBinding> holder, int position) {
+            BuddyItemViewModel model = new BuddyItemViewModel((Application) holder.itemView.getContext().getApplicationContext());
+            model.setRoomStore(roomClient);
+            holder.binding.setData(model);
+            model.connect(lifecycleOwner,list.get(position).getId());
+        }
+
+        @Override
+        public int getItemCount() {
+            return list.size();
+        }
+
+        public void setList(List<Buddy> list) {
+            this.list = list;
+            notifyDataSetChanged();
+        }
+
+        public static class ViewHolder<T extends ViewDataBinding> extends RecyclerView.ViewHolder {
+            T binding;
+
+            public ViewHolder(T binding) {
+                this(binding.getRoot());
+                this.binding = binding;
+            }
+
+            public ViewHolder(@NonNull View itemView) {
+                super(itemView);
+            }
+        }
     }
 
-    private void initView() {
-        ivMin = (AppCompatImageView) findViewById(R.id.iv_min);
-        tvTitle = (AppCompatTextView) findViewById(R.id.tv_title);
-        ivAdd = (AppCompatImageView) findViewById(R.id.iv_add);
-        remotePeers = (RecyclerView) findViewById(R.id.remote_peers);
-        llAction = (LinearLayout) findViewById(R.id.ll_action);
+    public static class MultiData extends BaseObservable {
+
+        private ObservableField<Action> left = new ObservableField<>();
+        private ObservableField<Action> right = new ObservableField<>();
+        private ObservableField<Action> center = new ObservableField<>();
+        private ObservableField<Action> bottom = new ObservableField<>();
+        private ObservableField<RoomStore> roomStore = new ObservableField<>();
+        private ObservableField<RoomInfo> roomInfoObservableField = new ObservableField<>();
+        private ObservableField<Peers> peersObservableField = new ObservableField<>();
+
+
+        public void onMin() {
+
+        }
+
+        public void onAdd() {
+
+        }
+
+
+        public ObservableField<Action> getLeft() {
+            return left;
+        }
+
+        public ObservableField<Action> getRight() {
+            return right;
+        }
+
+        public ObservableField<Action> getCenter() {
+            return center;
+        }
+
+        public ObservableField<Action> getBottom() {
+            return bottom;
+        }
+    }
+
+
+    public static class Action implements Runnable {
+        String name;
+        int imgId;
+        boolean checked;
+        boolean enabled;
+        Runnable click;
+
+        public Runnable getClick() {
+            return click;
+        }
+
+        public Action setClick(Runnable click) {
+            this.click = click;
+            return this;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Action setName(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public int getImgId() {
+            return imgId;
+        }
+
+        public Action setImgId(int imgId) {
+            this.imgId = imgId;
+            return this;
+        }
+
+        public boolean isChecked() {
+            return checked;
+        }
+
+        public Action setChecked(boolean checked) {
+            this.checked = checked;
+            return this;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public Action setEnabled(boolean enabled) {
+            this.enabled = enabled;
+            return this;
+        }
+
+        @Override
+        public void run() {
+
+        }
     }
 }

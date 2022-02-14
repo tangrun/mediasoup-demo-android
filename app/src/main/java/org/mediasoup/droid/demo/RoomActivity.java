@@ -27,7 +27,6 @@ import com.nabinbhandari.android.permissions.Permissions;
 import org.mediasoup.droid.Logger;
 import org.mediasoup.droid.MediasoupClient;
 import org.mediasoup.droid.demo.adapter.PeerAdapter;
-import org.mediasoup.droid.demo.databinding.ActivityRoomBinding;
 import org.mediasoup.droid.demo.vm.EdiasProps;
 import org.mediasoup.droid.demo.vm.MeProps;
 import org.mediasoup.droid.demo.vm.RoomProps;
@@ -56,13 +55,13 @@ public class RoomActivity extends AppCompatActivity {
   private RoomStore mRoomStore;
   private RoomClient mRoomClient;
 
-  private ActivityRoomBinding mBinding;
+//  private ActivityRoomBinding mBinding;
   private PeerAdapter mPeerAdapter;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    mBinding = DataBindingUtil.setContentView(this, R.layout.activity_room);
+//    mBinding = DataBindingUtil.setContentView(this, R.layout.activity_room);
     createRoom();
     checkPermission();
   }
@@ -101,9 +100,9 @@ public class RoomActivity extends AppCompatActivity {
     }
 
     // Room action config.
-    mOptions.setProduce(preferences.getBoolean("produce", true));
-    mOptions.setConsume(preferences.getBoolean("consume", true));
-    mOptions.setForceTcp(preferences.getBoolean("forceTcp", false));
+//    mOptions.setProduce(preferences.getBoolean("produce", true));
+//    mOptions.setConsume(preferences.getBoolean("consume", true));
+//    mOptions.setForceTcp(preferences.getBoolean("forceTcp", false));
 
     // Device config.
     String camera = preferences.getString("camera", "front");
@@ -114,9 +113,9 @@ public class RoomActivity extends AppCompatActivity {
   }
 
   private void initRoomClient() {
-    mRoomClient =
-        new RoomClient(
-            this, mRoomStore, mRoomId, mPeerId, mDisplayName, mForceH264, mForceVP9, mOptions);
+//    mRoomClient =
+//        new RoomClient(
+//            this, mRoomStore, mRoomId, mPeerId, mDisplayName, mForceH264, mForceVP9, mOptions);
   }
 
   private void initViewModel() {
@@ -125,59 +124,59 @@ public class RoomActivity extends AppCompatActivity {
     // Room.
     RoomProps roomProps = ViewModelProviders.of(this, factory).get(RoomProps.class);
     roomProps.connect(this);
-    mBinding.invitationLink.setOnClickListener(
-        v -> {
-          String linkUrl = roomProps.getInvitationLink().get();
-          clipboardCopy(getApplication(), linkUrl, R.string.invite_link_copied);
-        });
-    mBinding.setRoomProps(roomProps);
+//    mBinding.invitationLink.setOnClickListener(
+//        v -> {
+//          String linkUrl = roomProps.getInvitationLink().get();
+//          clipboardCopy(getApplication(), linkUrl, R.string.invite_link_copied);
+//        });
+//    mBinding.setRoomProps(roomProps);
 
     // Me.
     MeProps meProps = ViewModelProviders.of(this, factory).get(MeProps.class);
     meProps.connect(this);
-    mBinding.me.setProps(meProps, mRoomClient);
-
-    mBinding.hideVideos.setOnClickListener(
-        v -> {
-          Me me = meProps.getMe().get();
-          if (me != null) {
-            if (me.isAudioOnly()) {
-              mRoomClient.disableAudioOnly();
-            } else {
-              mRoomClient.enableAudioOnly();
-            }
-          }
-        });
-    mBinding.muteAudio.setOnClickListener(
-        v -> {
-          Me me = meProps.getMe().get();
-          if (me != null) {
-            if (me.isAudioMuted()) {
-              mRoomClient.unmuteAudio();
-            } else {
-              mRoomClient.muteAudio();
-            }
-          }
-        });
-    mBinding.restartIce.setOnClickListener(v -> mRoomClient.restartIce());
-
-    // Peers.
-    mPeerAdapter = new PeerAdapter(mRoomStore, this, mRoomClient);
-    mBinding.remotePeers.setLayoutManager(new LinearLayoutManager(this));
-    mBinding.remotePeers.setAdapter(mPeerAdapter);
+//    mBinding.me.setProps(meProps, mRoomClient);
+//
+//    mBinding.hideVideos.setOnClickListener(
+//        v -> {
+//          Me me = meProps.getMe().get();
+//          if (me != null) {
+//            if (me.isAudioOnly()) {
+//              mRoomClient.disableAudioOnly();
+//            } else {
+//              mRoomClient.enableAudioOnly();
+//            }
+//          }
+//        });
+//    mBinding.muteAudio.setOnClickListener(
+//        v -> {
+//          Me me = meProps.getMe().get();
+//          if (me != null) {
+//            if (me.isAudioMuted()) {
+//              mRoomClient.unmuteAudio();
+//            } else {
+//              mRoomClient.muteAudio();
+//            }
+//          }
+//        });
+//    mBinding.restartIce.setOnClickListener(v -> mRoomClient.restartIce());
+//
+//    // Peers.
+//    mPeerAdapter = new PeerAdapter(mRoomStore, this, mRoomClient);
+//    mBinding.remotePeers.setLayoutManager(new LinearLayoutManager(this));
+//    mBinding.remotePeers.setAdapter(mPeerAdapter);
     mRoomStore
         .getPeers()
         .observe(
             this,
             peers -> {
               List<Peer> peersList = peers.getAllPeers();
-              if (peersList.isEmpty()) {
-                mBinding.remotePeers.setVisibility(View.GONE);
-                mBinding.roomState.setVisibility(View.VISIBLE);
-              } else {
-                mBinding.remotePeers.setVisibility(View.VISIBLE);
-                mBinding.roomState.setVisibility(View.GONE);
-              }
+//              if (peersList.isEmpty()) {
+//                mBinding.remotePeers.setVisibility(View.GONE);
+//                mBinding.roomState.setVisibility(View.VISIBLE);
+//              } else {
+//                mBinding.remotePeers.setVisibility(View.VISIBLE);
+//                mBinding.roomState.setVisibility(View.GONE);
+//              }
               mPeerAdapter.replacePeers(peersList);
             });
 
