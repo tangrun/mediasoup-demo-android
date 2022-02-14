@@ -1,8 +1,11 @@
 package org.mediasoup.droid.lib.model;
 
 import androidx.annotation.NonNull;
+import androidx.core.util.Supplier;
+import androidx.lifecycle.MutableLiveData;
 
 import org.json.JSONObject;
+import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
 
 import java.util.Date;
 import java.util.HashSet;
@@ -19,8 +22,13 @@ public class Buddy {
      */
     private String avatar;
     private Integer volume;
-
     private final Set<String> ids = new HashSet<>();
+
+    /**
+     * 属性变化
+     * ids volume
+     */
+    private final SupplierMutableLiveData<Buddy> buddyMutableLiveData;
 
     public Buddy(boolean isProducer,String id,String name,String avatar,DeviceInfo deviceInfo) {
         this.isProducer = isProducer;
@@ -28,6 +36,7 @@ public class Buddy {
         setAvatar(avatar);
         setDevice(deviceInfo);
         setId(id);
+        buddyMutableLiveData = new SupplierMutableLiveData<>(() -> Buddy.this);
     }
 
     public Buddy(boolean isProducer, @NonNull JSONObject info) {
@@ -45,6 +54,11 @@ public class Buddy {
             device = DeviceInfo.unknownDevice();
         }
         avatar = info.optString("avatar");
+        buddyMutableLiveData = new SupplierMutableLiveData<>(() -> Buddy.this);
+    }
+
+    public SupplierMutableLiveData<Buddy> getBuddyMutableLiveData() {
+        return buddyMutableLiveData;
     }
 
     public Buddy setProducer(boolean producer) {

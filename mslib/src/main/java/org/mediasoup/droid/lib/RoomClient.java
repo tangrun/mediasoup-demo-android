@@ -20,6 +20,7 @@ import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.RecvTransport;
 import org.mediasoup.droid.SendTransport;
 import org.mediasoup.droid.Transport;
+import org.mediasoup.droid.lib.model.RoomState;
 import org.mediasoup.droid.lib.socket.WebSocketTransport;
 import org.mediasoup.droid.lib.lv.RoomStore;
 import org.protoojs.droid.Message;
@@ -68,6 +69,7 @@ public class RoomClient extends RoomMessageHandler {
     private SendTransport mSendTransport;
     // mediasoup Transport for receiving.
     private RecvTransport mRecvTransport;
+    private String mMineId;
     // Local Audio Track for mic.
     private AudioTrack mLocalAudioTrack;
     // Local mic mediasoup Producer.
@@ -96,6 +98,7 @@ public class RoomClient extends RoomMessageHandler {
         super(roomStore);
         this.mContext = context.getApplicationContext();
         this.mOptions = options;
+        this.mMineId = options.me.getId();
         this.mClosed = false;
         this.mStore.addBuddy(options.me);
         // init worker handler.
@@ -154,38 +157,42 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void enableCam() {
         Logger.d(TAG, "enableCam()");
-        mStore.setCamInProgress(true);
-        mWorkHandler.post(
-                () -> {
-                    enableCamImpl();
-                    mStore.setCamInProgress(false);
-                });
+        mStore.setCamInProgress(RoomState.State.InProgress);
+        mWorkHandler.post(() -> {
+            enableCamImpl();
+            mStore.setCamInProgress(RoomState.State.On);
+        });
     }
 
     @Async
     public void disableCam() {
         Logger.d(TAG, "disableCam()");
-        mWorkHandler.post(this::disableCamImpl);
+        mStore.setCamInProgress(RoomState.State.InProgress);
+        mWorkHandler.post(() -> {
+            disableCamImpl();
+            mStore.setCamInProgress(RoomState.State.Off);
+        });
+
     }
 
     @Async
     public void changeCam() {
         Logger.d(TAG, "changeCam()");
-        mStore.setCamInProgress(true);
+        mStore.setCamSwitchInProgress(RoomState.State.InProgress);
         mWorkHandler.post(
                 () ->
                         mPeerConnectionUtils.switchCam(
                                 new CameraVideoCapturer.CameraSwitchHandler() {
                                     @Override
                                     public void onCameraSwitchDone(boolean b) {
-                                        mStore.setCamInProgress(false);
+                                        mStore.setCamInProgress(RoomState.State.On);
                                     }
 
                                     @Override
                                     public void onCameraSwitchError(String s) {
                                         Logger.w(TAG, "changeCam() | failed: " + s);
                                         mStore.addNotify("error", "Could not change cam: " + s);
-                                        mStore.setCamInProgress(false);
+                                        mStore.setCamInProgress(RoomState.State.Off);
                                     }
                                 }));
     }
@@ -203,79 +210,9 @@ public class RoomClient extends RoomMessageHandler {
     }
 
     @Async
-    public void enableAudioOnly() {
-        Logger.d(TAG, "enableAudioOnly()");
-        mStore.setAudioOnlyInProgress(true);
-
-        disableCam();
-        mWorkHandler.post(
-                () -> {
-                    for (ConsumerHolder holder : mConsumers.values()) {
-                        if (!"video".equals(holder.mConsumer.getKind())) {
-                            continue;
-                        }
-                        pauseConsumer(holder.mConsumer);
-                    }
-                    mStore.setAudioOnlyState(true);
-                    mStore.setAudioOnlyInProgress(false);
-                });
-    }
-
-    @Async
-    public void disableAudioOnly() {
-        Logger.d(TAG, "disableAudioOnly()");
-        mStore.setAudioOnlyInProgress(true);
-
-        if (mCamProducer == null && mOptions.mProduce && mOptions.mProduceVideo) {
-            enableCam();
-        }
-        mWorkHandler.post(
-                () -> {
-                    for (ConsumerHolder holder : mConsumers.values()) {
-                        if (!"video".equals(holder.mConsumer.getKind())) {
-                            continue;
-                        }
-                        resumeConsumer(holder.mConsumer);
-                    }
-                    mStore.setAudioOnlyState(false);
-                    mStore.setAudioOnlyInProgress(false);
-                });
-    }
-
-    @Async
-    public void muteAudio() {
-        Logger.d(TAG, "muteAudio()");
-        mStore.setAudioMutedState(true);
-        mWorkHandler.post(
-                () -> {
-                    for (ConsumerHolder holder : mConsumers.values()) {
-                        if (!"audio".equals(holder.mConsumer.getKind())) {
-                            continue;
-                        }
-                        pauseConsumer(holder.mConsumer);
-                    }
-                });
-    }
-
-    @Async
-    public void unmuteAudio() {
-        Logger.d(TAG, "unmuteAudio()");
-        mStore.setAudioMutedState(false);
-        mWorkHandler.post(
-                () -> {
-                    for (ConsumerHolder holder : mConsumers.values()) {
-                        if (!"audio".equals(holder.mConsumer.getKind())) {
-                            continue;
-                        }
-                        resumeConsumer(holder.mConsumer);
-                    }
-                });
-    }
-
-    @Async
     public void restartIce() {
         Logger.d(TAG, "restartIce()");
-        mStore.setRestartIceInProgress(true);
+        mStore.setRestartIceInProgress(RoomState.State.InProgress);
         mWorkHandler.post(
                 () -> {
                     try {
@@ -291,12 +228,13 @@ public class RoomClient extends RoomMessageHandler {
                                             "restartIce", req -> jsonPut(req, "transportId", mRecvTransport.getId()));
                             mRecvTransport.restartIce(iceParameters);
                         }
+                        mStore.setRestartIceInProgress(RoomState.State.On);
                     } catch (Exception e) {
                         e.printStackTrace();
                         logError("restartIce() | failed:", e);
                         mStore.addNotify("error", "ICE restart failed: " + e.getMessage());
+                        mStore.setRestartIceInProgress(RoomState.State.Off);
                     }
-                    mStore.setRestartIceInProgress(false);
                 });
     }
 
@@ -363,27 +301,7 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     @Deprecated
     public void changeDisplayName(String displayName) {
-        Logger.d(TAG, "changeDisplayName()");
 
-        // Store in cookie.
-
-        mWorkHandler.post(
-                () -> {
-                    try {
-                        mProtoo.syncRequest(
-                                "changeDisplayName", req -> jsonPut(req, "displayName", displayName));
-                        mStore.setDisplayName(displayName);
-                        mStore.addNotify("Display name change");
-                    } catch (ProtooException e) {
-                        e.printStackTrace();
-                        logError("changeDisplayName() | failed:", e);
-                        mStore.addNotify("error", "Could not change display name: " + e.getMessage());
-
-                        // We need to refresh the component for it to render the previous
-                        // displayName again.
-                        mStore.setDisplayName(mOptions.me.getDisplayName());
-                    }
-                });
     }
 
     @Async
@@ -672,13 +590,12 @@ public class RoomClient extends RoomMessageHandler {
                             });
 
             mStore.setRoomState(ConnectionState.JOINED);
-            mStore.addNotify("You are in the room!", 3000);
 
             JSONObject resObj = JsonUtils.toJsonObject(joinResponse);
             JSONArray peers = resObj.optJSONArray("peers");
             for (int i = 0; peers != null && i < peers.length(); i++) {
                 JSONObject peer = peers.getJSONObject(i);
-                mStore.addPeer(peer.optString("id"), peer);
+                mStore.addBuddyForPeer(peer.optString("id"), peer);
             }
 
             // Enable mic/webcam.
@@ -730,14 +647,14 @@ public class RoomClient extends RoomMessageHandler {
                             producer -> {
                                 Logger.e(TAG, "onTransportClose(), micProducer");
                                 if (mMicProducer != null) {
-                                    mStore.removeProducer(mMicProducer.getId());
+                                    mStore.removeProducer(mMineId, mMicProducer.getId());
                                     mMicProducer = null;
                                 }
                             },
                             mLocalAudioTrack,
                             null,
                             null);
-            mStore.addProducer(mMicProducer);
+            mStore.addProducer(mMineId, mMicProducer);
         } catch (MediasoupException e) {
             e.printStackTrace();
             logError("enableMic() | failed:", e);
@@ -756,7 +673,7 @@ public class RoomClient extends RoomMessageHandler {
         }
 
         mMicProducer.close();
-        mStore.removeProducer(mMicProducer.getId());
+        mStore.removeProducer(mMineId, mMicProducer.getId());
 
         try {
             mProtoo.syncRequest("closeProducer", req -> jsonPut(req, "producerId", mMicProducer.getId()));
@@ -767,35 +684,16 @@ public class RoomClient extends RoomMessageHandler {
         mMicProducer = null;
     }
 
+    @Deprecated
     @WorkerThread
     private void muteMicImpl() {
-        Logger.d(TAG, "muteMicImpl()");
-        mMicProducer.pause();
 
-        try {
-            mProtoo.syncRequest("pauseProducer", req -> jsonPut(req, "producerId", mMicProducer.getId()));
-            mStore.setProducerPaused(mMicProducer.getId());
-        } catch (ProtooException e) {
-            e.printStackTrace();
-            logError("muteMic() | failed:", e);
-            mStore.addNotify("error", "Error pausing server-side mic Producer: " + e.getMessage());
-        }
     }
 
+    @Deprecated
     @WorkerThread
     private void unmuteMicImpl() {
-        Logger.d(TAG, "unmuteMicImpl()");
-        mMicProducer.resume();
 
-        try {
-            mProtoo.syncRequest(
-                    "resumeProducer", req -> jsonPut(req, "producerId", mMicProducer.getId()));
-            mStore.setProducerResumed(mMicProducer.getId());
-        } catch (ProtooException e) {
-            e.printStackTrace();
-            logError("unmuteMic() | failed:", e);
-            mStore.addNotify("error", "Error resuming server-side mic Producer: " + e.getMessage());
-        }
     }
 
     @WorkerThread
@@ -827,14 +725,14 @@ public class RoomClient extends RoomMessageHandler {
                             producer -> {
                                 Logger.e(TAG, "onTransportClose(), camProducer");
                                 if (mCamProducer != null) {
-                                    mStore.removeProducer(mCamProducer.getId());
+                                    mStore.removeProducer(mMineId, mCamProducer.getId());
                                     mCamProducer = null;
                                 }
                             },
                             mLocalVideoTrack,
                             null,
                             null);
-            mStore.addProducer(mCamProducer);
+            mStore.addProducer(mMineId, mCamProducer);
         } catch (MediasoupException e) {
             e.printStackTrace();
             logError("enableWebcam() | failed:", e);
@@ -852,7 +750,7 @@ public class RoomClient extends RoomMessageHandler {
             return;
         }
         mCamProducer.close();
-        mStore.removeProducer(mCamProducer.getId());
+        mStore.removeProducer(mMineId, mCamProducer.getId());
 
         try {
             mProtoo.syncRequest("closeProducer", req -> jsonPut(req, "producerId", mCamProducer.getId()));
@@ -1065,40 +963,16 @@ public class RoomClient extends RoomMessageHandler {
         // TODO(HaiyangWu): support data consume
     }
 
+    @Deprecated
     @WorkerThread
     private void pauseConsumer(Consumer consumer) {
-        Logger.d(TAG, "pauseConsumer() " + consumer.getId());
-        if (consumer.isPaused()) {
-            return;
-        }
 
-        try {
-            mProtoo.syncRequest("pauseConsumer", req -> jsonPut(req, "consumerId", consumer.getId()));
-            consumer.pause();
-            mStore.setConsumerPaused(consumer.getId(), "local");
-        } catch (ProtooException e) {
-            e.printStackTrace();
-            logError("pauseConsumer() | failed:", e);
-            mStore.addNotify("error", "Error pausing Consumer: " + e.getMessage());
-        }
     }
 
+    @Deprecated
     @WorkerThread
     private void resumeConsumer(Consumer consumer) {
-        Logger.d(TAG, "resumeConsumer() " + consumer.getId());
-        if (!consumer.isPaused()) {
-            return;
-        }
 
-        try {
-            mProtoo.syncRequest("resumeConsumer", req -> jsonPut(req, "consumerId", consumer.getId()));
-            consumer.resume();
-            mStore.setConsumerResumed(consumer.getId(), "local");
-        } catch (Exception e) {
-            e.printStackTrace();
-            logError("resumeConsumer() | failed:", e);
-            mStore.addNotify("error", "Error resuming Consumer: " + e.getMessage());
-        }
     }
 
     public RoomStore getStore() {

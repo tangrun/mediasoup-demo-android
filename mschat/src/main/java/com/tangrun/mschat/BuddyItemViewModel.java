@@ -11,6 +11,7 @@ import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.lib.Constant;
 import org.mediasoup.droid.lib.RoomOptions;
+import org.mediasoup.droid.lib.TrackInvoker;
 import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.Buddys;
 import org.mediasoup.droid.lib.model.Consumers;
@@ -46,116 +47,32 @@ public class BuddyItemViewModel extends RoomStoreViewModel {
 
     }
 
+    Observer<Buddy> buddyObserver = new Observer<Buddy>() {
+        @Override
+        public void onChanged(Buddy buddy) {
+            mVolume.set(buddy.getVolume());
+
+            TrackInvoker trackInvoker = buddy.isProducer() ? getRoomStore().getProducers() : getRoomStore().getConsumers();
+            AudioTrack audioTrack = trackInvoker.getAudioTrack(buddy.getIds());
+            VideoTrack videoTrack = trackInvoker.getVideoTrack(buddy.getIds());
+
+            boolean disabledMic = getRoomOptions().mConsumeAudio && audioTrack == null;
+            boolean disabledCam = getRoomOptions().mConsumeVideo && videoTrack == null;
+
+            mAudioTrack.set(audioTrack);
+            mVideoTrack.set(videoTrack);
+            mDisabledCam.set(disabledCam);
+            mDisabledMic.set(disabledMic);
+        }
+    };
+
     public void connect(LifecycleOwner owner, String peerId) {
         Buddy buddy = getRoomStore().getBuddys().getValue().getBuddy(peerId);
         if (buddy == null) return;
-        if (buddy.isProducer()) {
-            getRoomStore().getProducers().observe(owner, new Observer<Producers>() {
-                @Override
-                public void onChanged(Producers producers) {
-                    Buddy buddy = getRoomStore().getBuddys().getValue().getBuddy(peerId);
 
-                    Producers.ProducersWrapper audioWrapper = getProducer(producers, buddy.getIds(), Constant.kind_audio);
-                    Producer audioProducer = audioWrapper == null ? null : audioWrapper.getProducer();
-                    Producers.ProducersWrapper videoWrapper = getProducer(producers, buddy.getIds(), Constant.kind_video);
-                    Producer videoProducer = videoWrapper == null ? null : videoWrapper.getProducer();
-
-                    AudioTrack audioTrack = audioProducer == null ? null : (AudioTrack) audioProducer.getTrack();
-                    boolean disabledMic = getRoomOptions().mProduceAudio && audioTrack == null;
-                    VideoTrack videoTrack = videoProducer == null ? null : (VideoTrack) videoProducer.getTrack();
-                    boolean disabledCam = getRoomOptions().mProduceVideo && videoTrack == null;
-
-                    mAudioTrack.set(audioTrack);
-                    mVideoTrack.set(videoTrack);
-                    mDisabledCam.set(disabledCam);
-                    mDisabledMic.set(disabledMic);
-                }
-            });
-        } else {
-            getRoomStore().getConsumers().observe(owner, new Observer<Consumers>() {
-                @Override
-                public void onChanged(Consumers consumers) {
-                    Buddy buddy = getRoomStore().getBuddys().getValue().getBuddy(peerId);
-
-                    Consumers.ConsumerWrapper audioWrapper = getConsumer(consumers, buddy.getIds(), Constant.kind_audio);
-                    Consumer audioProducer = audioWrapper == null ? null : audioWrapper.getConsumer();
-                    AudioTrack audioTrack = audioProducer == null ? null : (AudioTrack) audioProducer.getTrack();
-                    boolean disabledMic = getRoomOptions().mConsumeAudio && audioTrack == null;
-
-                    Consumers.ConsumerWrapper videoWrapper = getConsumer(consumers, buddy.getIds(), Constant.kind_video);
-                    Consumer videoProducer = videoWrapper == null ? null : videoWrapper.getConsumer();
-                    VideoTrack videoTrack = videoProducer == null ? null : (VideoTrack) videoProducer.getTrack();
-                    boolean disabledCam = getRoomOptions().mConsumeVideo && videoTrack == null;
-
-                    mAudioTrack.set(audioTrack);
-                    mVideoTrack.set(videoTrack);
-                    mDisabledCam.set(disabledCam);
-                    mDisabledMic.set(disabledMic);
-                }
-            });
-        }
-
-        getRoomStore().getBuddys().observe(owner, new Observer<Buddys>() {
-            @Override
-            public void onChanged(Buddys buddys) {
-                Buddy buddy = buddys.getBuddy(peerId);
-                mBuddy.set(buddy);
-                VideoTrack videoTrack;
-                AudioTrack audioTrack;
-                boolean disabledCam;
-                boolean disabledMic;
-                Integer audioScore = null, videoScore = null;
-
-                RoomOptions options = getRoomOptions();
-                if (buddy.isProducer()) {
-                    Producers.ProducersWrapper audioWrapper = getRoomStore().getProducers().getValue().filter(Constant.kind_audio);
-                    Producer audioProducer = audioWrapper == null ? null : audioWrapper.getProducer();
-                    audioTrack = audioProducer == null ? null : (AudioTrack) audioProducer.getTrack();
-                    disabledMic = options.mProduceAudio && audioTrack == null;
-
-                    Producers.ProducersWrapper videoWrapper = getRoomStore().getProducers().getValue().filter(Constant.kind_video);
-                    Producer videoProducer = videoWrapper == null ? null : videoWrapper.getProducer();
-                    videoTrack = videoProducer == null ? null : (VideoTrack) videoProducer.getTrack();
-                    disabledCam = options.mProduceVideo && videoTrack == null;
-                } else {
-                    Consumers.ConsumerWrapper audioWrapper = getConsumer(buddy.getIds(), Constant.kind_audio);
-                    Consumer audioProducer = audioWrapper == null ? null : audioWrapper.getConsumer();
-                    audioTrack = audioProducer == null ? null : (AudioTrack) audioProducer.getTrack();
-                    disabledMic = options.mConsumeAudio && audioTrack == null;
-
-                    Consumers.ConsumerWrapper videoWrapper = getConsumer(buddy.getIds(), Constant.kind_video);
-                    Consumer videoProducer = videoWrapper == null ? null : videoWrapper.getConsumer();
-                    videoTrack = videoProducer == null ? null : (VideoTrack) videoProducer.getTrack();
-                    disabledCam = options.mConsumeVideo && videoTrack == null;
-                }
-
-                mAudioTrack.set(audioTrack);
-                mVideoTrack.set(videoTrack);
-                mDisabledCam.set(disabledCam);
-                mDisabledMic.set(disabledMic);
-                mVolume.set(disabledMic ? null : buddy.getVolume());
-                mAudioScore.set(audioScore);
-                mVideoScore.set(videoScore);
-            }
-        });
+        buddy.getBuddyMutableLiveData().removeObserver(buddyObserver);
+        buddy.getBuddyMutableLiveData().observe(owner, buddyObserver);
     }
-
-    Producers.ProducersWrapper getProducer(Producers producers, Collection<String> id, String kind) {
-        for (String s : id) {
-            Producers.ProducersWrapper wrapper = producers.getProducer(s);
-            if (wrapper != null && kind.equals(wrapper.getType())) return wrapper;
-        }
-        return null;
-    }
-
-    Consumers.ConsumerWrapper getConsumer(Consumers consumers, Collection<String> id, String kind) {
-        for (String s : id) {
-            Consumers.ConsumerWrapper wrapper = consumers.getConsumer(s);
-            if (wrapper != null && kind.equals(wrapper.getType())) return wrapper;
-        }
-        return null;
-    }
-
 
     public ObservableField<Buddy> getBuddy() {
         return mBuddy;

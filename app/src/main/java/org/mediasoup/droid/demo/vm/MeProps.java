@@ -11,7 +11,7 @@ import androidx.lifecycle.LifecycleOwner;
 import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.lib.RoomClient;
 import org.mediasoup.droid.lib.lv.RoomStore;
-import org.mediasoup.droid.lib.model.Me;
+import org.mediasoup.droid.lib.model.RoomState;
 import org.mediasoup.droid.lib.model.Producers;
 import org.webrtc.AudioTrack;
 import org.webrtc.VideoTrack;
@@ -25,7 +25,7 @@ public class MeProps extends PeerViewProps {
   }
 
   private final ObservableField<Boolean> mConnected;
-  private final ObservableField<Me> mMe;
+  private final ObservableField<RoomState> mMe;
   private final ObservableField<DeviceState> mMicState;
   private final ObservableField<DeviceState> mCamState;
   private final ObservableField<DeviceState> mChangeCamState;
@@ -47,7 +47,7 @@ public class MeProps extends PeerViewProps {
         new Observable.OnPropertyChangedCallback() {
           @Override
           public void onPropertyChanged(Observable sender, int propertyId) {
-            Me me = mStateComposer.mMe;
+            RoomState me = mStateComposer.mMe;
             Producers.ProducersWrapper audioPW = mStateComposer.mAudioPW;
             Producer audioProducer = audioPW != null ? audioPW.getProducer() : null;
             Producers.ProducersWrapper videoPW = mStateComposer.mVideoPW;
@@ -120,7 +120,7 @@ public class MeProps extends PeerViewProps {
     return mConnected;
   }
 
-  public ObservableField<Me> getMe() {
+  public ObservableField<RoomState> getMe() {
     return mMe;
   }
 
@@ -139,7 +139,7 @@ public class MeProps extends PeerViewProps {
   @Override
   public void connect(LifecycleOwner owner) {
     getRoomStore()
-        .getMe()
+        .getRoomState()
         .observe(
             owner,
             me -> {
@@ -162,7 +162,7 @@ public class MeProps extends PeerViewProps {
 
     private Producers.ProducersWrapper mAudioPW;
     private Producers.ProducersWrapper mVideoPW;
-    private Me mMe;
+    private RoomState mMe;
 
     void connect(@NonNull LifecycleOwner owner, RoomStore store) {
       store
@@ -175,7 +175,7 @@ public class MeProps extends PeerViewProps {
                 notifyChange();
               });
       store
-          .getMe()
+          .getRoomState()
           .observe(
               owner,
               (me) -> {

@@ -1,24 +1,18 @@
 package org.mediasoup.droid.lib.lv;
 
-import android.text.TextUtils;
-
-import androidx.lifecycle.MutableLiveData;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.lib.RoomClient;
-import org.mediasoup.droid.lib.RoomOptions;
 import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.Buddys;
 import org.mediasoup.droid.lib.model.DeviceInfo;
-import org.mediasoup.droid.lib.model.Me;
-import org.mediasoup.droid.lib.model.Peers;
+import org.mediasoup.droid.lib.model.RoomState;
 import org.mediasoup.droid.lib.model.Producers;
-import org.mediasoup.droid.lib.model.RoomInfo;
 import org.mediasoup.droid.lib.model.Consumers;
-import org.mediasoup.droid.lib.model.Notify;
 
 /**
  * Room state.
@@ -30,243 +24,108 @@ public class RoomStore {
 
     private static final String TAG = "RoomStore";
 
-    // room
-    // mediasoup-demo/app/lib/redux/reducers/room.js
-    private SupplierMutableLiveData<RoomInfo> roomInfo = new SupplierMutableLiveData<>(RoomInfo::new);
 
-    // me
-    // mediasoup-demo/app/lib/redux/reducers/me.js
-    private SupplierMutableLiveData<Me> me = new SupplierMutableLiveData<>(Me::new);
+    private final SupplierMutableLiveData<RoomState> roomState = new SupplierMutableLiveData<>(RoomState::new);
+    private final SupplierMutableLiveData<Buddys> buddys = new SupplierMutableLiveData<>(Buddys::new);
+    private final Producers producers = new Producers();
+    private final Consumers consumers = new Consumers();
 
-    // producers
-    // mediasoup-demo/app/lib/redux/reducers/producers.js
-    private SupplierMutableLiveData<Producers> producers =
-            new SupplierMutableLiveData<>(Producers::new);
-
-    // peers
-    // mediasoup-demo/app/lib/redux/reducers/peer.js
-    private SupplierMutableLiveData<Peers> peers = new SupplierMutableLiveData<>(Peers::new);
-
-    private SupplierMutableLiveData<Buddys> buddys = new SupplierMutableLiveData<>(Buddys::new);
-
-    // consumers
-    // mediasoup-demo/app/lib/redux/reducers/consumers.js
-    private SupplierMutableLiveData<Consumers> consumers =
-            new SupplierMutableLiveData<>(Consumers::new);
-
-    // notify
-    // mediasoup-demo/app/lib/redux/reducers/notifications.js
-    private MutableLiveData<Notify> notify = new MutableLiveData<>();
-
-    public void setRoomUrl(String roomId, String url) {
-        roomInfo.postValue(
-                roomInfo -> {
-                    roomInfo.setRoomId(roomId);
-                    roomInfo.setUrl(url);
-                });
+    public SupplierMutableLiveData<RoomState> getRoomState() {
+        return roomState;
     }
 
-    public void setRoomState(RoomClient.ConnectionState state) {
-        roomInfo.postValue(roomInfo -> roomInfo.setConnectionState(state));
-
-        if (RoomClient.ConnectionState.CLOSED.equals(state)) {
-            peers.postValue(Peers::clear);
-            me.postValue(Me::clear);
-            producers.postValue(Producers::clear);
-            consumers.postValue(Consumers::clear);
-        }
-    }
-
-    public void setRoomActiveSpeaker(String peerId) {
-        roomInfo.postValue(roomInfo -> roomInfo.setActiveSpeakerId(peerId));
-    }
-
-    public void setRoomStatsPeerId(String peerId) {
-        roomInfo.postValue(roomInfo -> roomInfo.setStatsPeerId(peerId));
-    }
-
-    public void setRoomFaceDetection(boolean enable) {
-        roomInfo.postValue(roomInfo -> roomInfo.setFaceDetection(enable));
-    }
-
-    public void setMe(String peerId, String displayName, DeviceInfo device) {
-        me.postValue(
-                me -> {
-                    me.setId(peerId);
-                    me.setDisplayName(displayName);
-                    me.setDevice(device);
-                });
-    }
-
-    public void setMediaCapabilities(boolean canSendMic, boolean canSendCam) {
-        me.postValue(
-                me -> {
-                    me.setCanSendMic(canSendMic);
-                    me.setCanSendCam(canSendCam);
-                });
-    }
-
-    public void setCanChangeCam(boolean canChangeCam) {
-        me.postValue(me -> me.setCanSendCam(canChangeCam));
-    }
-
-    public void setDisplayName(String displayName) {
-        me.postValue(me -> me.setDisplayName(displayName));
-    }
-
-    public void setAudioOnlyState(boolean enabled) {
-        me.postValue(me -> me.setAudioOnly(enabled));
-    }
-
-    public void setAudioOnlyInProgress(boolean enabled) {
-        me.postValue(me -> me.setAudioOnlyInProgress(enabled));
-    }
-
-    public void setAudioMutedState(boolean enabled) {
-        me.postValue(me -> me.setAudioMuted(enabled));
-    }
-
-    public void setRestartIceInProgress(boolean restartIceInProgress) {
-        me.postValue(me -> me.setRestartIceInProgress(restartIceInProgress));
-    }
-
-    public void setCamInProgress(boolean inProgress) {
-        me.postValue(me -> me.setCamInProgress(inProgress));
-    }
-
-    public void addProducer(Producer producer) {
-        producers.postValue(producers -> producers.addProducer(producer));
-    }
-
-    public void setProducerPaused(String producerId) {
-        producers.postValue(producers -> producers.setProducerPaused(producerId));
-    }
-
-    public void setProducerResumed(String producerId) {
-        producers.postValue(producers -> producers.setProducerResumed(producerId));
-    }
-
-    public void removeProducer(String producerId) {
-        producers.postValue(producers -> producers.removeProducer(producerId));
-    }
-
-    public void setProducerScore(String producerId, JSONArray score) {
-        producers.postValue(producers -> producers.setProducerScore(producerId, score));
-    }
-
-    public void addDataProducer(Object dataProducer) {
-        // TODO(HaiyangWU): support data consumer. Note, new DataConsumer.java
-    }
-
-    public void removeDataProducer(String dataProducerId) {
-        // TODO(HaiyangWU): support data consumer.
-    }
-
-    public void addPeer(String peerId, JSONObject peerInfo) {
-        peers.postValue(peersInfo -> peersInfo.addPeer(peerId, peerInfo));
-    }
-
-    public void setPeerDisplayName(String peerId, String displayName) {
-        peers.postValue(peersInfo -> peersInfo.setPeerDisplayName(peerId, displayName));
-    }
-
-    public void removePeer(String peerId) {
-        roomInfo.postValue(
-                roomInfo -> {
-                    if (!TextUtils.isEmpty(peerId) && peerId.equals(roomInfo.getActiveSpeakerId())) {
-                        roomInfo.setActiveSpeakerId(null);
-                    }
-                    if (!TextUtils.isEmpty(peerId) && peerId.equals(roomInfo.getStatsPeerId())) {
-                        roomInfo.setStatsPeerId(null);
-                    }
-                });
-        peers.postValue(peersInfo -> peersInfo.removePeer(peerId));
-    }
-
-    public void addConsumer(String peerId, String type, Consumer consumer, boolean remotelyPaused) {
-        consumers.postValue(consumers -> consumers.addConsumer(type, consumer, remotelyPaused));
-        peers.postValue(peers -> peers.addConsumer(peerId, consumer));
-    }
-
-    public void removeConsumer(String peerId, String consumerId) {
-        consumers.postValue(consumers -> consumers.removeConsumer(consumerId));
-        peers.postValue(peers -> peers.removeConsumer(peerId, consumerId));
-    }
-
-    public void setConsumerPaused(String consumerId, String originator) {
-        consumers.postValue(consumers -> consumers.setConsumerPaused(consumerId, originator));
-    }
-
-    public void setConsumerResumed(String consumerId, String originator) {
-        consumers.postValue(consumers -> consumers.setConsumerResumed(consumerId, originator));
-    }
-
-    public void setConsumerCurrentLayers(String consumerId, int spatialLayer, int temporalLayer) {
-        consumers.postValue(
-                consumers -> consumers.setConsumerCurrentLayers(consumerId, spatialLayer, temporalLayer));
-    }
-
-    public void setConsumerScore(String consumerId, JSONArray score) {
-        consumers.postValue(consumers -> consumers.setConsumerScore(consumerId, score));
-    }
-
-    public void addDataConsumer(String peerId, Object dataConsumer) {
-        // TODO(HaiyangWU): support data consumer. Note, new DataConsumer.java
-    }
-
-    public void removeDataConsumer(String peerId, String dataConsumerId) {
-        // TODO(HaiyangWU): support data consumer.
-    }
-
-    public void addNotify(String text) {
-        notify.postValue(new Notify("info", text));
-    }
-
-    public void addNotify(String text, int timeout) {
-        notify.postValue(new Notify("info", text, timeout));
-    }
-
-    public void addNotify(String type, String text) {
-        notify.postValue(new Notify(type, text));
-    }
-
-    public void addNotify(String text, Throwable throwable) {
-        notify.postValue(new Notify("error", text + throwable.getMessage()));
-    }
-
-    public SupplierMutableLiveData<RoomInfo> getRoomInfo() {
-        return roomInfo;
-    }
-
-    public SupplierMutableLiveData<Me> getMe() {
-        return me;
-    }
-
-    public MutableLiveData<Notify> getNotify() {
-        return notify;
-    }
-
-    public SupplierMutableLiveData<Peers> getPeers() {
-        return peers;
-    }
-
-    public SupplierMutableLiveData<Producers> getProducers() {
+    public Producers getProducers() {
         return producers;
     }
 
-    public SupplierMutableLiveData<Consumers> getConsumers() {
+    public Consumers getConsumers() {
         return consumers;
     }
 
-
-    public void setSpeakerVolume(String peerId, Integer volume) {
-        buddys.postValue(value -> {
-            value.getBuddy(peerId).setVolume(volume);
-        });
+    public void addNotify(String msg) {
+        Log.d(TAG, "addNotify: " + msg);
     }
 
+    public void addNotify(String tag, String msg) {
+        Log.d(TAG, "addNotify: " + tag + " : " + msg);
+    }
+
+
+    // region roomState
+    public void setRestartIceInProgress(RoomState.State state) {
+        roomState.postValue(value -> value.setRestartIce(state));
+    }
+
+    public void setCamSwitchInProgress(RoomState.State state) {
+        roomState.postValue(value -> value.setCamSwitch(state));
+    }
+
+    public void setCamInProgress(RoomState.State state) {
+        roomState.postValue(value -> value.setCam(state));
+    }
+
+    public void setRoomState(RoomClient.ConnectionState state) {
+        roomState.postValue(value -> value.setConnectionState(state));
+    }
+    // endregion
+
+
+    // region producer
+    public void setProducerScore(String producerId, JSONArray score) {
+        producers.setProducerScore(producerId, score);
+    }
+
+    public void setProducerResumed(String producerId) {
+        producers.setProducerResumed(producerId);
+    }
+
+    public void setProducerPaused(String producerId) {
+        producers.setProducerPaused(producerId);
+    }
+
+    public void addProducer(String peerId, Producer producer) {
+        producers.addProducer(producer);
+        getBuddyPost(peerId, value -> value.getIds().add(producer.getId()));
+    }
+
+    public void removeProducer(String peerId, String producerId) {
+        producers.removeProducer(producerId);
+        getBuddyPost(peerId, value -> value.getIds().remove(producerId));
+    }
+    // endregion
+
+
+    // region consumer
+    public void setConsumerScore(String consumerId, JSONArray score) {
+        consumers.setConsumerScore(consumerId, score);
+    }
+
+    public void setConsumerResumed(String consumerId, String type) {
+        consumers.setConsumerResumed(consumerId, type);
+    }
+
+    public void setConsumerPaused(String consumerId, String type) {
+        consumers.setConsumerPaused(consumerId, type);
+    }
+
+    public void addConsumer(String peerId, String type, Consumer consumer, boolean remotelyPaused) {
+        consumers.addConsumer(type, consumer, remotelyPaused);
+        getBuddyPost(peerId, value -> value.getIds().add(consumer.getId()));
+    }
+
+    public void removeConsumer(String peerId, String consumerId) {
+        consumers.removeConsumer(consumerId);
+        getBuddyPost(peerId, value -> value.getIds().remove(consumerId));
+    }
+    // endregion
+
+    // region buddy
     public Buddy getBuddy(String id) {
         return buddys.getValue().getBuddy(id);
+    }
+
+    public void removeBuddy(String peerId) {
+        buddys.postValue(value -> value.remove(peerId));
     }
 
     public void addBuddy(Buddy buddy) {
@@ -276,21 +135,31 @@ public class RoomStore {
     }
 
     public void addBuddyForPeer(String id, JSONObject jsonObject) {
-        buddys.postValue(new SupplierMutableLiveData.Invoker<Buddys>() {
-            @Override
-            public void invokeAction(Buddys value) {
-                value.addPeer(id, jsonObject);
-            }
-        });
+        addBuddy(new Buddy(false, jsonObject));
     }
 
     public void addBuddyForMe(String id, String name, String avatar, DeviceInfo deviceInfo) {
-        buddys.postValue(new SupplierMutableLiveData.Invoker<Buddys>() {
-            @Override
-            public void invokeAction(Buddys value) {
-                value.addMe(id, name, avatar, deviceInfo);
-            }
-        });
+        addBuddy(new Buddy(true, id, name, avatar, deviceInfo));
+    }
+    // endregion
+
+    public void setSpeakerVolume(String peerId, Integer volume) {
+        getBuddyPost(peerId, value -> value.setVolume(volume));
+    }
+
+
+    private void getBuddyPost(String buddyId, SupplierMutableLiveData.Invoker<Buddy> invoker) {
+        Buddy buddy = getBuddy(buddyId);
+        if (buddy != null) {
+            buddy.getBuddyMutableLiveData().postValue(invoker);
+        }
+    }
+
+    private void getConsumerPost(String consumerId, SupplierMutableLiveData.Invoker<Consumers.ConsumerWrapper> invoker) {
+        Consumers.ConsumerWrapper wrapper = consumers.getConsumer(consumerId);
+        if (wrapper != null) {
+            wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(invoker);
+        }
     }
 
     public SupplierMutableLiveData<Buddys> getBuddys() {

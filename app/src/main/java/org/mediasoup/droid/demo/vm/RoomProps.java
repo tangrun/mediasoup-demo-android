@@ -78,7 +78,7 @@ public class RoomProps extends EdiasProps {
     RoomStore roomStore = getRoomStore();
     roomStore.getRoomInfo().observe(owner, this::receiveState);
     roomStore
-        .getMe()
+        .getRoomState()
         .observe(
             owner,
             me -> {

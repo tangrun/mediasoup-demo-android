@@ -5,12 +5,9 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatImageView;
-import androidx.appcompat.widget.AppCompatTextView;
 import androidx.databinding.BaseObservable;
 import androidx.databinding.DataBindingUtil;
 import androidx.databinding.ObservableField;
@@ -22,7 +19,6 @@ import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.mschat.BR;
 import com.example.mschat.R;
 import com.example.mschat.databinding.FragmentRoomMultiBinding;
 import com.example.mschat.databinding.ItemPeerBinding;
@@ -33,7 +29,7 @@ import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.Buddys;
 import org.mediasoup.droid.lib.model.Peers;
 import org.mediasoup.droid.lib.model.RoomInfo;
-import org.webrtc.SurfaceViewRenderer;
+import org.mediasoup.droid.lib.model.RoomState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +75,13 @@ public class MultiFragment extends Fragment {
         roomViewModel.getRoomStore().getBuddys().observe(this, new Observer<Buddys>() {
             @Override
             public void onChanged(Buddys buddys) {
-
+                adapter.setList(buddys.getAllPeers());
+            }
+        });
+        roomViewModel.getRoomStore().getRoomState().observe(this, new Observer<RoomState>() {
+            @Override
+            public void onChanged(RoomState roomState) {
+                roomState.getConnectionState()
             }
         });
 
@@ -180,6 +182,12 @@ public class MultiFragment extends Fragment {
         boolean checked;
         boolean enabled;
         Runnable click;
+
+        public Action(String name, int imgId, Runnable click) {
+            this.name = name;
+            this.imgId = imgId;
+            this.click = click;
+        }
 
         public Runnable getClick() {
             return click;

@@ -2,6 +2,7 @@ package org.mediasoup.droid.lib.model;
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Logger;
@@ -22,22 +23,23 @@ public class Buddys {
         mPeersInfo = Collections.synchronizedMap(new LinkedHashMap<>());
     }
 
-    public void addMe(String peerId, String displayName, String avatar, DeviceInfo deviceInfo) {
-        mPeersInfo.put(peerId, new Buddy(true, peerId, displayName, avatar, deviceInfo));
-    }
-
     public void addBuddy(Buddy buddy) {
         mPeersInfo.put(buddy.getId(), buddy);
-    }
-
-    public void addPeer(String peerId, @NonNull JSONObject peerInfo) {
-        mPeersInfo.put(peerId, new Buddy(false, peerInfo));
     }
 
     public void remove(String id) {
         mPeersInfo.remove(id);
     }
 
+    public void setSpeakerVolume(String buddyId, Integer volume){
+        Buddy buddy = getBuddy(buddyId);
+        if (buddy == null) {
+            Logger.e(TAG, "no Peer found for new Consumer");
+            return;
+        }
+
+        buddy.getBuddyMutableLiveData().postValue(value -> value.setVolume(volume));
+    }
 
     public void addId(String buddyId, String id) {
         Buddy buddy = getBuddy(buddyId);
@@ -46,16 +48,16 @@ public class Buddys {
             return;
         }
 
-        buddy.getIds().add(id);
+        buddy.getBuddyMutableLiveData().postValue(value -> value.getIds().add(id));
     }
 
-    public void removeId(String peerId, String consumerId) {
-        Buddy buddy = getBuddy(peerId);
+    public void removeId(String buddyId, String consumerId) {
+        Buddy buddy = getBuddy(buddyId);
         if (buddy == null) {
             return;
         }
 
-        buddy.getIds().remove(consumerId);
+        buddy.getBuddyMutableLiveData().postValue(value -> value.getIds().remove(consumerId));
     }
 
     public Buddy getBuddy(String peerId) {

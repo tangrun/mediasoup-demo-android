@@ -76,7 +76,7 @@ public class PeerProps extends PeerViewProps {
   }
 
   public void connect(LifecycleOwner owner, @NonNull String peerId) {
-    getRoomStore().getMe().observe(owner, me -> mAudioMuted.set(me.isAudioMuted()));
+    getRoomStore().getRoomState().observe(owner, me -> mAudioMuted.set(me.isAudioMuted()));
     getRoomStore()
         .getRoomInfo()
         .observe(owner, roomInfo -> mFaceDetection.set(roomInfo.isFaceDetection()));
