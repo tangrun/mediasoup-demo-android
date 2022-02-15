@@ -6,6 +6,7 @@ import org.json.JSONArray;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.lib.Constant;
 import org.mediasoup.droid.lib.TrackInvoker;
+import org.mediasoup.droid.lib.WrapperCommon;
 import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
 import org.webrtc.AudioTrack;
 import org.webrtc.VideoTrack;
@@ -40,15 +41,12 @@ public class Consumers implements TrackInvoker {
         return null;
     }
 
-    public static class ConsumerWrapper {
+    public static class ConsumerWrapper extends WrapperCommon {
 
         private String mType;
-        private boolean mLocallyPaused;
-        private boolean mRemotelyPaused;
         private int mSpatialLayer;
         private int mTemporalLayer;
         private Consumer mConsumer;
-        private JSONArray mScore;
         private int mPreferredSpatialLayer;
         private int mPreferredTemporalLayer;
 
@@ -56,7 +54,7 @@ public class Consumers implements TrackInvoker {
          * 属性变化
          * score paused resumed
          */
-        SupplierMutableLiveData<ConsumerWrapper> consumerWrapperSupplierMutableLiveData;
+        SupplierMutableLiveData<WrapperCommon> consumerWrapperSupplierMutableLiveData;
 
         ConsumerWrapper(String type, boolean remotelyPaused, Consumer consumer) {
             mType = type;
@@ -70,20 +68,12 @@ public class Consumers implements TrackInvoker {
             consumerWrapperSupplierMutableLiveData = new SupplierMutableLiveData<>(() -> ConsumerWrapper.this);
         }
 
-        public SupplierMutableLiveData<ConsumerWrapper> getConsumerWrapperSupplierMutableLiveData() {
+        public SupplierMutableLiveData<WrapperCommon> getConsumerWrapperSupplierMutableLiveData() {
             return consumerWrapperSupplierMutableLiveData;
         }
 
         public String getType() {
             return mType;
-        }
-
-        public boolean isLocallyPaused() {
-            return mLocallyPaused;
-        }
-
-        public boolean isRemotelyPaused() {
-            return mRemotelyPaused;
         }
 
         public int getSpatialLayer() {
@@ -98,16 +88,24 @@ public class Consumers implements TrackInvoker {
             return mConsumer;
         }
 
-        public JSONArray getScore() {
-            return mScore;
-        }
-
         public int getPreferredSpatialLayer() {
             return mPreferredSpatialLayer;
         }
 
         public int getPreferredTemporalLayer() {
             return mPreferredTemporalLayer;
+        }
+
+        private void setLocallyPaused(boolean b){
+            mLocallyPaused = b;
+        }
+
+        private void setRemotelyPaused(boolean b){
+            mRemotelyPaused = b;
+        }
+
+        private void setScore(JSONArray jsonArray){
+            mScore = jsonArray;
         }
     }
 
@@ -133,9 +131,9 @@ public class Consumers implements TrackInvoker {
 
         wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> {
             if (Constant.originator_local.equals(originator)) {
-                wrapper.mLocallyPaused = true;
+                wrapper.setLocallyPaused(true);
             } else {
-                wrapper.mRemotelyPaused = true;
+                wrapper.setRemotelyPaused(true);
             }
         });
     }
@@ -148,9 +146,9 @@ public class Consumers implements TrackInvoker {
 
         wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> {
             if (Constant.originator_local.equals(originator)) {
-                wrapper.mLocallyPaused = false;
+                wrapper.setLocallyPaused(false);
             } else {
-                wrapper.mRemotelyPaused = false;
+                wrapper.setRemotelyPaused(false);
             }
         });
     }
@@ -162,7 +160,7 @@ public class Consumers implements TrackInvoker {
             return;
         }
 
-        wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> value.mScore = score);
+        wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> wrapper.setScore(score));
     }
 
     public void setConsumerCurrentLayers(String consumerId, int spatialLayer, int temporalLayer) {

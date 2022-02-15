@@ -7,12 +7,16 @@ import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.lib.RoomClient;
+import org.mediasoup.droid.lib.WrapperCommon;
 import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.Buddys;
 import org.mediasoup.droid.lib.model.DeviceInfo;
 import org.mediasoup.droid.lib.model.RoomState;
 import org.mediasoup.droid.lib.model.Producers;
 import org.mediasoup.droid.lib.model.Consumers;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Room state.
@@ -134,6 +138,26 @@ public class RoomStore {
         });
     }
 
+    public void addBuddyForPeers(JSONArray jsonArray) {
+        List<Buddy> list = new ArrayList<>();
+        try {
+            for (int i = 0; jsonArray != null && i < jsonArray.length(); i++) {
+                JSONObject peer = jsonArray.getJSONObject(i);
+                Buddy buddy = new Buddy(false, peer);
+                list.add(buddy);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (!list.isEmpty()) {
+            buddys.postValue(value -> {
+                for (Buddy buddy : list) {
+                    value.addBuddy(buddy);
+                }
+            });
+        }
+    }
+
     public void addBuddyForPeer(String id, JSONObject jsonObject) {
         addBuddy(new Buddy(false, jsonObject));
     }
@@ -141,6 +165,14 @@ public class RoomStore {
     public void addBuddyForMe(String id, String name, String avatar, DeviceInfo deviceInfo) {
         addBuddy(new Buddy(true, id, name, avatar, deviceInfo));
     }
+
+    public void updateBuddy(String peerId, JSONObject jsonObject) {
+        getBuddyPost(peerId, value -> {
+            Buddy buddy = new Buddy(false, jsonObject);
+            
+        });
+    }
+
     // endregion
 
     public void setSpeakerVolume(String peerId, Integer volume) {
@@ -158,7 +190,12 @@ public class RoomStore {
     private void getConsumerPost(String consumerId, SupplierMutableLiveData.Invoker<Consumers.ConsumerWrapper> invoker) {
         Consumers.ConsumerWrapper wrapper = consumers.getConsumer(consumerId);
         if (wrapper != null) {
-            wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(invoker);
+            wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(new SupplierMutableLiveData.Invoker<WrapperCommon>() {
+                @Override
+                public void invokeAction(WrapperCommon value) {
+                    invoker.invokeAction(wrapper);
+                }
+            });
         }
     }
 

@@ -593,10 +593,11 @@ public class RoomClient extends RoomMessageHandler {
 
             JSONObject resObj = JsonUtils.toJsonObject(joinResponse);
             JSONArray peers = resObj.optJSONArray("peers");
-            for (int i = 0; peers != null && i < peers.length(); i++) {
-                JSONObject peer = peers.getJSONObject(i);
-                mStore.addBuddyForPeer(peer.optString("id"), peer);
-            }
+            mStore.addBuddyForPeers(peers);
+//            for (int i = 0; peers != null && i < peers.length(); i++) {
+//                JSONObject peer = peers.getJSONObject(i);
+//                mStore.addBuddyForPeer(peer.optString("id"), peer);
+//            }
 
             // Enable mic/webcam.
             // 取消自动上传流 在界面判断

@@ -7,6 +7,7 @@ import org.json.JSONArray;
 import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.lib.Constant;
 import org.mediasoup.droid.lib.TrackInvoker;
+import org.mediasoup.droid.lib.WrapperCommon;
 import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
 import org.webrtc.AudioTrack;
 import org.webrtc.VideoTrack;
@@ -41,27 +42,26 @@ public class Producers implements TrackInvoker {
         return null;
     }
 
-    public static class ProducersWrapper {
+    public static class ProducersWrapper extends WrapperCommon {
 
         public static final String TYPE_CAM = "cam";
         public static final String TYPE_SHARE = "share";
 
         private Producer mProducer;
-        private JSONArray mScore;
         private String mType;
 
         /**
          * 属性变化
          * score paused resumed
          */
-        private final SupplierMutableLiveData<ProducersWrapper> producersWrapperSupplierMutableLiveData;
+        private final SupplierMutableLiveData<WrapperCommon> producersWrapperSupplierMutableLiveData;
 
         ProducersWrapper(Producer producer) {
             this.mProducer = producer;
             producersWrapperSupplierMutableLiveData = new SupplierMutableLiveData<>(() -> ProducersWrapper.this);
         }
 
-        public SupplierMutableLiveData<ProducersWrapper> getProducersWrapperSupplierMutableLiveData() {
+        public SupplierMutableLiveData<WrapperCommon> getProducersWrapperSupplierMutableLiveData() {
             return producersWrapperSupplierMutableLiveData;
         }
 
@@ -77,9 +77,19 @@ public class Producers implements TrackInvoker {
             return mType;
         }
 
-        public void setType(String type) {
-            mType = type;
+        private void setLocallyPaused(boolean b) {
+            mLocallyPaused = b;
         }
+
+        private void setRemotelyPaused(boolean b) {
+            mRemotelyPaused = b;
+        }
+
+        private void setScore(JSONArray jsonArray) {
+            mScore = jsonArray;
+        }
+
+
     }
 
     private final Map<String, ProducersWrapper> mProducers;
@@ -102,7 +112,10 @@ public class Producers implements TrackInvoker {
             return;
         }
 
-        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> value.mProducer.pause());
+        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> {
+            wrapper.setRemotelyPaused(false);
+            wrapper.mProducer.pause();
+        });
     }
 
     public void setProducerResumed(String producerId) {
@@ -111,7 +124,12 @@ public class Producers implements TrackInvoker {
             return;
         }
 
-        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> value.mProducer.resume());
+        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> {
+                    wrapper.setLocallyPaused(false);
+                    wrapper.mProducer.resume();
+
+                }
+        );
     }
 
     public void setProducerScore(String producerId, JSONArray score) {
@@ -120,7 +138,7 @@ public class Producers implements TrackInvoker {
             return;
         }
 
-        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> value.mScore = score);
+        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> wrapper.setScore(score));
     }
 
     public ProducersWrapper getProducer(String producerId) {

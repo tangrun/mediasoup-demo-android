@@ -58,6 +58,17 @@ class RoomMessageHandler {
                 mStore.addBuddyForPeer(id, data);
                 break;
             }
+            case "peerUpdate":{
+                String peerId = data.optString("peerId");
+                JSONObject jsonObject = data.optJSONObject("peerInfo");
+                mStore.updateBuddy(peerId, jsonObject);
+                break;
+            }
+            case "newPeers": {
+                JSONArray jsonArray = data.optJSONArray("peers");
+                mStore.addBuddyForPeers( jsonArray);
+                break;
+            }
             case "peerClosed": {
                 String peerId = data.getString("peerId");
                 mStore.removeBuddy(peerId);

@@ -22,7 +22,7 @@ public class RoomActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
         RoomViewModel viewModel = ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()).create(RoomViewModel.class);
-        viewModel.setRoomStore(Start.getClient().getStore());
+        viewModel.setRoomStore(Start.getClient());
         int type = getIntent().getIntExtra("type", 0);
         if (type == 0){
             getSupportFragmentManager().beginTransaction()
