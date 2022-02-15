@@ -10,7 +10,7 @@
 
         <variable
             name="data"
-            type="com.tangrun.mschat.MultiFragment.MultiData" />
+            type="com.tangrun.mschat.RoomViewModel" />
     </data>
 
     <LinearLayout
@@ -46,6 +46,7 @@
                 android:ellipsize="end"
                 android:gravity="center"
                 android:maxLines="1"
+                android:text="@{data.connectionState.toString()}"
                 android:textColor="@color/chat_white"
                 android:textSize="14sp"
                 android:textStyle="bold"
@@ -88,12 +89,12 @@
                 android:showDividers="middle"
                 android:visibility="@{data.left == null ? View.GONE:View.VISIBLE}">
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:scaleType="centerInside"
                     tools:src="@mipmap/ic_call_video_answer"
-                    android:src="@{data.bottom.imgId}" />
+                    app:resId="@{data.bottom.imgId}" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -116,12 +117,12 @@
                 android:orientation="vertical"
                 android:visibility="@{data.center == null ? View.GONE:View.VISIBLE}">
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:scaleType="centerInside"
                     tools:src="@mipmap/ic_call_video_answer"
-                    android:src="@{data.bottom.imgId}" />
+                    app:resId="@{data.bottom.imgId}" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -145,12 +146,12 @@
                 android:visibility="@{data.right == null ? View.GONE:View.VISIBLE}"
                 android:orientation="vertical">
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:scaleType="centerInside"
                     tools:src="@mipmap/ic_call_video_answer"
-                    android:src="@{data.bottom.imgId}" />
+                    app:resId="@{data.bottom.imgId}" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -181,12 +182,12 @@
                 android:visibility="@{data.bottom == null ? View.GONE:View.VISIBLE}"
                 android:orientation="vertical">
 
-                <ImageView
+                <androidx.appcompat.widget.AppCompatImageView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:scaleType="centerInside"
                     tools:src="@mipmap/ic_call_video_answer"
-                    android:src="@{data.bottom.imgId}" />
+                    app:resId="@{data.bottom.imgId}" />
 
                 <TextView
                     android:layout_width="wrap_content"

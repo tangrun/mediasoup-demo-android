@@ -34,6 +34,11 @@ public class BindAdapter {
         }
     }
 
+    @BindingAdapter(value = {"resId"})
+    public static void loadImgUrl(AppCompatImageView view, int resId) {
+        view.setImageResource(resId);
+    }
+
     @BindingAdapter(value = {"url", "placeholder", "error"})
     public static void loadImgUrl(AppCompatImageView view, String url, Drawable placeholder, Drawable error) {
         RequestBuilder<Drawable> builder = Glide.with(view)

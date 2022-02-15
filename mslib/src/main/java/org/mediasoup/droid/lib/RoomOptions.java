@@ -13,6 +13,7 @@ public class RoomOptions {
     public String serverPort;
     public String roomId;
     public Buddy me;
+    public boolean connectedJoin;
     // Whether we want to force RTC over TCP.
     public boolean mForceTcp = false;
     // Whether we want to produce audio/video.
@@ -24,19 +25,20 @@ public class RoomOptions {
     public boolean mConsumeAudio = true;
     public boolean mConsumeVideo = true;
     // Whether we want DataChannels.
-    public boolean mUseDataChannel =false;
+    public boolean mUseDataChannel = false;
 
     public boolean forceH264 = false;
     public boolean forceVP9 = false;
 
-    public void setMe(String  id,String name,String avatar) {
-        me = new Buddy(true, id,name,avatar, DeviceInfo.androidDevice());
+    public void setMe(String id, String name, String avatar) {
+        me = new Buddy(true, id, name, avatar, DeviceInfo.androidDevice());
     }
 
     public String getProtooUrl() {
         String url =
                 String.format(
-                        Locale.US, "wss://%s:%d/?roomId=%s&peerId=%s", serverHost, serverPort, roomId, me.getId());
+                        Locale.US, "wss://%s:%s/?roomId=%s&peerId=%s&displayName=%s&avatar=%s", serverHost, serverPort,
+                        roomId, me.getId(), me.getDisplayName(), me.getAvatar());
         if (forceH264) {
             url += "&forceH264=true";
         } else if (forceVP9) {

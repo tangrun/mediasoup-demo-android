@@ -29,7 +29,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_gravity="center"
-                android:visibility="@{data.videoTrack != null}"
+                app:visible="@{data.videoTrack != null}"
                 app:videoTrack="@{data.videoTrack}"
                 tools:visibility="visible" />
 
@@ -39,11 +39,24 @@
                 android:layout_height="match_parent"
                 android:adjustViewBounds="true"
                 android:scaleType="centerCrop"
-                app:visibility="@{data.videoTrack == null}"
+                app:visible="@{data.videoTrack == null}"
                 app:error="@{@drawable/buddy}"
                 app:placeholder="@{@drawable/buddy}"
                 app:url="@{data.buddy.avatar}"
                 tools:src="@drawable/buddy" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp"
+                android:textColor="#ffffff"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:text='@{data.connectionState.toString() +" "+ data.conversationState.toString() }'
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="name xxxx"
+                tools:visibility="visible" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/tv_display_name"

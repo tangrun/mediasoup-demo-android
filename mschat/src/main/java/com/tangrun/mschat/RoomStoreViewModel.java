@@ -25,11 +25,10 @@ public class RoomStoreViewModel extends AndroidViewModel {
         super(application);
     }
 
-    public ViewModel setRoomStore( RoomClient roomClient) {
+    public void setRoomStore( RoomClient roomClient) {
         this.roomClient = roomClient;
         this.roomStore = roomClient.getStore();
         this.roomOptions = roomClient.getOptions();
-        return this;
     }
 
     public RoomStore getRoomStore() {

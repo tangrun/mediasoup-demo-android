@@ -66,8 +66,8 @@ public class MultiFragment extends Fragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        RoomViewModel roomViewModel = ViewModelProviders.of(this).get(RoomViewModel.class);
-
+        RoomViewModel roomViewModel = ViewModelProviders.of(getActivity()).get(RoomViewModel.class);
+        binding.setData(roomViewModel);
         MultiAdapter adapter = new MultiAdapter(roomViewModel.getRoomClient(),this);
         binding.rvBuddys.setAdapter(adapter);
         GridLayoutManager layout = new GridLayoutManager(getContext(), 2);
@@ -81,9 +81,34 @@ public class MultiFragment extends Fragment {
         roomViewModel.getRoomStore().getRoomState().observe(this, new Observer<RoomState>() {
             @Override
             public void onChanged(RoomState roomState) {
-                roomState.getConnectionState()
+                roomViewModel.setConnectionState(roomState.getConnectionState());
             }
         });
+
+        roomViewModel.setBottom(new Action("挂断", R.drawable.selector_call_hangup, new Runnable() {
+            @Override
+            public void run() {
+                roomViewModel.getRoomClient().hangup();
+            }
+        }));
+        roomViewModel.setLeft(new Action("麦克风", R.drawable.selector_call_mute, new Runnable() {
+            @Override
+            public void run() {
+                roomViewModel.onMic();
+            }
+        }));
+        roomViewModel.setCenter(new Action("扬声器", R.drawable.selector_call_speaker, new Runnable() {
+            @Override
+            public void run() {
+
+            }
+        }));
+        roomViewModel.setRight(new Action("摄像头", R.drawable.selector_call_enable_camera, new Runnable() {
+            @Override
+            public void run() {
+                roomViewModel.onCam();
+            }
+        }));
 
     }
 
@@ -135,43 +160,6 @@ public class MultiFragment extends Fragment {
             public ViewHolder(@NonNull View itemView) {
                 super(itemView);
             }
-        }
-    }
-
-    public static class MultiData extends BaseObservable {
-
-        private ObservableField<Action> left = new ObservableField<>();
-        private ObservableField<Action> right = new ObservableField<>();
-        private ObservableField<Action> center = new ObservableField<>();
-        private ObservableField<Action> bottom = new ObservableField<>();
-        private ObservableField<RoomStore> roomStore = new ObservableField<>();
-        private ObservableField<RoomInfo> roomInfoObservableField = new ObservableField<>();
-        private ObservableField<Peers> peersObservableField = new ObservableField<>();
-
-
-        public void onMin() {
-
-        }
-
-        public void onAdd() {
-
-        }
-
-
-        public ObservableField<Action> getLeft() {
-            return left;
-        }
-
-        public ObservableField<Action> getRight() {
-            return right;
-        }
-
-        public ObservableField<Action> getCenter() {
-            return center;
-        }
-
-        public ObservableField<Action> getBottom() {
-            return bottom;
         }
     }
 

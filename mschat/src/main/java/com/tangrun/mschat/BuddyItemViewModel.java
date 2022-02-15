@@ -38,6 +38,8 @@ public class BuddyItemViewModel extends RoomStoreViewModel {
     ObservableField<Integer> mVideoScore = new ObservableField<>();
     ObservableField<Integer> mVolume = new ObservableField<>();
     ObservableField<String> mStateTip = new ObservableField<>();
+    ObservableField<Buddy.ConnectionState> connectionState = new ObservableField<>();
+    ObservableField<Buddy.ConversationState> conversationState = new ObservableField<>();
 
 
     public BuddyItemViewModel(@NonNull Application application) {
@@ -64,6 +66,8 @@ public class BuddyItemViewModel extends RoomStoreViewModel {
             mVideoTrack.set(videoTrack);
             mDisabledCam.set(disabledCam);
             mDisabledMic.set(disabledMic);
+            connectionState.set(buddy.getConnectionState());
+            conversationState.set(buddy.getConversationState());
         }
     };
 
@@ -73,6 +77,24 @@ public class BuddyItemViewModel extends RoomStoreViewModel {
 
         buddy.getBuddyMutableLiveData().removeObserver(buddyObserver);
         buddy.getBuddyMutableLiveData().observe(owner, buddyObserver);
+    }
+
+    public ObservableField<Buddy.ConnectionState> getConnectionState() {
+        return connectionState;
+    }
+
+    public BuddyItemViewModel setConnectionState(ObservableField<Buddy.ConnectionState> connectionState) {
+        this.connectionState = connectionState;
+        return this;
+    }
+
+    public ObservableField<Buddy.ConversationState> getConversationState() {
+        return conversationState;
+    }
+
+    public BuddyItemViewModel setConversationState(ObservableField<Buddy.ConversationState> conversationState) {
+        this.conversationState = conversationState;
+        return this;
     }
 
     public ObservableField<Buddy> getBuddy() {

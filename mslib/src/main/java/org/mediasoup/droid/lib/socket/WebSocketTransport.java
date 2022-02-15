@@ -179,7 +179,7 @@ public class WebSocketTransport extends AbsWebSocketTransport {
       if (mClosed) {
         return;
       }
-      Logger.d(TAG, "onOpen() ");
+      Logger.d(TAG, "onOpen() "+response.code() +" "+response.message());
       mWebSocket = webSocket;
       mConnected = true;
       if (mListener != null) {
@@ -190,7 +190,7 @@ public class WebSocketTransport extends AbsWebSocketTransport {
 
     @Override
     public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-      Logger.w(TAG, "onClosed()");
+      Logger.w(TAG, "onClosed() "+code+" "+reason);
       if (mClosed) {
         return;
       }
@@ -204,13 +204,12 @@ public class WebSocketTransport extends AbsWebSocketTransport {
 
     @Override
     public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-      Logger.w(TAG, "onClosing()");
+      Logger.w(TAG, "onClosing() "+code+" "+reason);
     }
 
     @Override
-    public void onFailure(
-        @NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
-      Logger.w(TAG, "onFailure()");
+    public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
+      Logger.w(TAG, "onFailure() "+response.code() +" "+response.message());
       if (mClosed) {
         return;
       }

@@ -1,5 +1,7 @@
 package org.mediasoup.droid.lib.model;
 
+import android.widget.VideoView;
+
 import androidx.annotation.NonNull;
 import androidx.core.util.Supplier;
 import androidx.lifecycle.MutableLiveData;
@@ -13,6 +15,102 @@ import java.util.Set;
 
 public class Buddy {
 
+    public enum ConnectionState {
+        /**
+         * 初始化
+         */
+        NEW("NEW"),
+
+        /**
+         * socket连接上
+         */
+        Online("Online"),
+
+        /**
+         * socket连接上
+         */
+        Offline("Offline"),
+
+        /**
+         * 主动离开
+         */
+        LEFT("LEFT"),
+        ;
+        String value;
+
+        ConnectionState(String value) {
+            this.value = value;
+        }
+        public static ConnectionState get(String value){
+            for (ConnectionState state : values()) {
+                if (state.value == value)return state;
+            }
+            return NEW;
+        }
+
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+
+
+    public enum ConversationState {
+        /**
+         * 初始化
+         */
+        NEW("NEW"),
+
+        /**
+         * 被邀请中
+         */
+        Invited("Invited"),
+
+        /**
+         * 被邀请时 超时未接听
+         */
+        InviteTimeout("InviteTimeout"),
+
+        /**
+         * 被邀请时 拒绝接听
+         */
+        InviteReject("InviteReject"),
+
+        /**
+         * 被邀请时 忙线中
+         */
+        InviteBusy("InviteBusy"),
+
+        /**
+         * 开始通话
+         */
+        InCall("InCall"),
+
+        /**
+         * 挂断离开
+         */
+        Left("Left"),
+        ;
+        String value;
+
+        ConversationState(String value) {
+            this.value = value;
+        }
+
+        public static ConversationState get(String value){
+            for (ConversationState state : values()) {
+                if (state.value == value)return state;
+            }
+            return NEW;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+
     boolean isProducer;
     private String id;
     private String displayName;
@@ -23,6 +121,8 @@ public class Buddy {
     private String avatar;
     private Integer volume;
     private final Set<String> ids = new HashSet<>();
+    private ConnectionState connectionState = ConnectionState.NEW;
+    private ConversationState conversationState = ConversationState.NEW;
 
     /**
      * 属性变化
@@ -30,7 +130,7 @@ public class Buddy {
      */
     private final SupplierMutableLiveData<Buddy> buddyMutableLiveData;
 
-    public Buddy(boolean isProducer,String id,String name,String avatar,DeviceInfo deviceInfo) {
+    public Buddy(boolean isProducer, String id, String name, String avatar, DeviceInfo deviceInfo) {
         this.isProducer = isProducer;
         setDisplayName(name);
         setAvatar(avatar);
@@ -54,7 +154,27 @@ public class Buddy {
             device = DeviceInfo.unknownDevice();
         }
         avatar = info.optString("avatar");
+        connectionState = ConnectionState.get(info.optString("connectionState"));
+        conversationState = ConversationState.get(info.optString("conversationState"));
         buddyMutableLiveData = new SupplierMutableLiveData<>(() -> Buddy.this);
+    }
+
+    public ConnectionState getConnectionState() {
+        return connectionState;
+    }
+
+    public Buddy setConnectionState(ConnectionState connectionState) {
+        this.connectionState = connectionState;
+        return this;
+    }
+
+    public ConversationState getConversationState() {
+        return conversationState;
+    }
+
+    public Buddy setConversationState(ConversationState conversationState) {
+        this.conversationState = conversationState;
+        return this;
     }
 
     public SupplierMutableLiveData<Buddy> getBuddyMutableLiveData() {

@@ -38,17 +38,29 @@ public class RoomClient extends RoomMessageHandler {
 
     public enum ConnectionState {
         // initial state.
-        NEW,
+        NEW("NEW"),
         // connecting or reconnecting.
-        CONNECTING,
-        RECONNECTING,
-        DISCONNECTED,
+        CONNECTING("CONNECTING"),
+        RECONNECTING("RECONNECTING"),
+        DISCONNECTED("DISCONNECTED"),
         // connected.
-        CONNECTED,
+        CONNECTED("CONNECTED"),
         // 进入房间
-        JOINED,
+        JOINED("JOINED"),
         // mClosed.
-        CLOSED,
+        CLOSED("CLOSED"),
+        ;
+
+        ConnectionState(String value) {
+            this.value = value;
+        }
+
+        String value;
+
+        @Override
+        public String toString() {
+            return value;
+        }
     }
 
     // Closed flag.
@@ -110,15 +122,27 @@ public class RoomClient extends RoomMessageHandler {
     }
 
     @Async
-    public void connect() {
+    public void connect(boolean join) {
         String url = mOptions.getProtooUrl();
         Logger.d(TAG, "connect() " + url);
+        mOptions.connectedJoin = join;
         mStore.setRoomState(ConnectionState.CONNECTING);
         mWorkHandler.post(
                 () -> {
                     WebSocketTransport transport = new WebSocketTransport(url);
                     mProtoo = new Protoo(transport, peerListener);
                 });
+    }
+
+    @Async
+    public void hangup() {
+        mWorkHandler.post(()->{
+            try {
+                String routerRtpCapabilities = mProtoo.syncRequest("hangup");
+            } catch (ProtooException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     @Async
@@ -470,6 +494,10 @@ public class RoomClient extends RoomMessageHandler {
                 public void onOpen() {
                     mWorkHandler.post(() -> {
                         mStore.setRoomState(ConnectionState.CONNECTED);
+                        if (mOptions.connectedJoin){
+                            mOptions.connectedJoin = false;
+                            join();
+                        }
                     });
                 }
 
@@ -581,9 +609,9 @@ public class RoomClient extends RoomMessageHandler {
                     mProtoo.syncRequest(
                             "join",
                             req -> {
-                                jsonPut(req, "displayName", mOptions.me.getDisplayName());
-                                jsonPut(req, "device", mOptions.me.getDevice());
-                                jsonPut(req, "avatar", mOptions.me.getAvatar());
+                                //jsonPut(req, "displayName", mOptions.me.getDisplayName());
+                                jsonPut(req, "device", mOptions.mConsumeVideo);
+                                //jsonPut(req, "avatar", mOptions.me.getAvatar());
                                 jsonPut(req, "rtpCapabilities", toJsonObject(rtpCapabilities));
                                 // TODO (HaiyangWu): add sctpCapabilities
                                 jsonPut(req, "sctpCapabilities", "");

@@ -21,9 +21,10 @@ public class RoomActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
-        RoomViewModel viewModel = ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()).create(RoomViewModel.class);
+        RoomViewModel viewModel = ViewModelProviders.of(this).get(RoomViewModel.class);
+        //RoomViewModel viewModel = ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()).create(RoomViewModel.class);
         viewModel.setRoomStore(Start.getClient());
-        int type = getIntent().getIntExtra("type", 0);
+        int type = getIntent().getIntExtra("type", 1);
         if (type == 0){
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.container, SingleFragment.newInstance())

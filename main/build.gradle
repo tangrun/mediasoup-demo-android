@@ -17,7 +17,9 @@ android {
             abiFilters 'x86' ,'x86_64', 'armeabi-v7a', 'arm64-v8a'
         }
     }
-
+    dataBinding {
+        enabled = true
+    }
     buildTypes {
         release {
             minifyEnabled false
