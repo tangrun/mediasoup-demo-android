@@ -85,7 +85,7 @@ public class Buddy {
         /**
          * 开始通话
          */
-        InCall("InCall"),
+        Joined("Joined"),
 
         /**
          * 挂断离开
@@ -156,7 +156,7 @@ public class Buddy {
         avatar = info.optString("avatar");
         connectionState = ConnectionState.get(info.optString("connectionState"));
         conversationState = ConversationState.get(info.optString("conversationState"));
-        buddyMutableLiveData = new SupplierMutableLiveData<>(() -> Buddy.this);
+        buddyMutableLiveData = new SupplierMutableLiveData<>(this);
     }
 
     public ConnectionState getConnectionState() {

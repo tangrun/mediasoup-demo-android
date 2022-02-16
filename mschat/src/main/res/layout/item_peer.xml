@@ -1,131 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <data>
-
-        <import type="android.view.View" />
-        <import type="android.text.TextUtils"/>
-
-        <variable
-            name="data"
-            type="com.tangrun.mschat.BuddyItemViewModel" />
-    </data>
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="0dp"
+        app:layout_constraintDimensionRatio="w,1:1"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <com.tangrun.mschat.InitSurfaceViewRender
+            android:id="@+id/v_renderer"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:onClick="@{() -> data.onItemClick()}"
-            app:layout_constraintDimensionRatio="w,1:1"
-            app:layout_constraintTop_toTopOf="parent">
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            tools:visibility="visible" />
 
-            <org.webrtc.SurfaceViewRenderer
-                android:id="@+id/v_renderer"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_gravity="center"
-                app:visible="@{data.videoTrack != null}"
-                app:videoTrack="@{data.videoTrack}"
-                tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/iv_cover"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:scaleType="centerCrop"
+            tools:src="@drawable/buddy" />
 
-            <androidx.appcompat.widget.AppCompatImageView
-                android:id="@+id/iv_cover"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:adjustViewBounds="true"
-                android:scaleType="centerCrop"
-                app:visible="@{data.videoTrack == null}"
-                app:error="@{@drawable/buddy}"
-                app:placeholder="@{@drawable/buddy}"
-                app:url="@{data.buddy.avatar}"
-                tools:src="@drawable/buddy" />
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_debug"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="name xxxx"
+            tools:visibility="visible" />
 
-            <androidx.appcompat.widget.AppCompatTextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="12dp"
-                android:textColor="#ffffff"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:text='@{data.connectionState.toString() +" "+ data.conversationState.toString() }'
-                app:layout_constraintTop_toTopOf="parent"
-                tools:text="name xxxx"
-                tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_display_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:text="name xxxx"
+            tools:visibility="visible" />
 
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/tv_display_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="12dp"
-                android:textColor="#ffffff"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="parent"
-                tools:text="name xxxx"
-                tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/iv_mic_disable"
+            android:layout_width="@dimen/peer_state_icon_size"
+            android:layout_height="@dimen/peer_state_icon_size"
+            android:layout_marginRight="8dp"
+            android:layout_marginBottom="12dp"
+            android:src="@drawable/ic_mic_off"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintRight_toLeftOf="@id/iv_cam_disable"
+            app:layout_constraintRight_toRightOf="parent"
+            tools:visibility="visible" />
 
-            <androidx.appcompat.widget.AppCompatImageView
-                android:id="@+id/iv_mic_disable"
-                android:layout_width="@dimen/peer_state_icon_size"
-                android:layout_height="@dimen/peer_state_icon_size"
-                android:layout_marginRight="8dp"
-                android:layout_marginBottom="12dp"
-                android:src="@drawable/ic_mic_off"
-                app:visible="@{data.disabledMic}"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintRight_toLeftOf="@id/iv_cam_disable"
-                app:layout_constraintRight_toRightOf="parent"
-                tools:visibility="visible" />
-
-            <androidx.appcompat.widget.AppCompatImageView
-                android:id="@+id/iv_cam_disable"
-                android:layout_width="@dimen/peer_state_icon_size"
-                android:layout_height="@dimen/peer_state_icon_size"
-                android:layout_marginRight="8dp"
-                android:layout_marginBottom="12dp"
-                android:src="@drawable/ic_cam_off"
-                app:visible="@{data.disabledCam}"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintRight_toLeftOf="@id/iv_voice_on"
-                app:layout_constraintRight_toRightOf="parent"
-                tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/iv_cam_disable"
+            android:layout_width="@dimen/peer_state_icon_size"
+            android:layout_height="@dimen/peer_state_icon_size"
+            android:layout_marginRight="8dp"
+            android:layout_marginBottom="12dp"
+            android:src="@drawable/ic_cam_off"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintRight_toLeftOf="@id/iv_voice_on"
+            app:layout_constraintRight_toRightOf="parent"
+            tools:visibility="visible" />
 
 
-            <androidx.appcompat.widget.AppCompatImageView
-                android:id="@+id/iv_voice_on"
-                android:layout_width="@dimen/peer_state_icon_size"
-                android:layout_height="@dimen/peer_state_icon_size"
-                android:layout_marginRight="8dp"
-                android:layout_marginBottom="12dp"
-                android:src="@drawable/ic_voice_on"
-                app:visible="@{data.volume != null &amp;&amp; data.volume != 0}"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/iv_voice_on"
+            android:layout_width="@dimen/peer_state_icon_size"
+            android:layout_height="@dimen/peer_state_icon_size"
+            android:layout_marginRight="8dp"
+            android:layout_marginBottom="12dp"
+            android:src="@drawable/ic_voice_on"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            tools:visibility="visible" />
 
-            <androidx.appcompat.widget.AppCompatTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="#ffffff"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:text="@{data.stateTip}"
-                app:visible="@{TextUtils.isEmpty(data.stateTip)}"
-                tools:text="dddddddddd"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_tip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="dddddddddd" />
 
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-</layout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

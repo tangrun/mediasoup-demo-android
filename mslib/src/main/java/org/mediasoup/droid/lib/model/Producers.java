@@ -22,8 +22,7 @@ public class Producers implements TrackInvoker {
     public AudioTrack getAudioTrack(Collection<String> ids) {
         for (String id : ids) {
             ProducersWrapper wrapper = getProducer(id);
-            if (wrapper != null && Constant.kind_audio.equals(wrapper.getType())) {
-                if (wrapper.getProducer() != null)
+            if (wrapper != null && wrapper.getProducer() !=null && Constant.kind_audio.equals(wrapper.getProducer().getKind())) {
                     return (AudioTrack) wrapper.getProducer().getTrack();
             }
         }
@@ -34,8 +33,7 @@ public class Producers implements TrackInvoker {
     public VideoTrack getVideoTrack(Collection<String> ids) {
         for (String id : ids) {
             ProducersWrapper wrapper = getProducer(id);
-            if (wrapper != null && Constant.kind_video.equals(wrapper.getType())) {
-                if (wrapper.getProducer() != null)
+            if (wrapper != null && wrapper.getProducer() !=null && Constant.kind_video.equals(wrapper.getProducer().getKind())) {
                     return (VideoTrack) wrapper.getProducer().getTrack();
             }
         }
@@ -58,7 +56,7 @@ public class Producers implements TrackInvoker {
 
         ProducersWrapper(Producer producer) {
             this.mProducer = producer;
-            producersWrapperSupplierMutableLiveData = new SupplierMutableLiveData<>(() -> ProducersWrapper.this);
+            producersWrapperSupplierMutableLiveData = new SupplierMutableLiveData<>(ProducersWrapper.this);
         }
 
         public SupplierMutableLiveData<WrapperCommon> getProducersWrapperSupplierMutableLiveData() {

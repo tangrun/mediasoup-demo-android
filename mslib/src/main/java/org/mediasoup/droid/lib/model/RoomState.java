@@ -5,6 +5,7 @@ import org.mediasoup.droid.lib.RoomClient;
 public class RoomState {
 
   public enum State{
+    Unknown,
     On,
     Off,
     InProgress,
@@ -12,84 +13,80 @@ public class RoomState {
 
   private RoomClient.ConnectionState connectionState = RoomClient.ConnectionState.NEW;
 
-  private boolean mCanSendMic;
-  private boolean mCanSendCam;
-  private boolean mCanChangeCam;
+  private boolean canSendMic;
+  private boolean canSendCam;
+  private boolean canChangeCam;
 
-  private State mCam= State.Off;
-  private State mMic = State.Off;
-  private State mCamSwitch = State.On;
-  private State mRestartIce = State.On;
+  private State cameraState = State.Off;
+  private State microphoneState = State.Off;
+  /**
+   * 前 / 后
+   */
+  private State cameraSwitchDeviceState = State.On;
+  private State restartIceState = State.On;
+
 
   public RoomClient.ConnectionState getConnectionState() {
     return connectionState;
   }
 
-  public RoomState setConnectionState(RoomClient.ConnectionState connectionState) {
+  public void setConnectionState(RoomClient.ConnectionState connectionState) {
     this.connectionState = connectionState;
-    return this;
   }
 
   public boolean isCanSendMic() {
-    return mCanSendMic;
+    return canSendMic;
   }
 
-  public RoomState setCanSendMic(boolean mCanSendMic) {
-    this.mCanSendMic = mCanSendMic;
-    return this;
+  public void setCanSendMic(boolean canSendMic) {
+    this.canSendMic = canSendMic;
   }
 
   public boolean isCanSendCam() {
-    return mCanSendCam;
+    return canSendCam;
   }
 
-  public RoomState setCanSendCam(boolean mCanSendCam) {
-    this.mCanSendCam = mCanSendCam;
-    return this;
+  public void setCanSendCam(boolean canSendCam) {
+    this.canSendCam = canSendCam;
   }
 
   public boolean isCanChangeCam() {
-    return mCanChangeCam;
+    return canChangeCam;
   }
 
-  public RoomState setCanChangeCam(boolean mCanChangeCam) {
-    this.mCanChangeCam = mCanChangeCam;
-    return this;
+  public void setCanChangeCam(boolean canChangeCam) {
+    this.canChangeCam = canChangeCam;
   }
 
-  public State getCam() {
-    return mCam;
+  public State getCameraState() {
+    return cameraState;
   }
 
-  public RoomState setCam(State mCam) {
-    this.mCam = mCam;
-    return this;
+  public void setCameraState(State cameraState) {
+    this.cameraState = cameraState;
   }
 
-  public State getMic() {
-    return mMic;
+  public State getMicrophoneState() {
+    return microphoneState;
   }
 
-  public RoomState setMic(State mMic) {
-    this.mMic = mMic;
-    return this;
+  public void setMicrophoneState(State microphoneState) {
+    this.microphoneState = microphoneState;
   }
 
-  public State getCamSwitch() {
-    return mCamSwitch;
+  public State getCameraSwitchDeviceState() {
+    return cameraSwitchDeviceState;
   }
 
-  public RoomState setCamSwitch(State mCamSwitch) {
-    this.mCamSwitch = mCamSwitch;
-    return this;
+  public void setCameraSwitchDeviceState(State cameraSwitchDeviceState) {
+    this.cameraSwitchDeviceState = cameraSwitchDeviceState;
   }
 
-  public State getRestartIce() {
-    return mRestartIce;
+  public State getRestartIceState() {
+    return restartIceState;
   }
 
-  public RoomState setRestartIce(State mRestartIce) {
-    this.mRestartIce = mRestartIce;
-    return this;
+  public void setRestartIceState(State restartIceState) {
+    this.restartIceState = restartIceState;
   }
 }

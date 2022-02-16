@@ -13,6 +13,7 @@ public class RoomOptions {
     public String serverPort;
     public String roomId;
     public Buddy me;
+    public boolean defaultFrontCam = true;
     public boolean connectedJoin;
     // Whether we want to force RTC over TCP.
     public boolean mForceTcp = false;

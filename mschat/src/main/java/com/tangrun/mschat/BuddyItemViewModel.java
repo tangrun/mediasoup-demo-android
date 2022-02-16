@@ -3,8 +3,8 @@ package com.tangrun.mschat;
 import android.app.Application;
 
 import androidx.annotation.NonNull;
-import androidx.databinding.ObservableField;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import org.mediasoup.droid.Consumer;
@@ -27,109 +27,54 @@ import java.util.Collection;
  * @description:
  * @date :2022/2/14 10:27
  */
-public class BuddyItemViewModel extends RoomStoreViewModel {
+public class BuddyItemViewModel {
 
-    ObservableField<Buddy> mBuddy = new ObservableField<>();
-    ObservableField<VideoTrack> mVideoTrack = new ObservableField<>();
-    ObservableField<AudioTrack> mAudioTrack = new ObservableField<>();
-    ObservableField<Boolean> mDisabledCam = new ObservableField<>();
-    ObservableField<Boolean> mDisabledMic = new ObservableField<>();
-    ObservableField<Integer> mAudioScore = new ObservableField<>();
-    ObservableField<Integer> mVideoScore = new ObservableField<>();
-    ObservableField<Integer> mVolume = new ObservableField<>();
-    ObservableField<String> mStateTip = new ObservableField<>();
-    ObservableField<Buddy.ConnectionState> connectionState = new ObservableField<>();
-    ObservableField<Buddy.ConversationState> conversationState = new ObservableField<>();
+    MutableLiveData<VideoTrack> mVideoTrack = new MutableLiveData<>();
+    MutableLiveData<AudioTrack> mAudioTrack = new MutableLiveData<>();
+    MutableLiveData<Boolean> mDisabledCam = new MutableLiveData<>();
+    MutableLiveData<Boolean> mDisabledMic = new MutableLiveData<>();
+    MutableLiveData<Integer> mAudioScore = new MutableLiveData<>();
+    MutableLiveData<Integer> mVideoScore = new MutableLiveData<>();
+    MutableLiveData<Integer> mVolume = new MutableLiveData<>();
+    MutableLiveData<String> mStateTip = new MutableLiveData<>();
+    MutableLiveData<Buddy.ConnectionState> connectionState = new MutableLiveData<>();
+    MutableLiveData<Buddy.ConversationState> conversationState = new MutableLiveData<>();
 
 
-    public BuddyItemViewModel(@NonNull Application application) {
-        super(application);
-    }
-
-    public void onItemClick() {
-
-    }
-
+    public Buddy buddy;
+    private RoomViewModel roomViewModel;
     Observer<Buddy> buddyObserver = new Observer<Buddy>() {
         @Override
         public void onChanged(Buddy buddy) {
-            mVolume.set(buddy.getVolume());
+            mVolume.setValue(buddy.getVolume());
 
-            TrackInvoker trackInvoker = buddy.isProducer() ? getRoomStore().getProducers() : getRoomStore().getConsumers();
+            TrackInvoker trackInvoker = buddy.isProducer() ? roomViewModel.getRoomStore().getProducers() : roomViewModel.getRoomStore().getConsumers();
             AudioTrack audioTrack = trackInvoker.getAudioTrack(buddy.getIds());
             VideoTrack videoTrack = trackInvoker.getVideoTrack(buddy.getIds());
 
-            boolean disabledMic = getRoomOptions().mConsumeAudio && audioTrack == null;
-            boolean disabledCam = getRoomOptions().mConsumeVideo && videoTrack == null;
+            boolean disabledMic = roomViewModel.getRoomOptions().mConsumeAudio && audioTrack == null;
+            boolean disabledCam = roomViewModel.getRoomOptions().mConsumeVideo && videoTrack == null;
 
-            mAudioTrack.set(audioTrack);
-            mVideoTrack.set(videoTrack);
-            mDisabledCam.set(disabledCam);
-            mDisabledMic.set(disabledMic);
-            connectionState.set(buddy.getConnectionState());
-            conversationState.set(buddy.getConversationState());
+            mAudioTrack.setValue(audioTrack);
+            mVideoTrack.setValue(videoTrack);
+            mDisabledCam.setValue(disabledCam);
+            mDisabledMic.setValue(disabledMic);
+            connectionState.setValue(buddy.getConnectionState());
+            conversationState.setValue(buddy.getConversationState());
         }
     };
 
-    public void connect(LifecycleOwner owner, String peerId) {
-        Buddy buddy = getRoomStore().getBuddys().getValue().getBuddy(peerId);
-        if (buddy == null) return;
+    public void disconnect() {
+        if (buddy != null) {
+            buddy.getBuddyMutableLiveData().removeObserver(buddyObserver);
+        }
+    }
 
+    public void connect(LifecycleOwner owner, Buddy buddy, RoomViewModel roomViewModel) {
+        this.roomViewModel = roomViewModel;
+        this.buddy = buddy;
         buddy.getBuddyMutableLiveData().removeObserver(buddyObserver);
         buddy.getBuddyMutableLiveData().observe(owner, buddyObserver);
     }
 
-    public ObservableField<Buddy.ConnectionState> getConnectionState() {
-        return connectionState;
-    }
-
-    public BuddyItemViewModel setConnectionState(ObservableField<Buddy.ConnectionState> connectionState) {
-        this.connectionState = connectionState;
-        return this;
-    }
-
-    public ObservableField<Buddy.ConversationState> getConversationState() {
-        return conversationState;
-    }
-
-    public BuddyItemViewModel setConversationState(ObservableField<Buddy.ConversationState> conversationState) {
-        this.conversationState = conversationState;
-        return this;
-    }
-
-    public ObservableField<Buddy> getBuddy() {
-        return mBuddy;
-    }
-
-    public ObservableField<VideoTrack> getVideoTrack() {
-        return mVideoTrack;
-    }
-
-    public ObservableField<AudioTrack> getAudioTrack() {
-        return mAudioTrack;
-    }
-
-    public ObservableField<Boolean> getDisabledCam() {
-        return mDisabledCam;
-    }
-
-    public ObservableField<Boolean> getDisabledMic() {
-        return mDisabledMic;
-    }
-
-    public ObservableField<Integer> getAudioScore() {
-        return mAudioScore;
-    }
-
-    public ObservableField<Integer> getVideoScore() {
-        return mVideoScore;
-    }
-
-    public ObservableField<Integer> getVolume() {
-        return mVolume;
-    }
-
-    public ObservableField<String> getStateTip() {
-        return mStateTip;
-    }
 }

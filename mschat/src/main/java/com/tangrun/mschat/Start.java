@@ -1,10 +1,12 @@
 package com.tangrun.mschat;
 
+import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
 import org.mediasoup.droid.Logger;
+import org.mediasoup.droid.MediasoupClient;
 import org.mediasoup.droid.lib.RoomClient;
 import org.mediasoup.droid.lib.RoomOptions;
 import org.mediasoup.droid.lib.lv.RoomStore;
@@ -21,6 +23,14 @@ public class Start {
 
     static RoomClient client;
 
+    static boolean init = false;
+    public static void init(Application application){
+        if (init)return;
+        init = true;
+        Logger.setLogLevel(Logger.LogLevel.LOG_DEBUG);
+        Logger.setDefaultHandler();
+        MediasoupClient.initialize(application);
+    }
 
     public static RoomClient getClient(){
         return client;
@@ -35,8 +45,7 @@ public class Start {
             Log.d(TAG, "startMultiCall: 已有通话");
             return;
         }
-        Logger.setDefaultHandler();
-        Logger.setLogLevel(Logger.LogLevel.LOG_DEBUG);
+        init((Application) context.getApplicationContext());
 
         RoomOptions options = new RoomOptions();
         options.setMe(id, name, avatar);

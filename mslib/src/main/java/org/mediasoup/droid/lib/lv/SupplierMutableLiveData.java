@@ -7,6 +7,10 @@ import androidx.lifecycle.MutableLiveData;
 @SuppressWarnings("WeakerAccess")
 public class SupplierMutableLiveData<T> extends MutableLiveData<T> {
 
+  public SupplierMutableLiveData(T value) {
+    super(value);
+  }
+
   public SupplierMutableLiveData(@NonNull Supplier<T> supplier) {
     setValue(supplier.get());
   }

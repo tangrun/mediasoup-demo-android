@@ -21,8 +21,7 @@ public class Consumers implements TrackInvoker {
     public AudioTrack getAudioTrack(Collection<String> ids) {
         for (String id : ids) {
             ConsumerWrapper wrapper = getConsumer(id);
-            if (wrapper != null && Constant.kind_audio.equals(wrapper.getType())) {
-                if (wrapper.getConsumer() != null)
+            if (wrapper != null && wrapper.getConsumer() !=null && Constant.kind_audio.equals(wrapper.getConsumer().getKind())) {
                     return (AudioTrack) wrapper.getConsumer().getTrack();
             }
         }
@@ -33,8 +32,7 @@ public class Consumers implements TrackInvoker {
     public VideoTrack getVideoTrack(Collection<String> ids) {
         for (String id : ids) {
             ConsumerWrapper wrapper = getConsumer(id);
-            if (wrapper != null && Constant.kind_video.equals(wrapper.getType())) {
-                if (wrapper.getConsumer() != null)
+            if (wrapper != null && wrapper.getConsumer() !=null && Constant.kind_video.equals(wrapper.getConsumer().getKind())) {
                     return (VideoTrack) wrapper.getConsumer().getTrack();
             }
         }

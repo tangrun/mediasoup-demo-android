@@ -2,9 +2,13 @@ package com.example.main;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.tangrun.mschat.Start;
+
+import java.lang.reflect.Field;
 
 public class MainActivity extends AppCompatActivity {
 

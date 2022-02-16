@@ -1,20 +1,23 @@
 package com.tangrun.mschat;
 
 import android.app.Application;
+import android.content.Context;
+import android.media.AudioManager;
 
 import androidx.annotation.NonNull;
-import androidx.databinding.Observable;
-import androidx.databinding.ObservableField;
-import androidx.lifecycle.AndroidViewModel;
+
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.mediasoup.droid.lib.RoomClient;
-import org.mediasoup.droid.lib.RoomOptions;
-import org.mediasoup.droid.lib.lv.RoomStore;
-import org.mediasoup.droid.lib.model.Peers;
 import org.mediasoup.droid.lib.model.RoomInfo;
 import org.mediasoup.droid.lib.model.RoomState;
+
+import java.util.Random;
 
 /**
  * @author RainTang
@@ -23,131 +26,105 @@ import org.mediasoup.droid.lib.model.RoomState;
  */
 public class RoomViewModel extends RoomStoreViewModel {
 
-    private MultiFragment.Action left ;
-    private MultiFragment.Action right ;
-    private MultiFragment.Action center ;
-    private MultiFragment.Action bottom ;
-    private RoomInfo roomInfo ;
-    private RoomClient.ConnectionState connectionState ;
-    private RoomState.State micState ;
-    private RoomState.State camState ;
-    private RoomState.State speakerState ;
-    private RoomState.State switchCamState ;
+    public MutableLiveData<MultiFragment.Action> left = new MutableLiveData<>();
+    public MutableLiveData<MultiFragment.Action> right = new MutableLiveData<>();
+    public MutableLiveData<MultiFragment.Action> center = new MutableLiveData<>();
+    public MutableLiveData<MultiFragment.Action> bottom = new MutableLiveData<>();
+    public MutableLiveData<RoomClient.ConnectionState> connectionState = new MutableLiveData<>(RoomClient.ConnectionState.NEW);
+    public MutableLiveData<RoomState.State> micState = new MutableLiveData<>(RoomState.State.Off);
+    public MutableLiveData<RoomState.State> camState = new MutableLiveData<>(RoomState.State.Off);
+    public MutableLiveData<RoomState.State> speakerState = new MutableLiveData<>(RoomState.State.Off);
+    public MutableLiveData<RoomState.State> switchCamState = new MutableLiveData<>(RoomState.State.Off);
+    private AudioManager audioManager;
 
 
     public RoomViewModel(@NonNull Application application) {
         super(application);
+        audioManager = (AudioManager) application.getSystemService(Context.AUDIO_SERVICE);
     }
 
-    public void onMic() {
-        if (micState == RoomState.State.Off)
+
+
+
+    public void join() {
+        getRoomClient().join();
+    }
+
+    public void hangup() {
+        getRoomClient().hangup();
+    }
+
+    public void onMinimize() {
+
+    }
+
+    public void onAddBuddy() {
+        JSONArray jsonArray = new JSONArray();
+        int i = new Random().nextInt(6);
+        i = Math.max(i,1);
+        try {
+            for (int j = 0; j < i; j++) {
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("id", j+"");
+                jsonObject.put("displayName", j+" name");
+                jsonObject.put("avatar", "");
+                jsonArray.put(jsonObject);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        getRoomClient().addPeers(jsonArray);
+    }
+
+    // region 界面音/视频操作
+
+    public void connectSwitchState(LifecycleOwner owner) {
+        getRoomStore().getRoomState().observe(owner, new Observer<RoomState>() {
+            @Override
+            public void onChanged(RoomState roomState) {
+                connectionState.setValue(roomState.getConnectionState());
+                micState.setValue(roomState.getMicrophoneState());
+                camState.setValue(roomState.getCameraState());
+                switchCamState.setValue(roomState.getCameraSwitchDeviceState());
+            }
+        });
+    }
+
+    private void setSpeakerphoneOn(boolean isSpeakerphoneOn) {
+        audioManager.setSpeakerphoneOn(isSpeakerphoneOn);
+        audioManager.setMode(isSpeakerphoneOn ? AudioManager.MODE_IN_COMMUNICATION : AudioManager.MODE_NORMAL);
+    }
+
+    public void switchMicEnable() {
+        if (micState.getValue() == RoomState.State.Off)
             getRoomClient().enableMic();
-        else if (micState == RoomState.State.On)
+        else if (micState.getValue() == RoomState.State.On)
             getRoomClient().disableMic();
     }
 
-    public void onCam() {
-        if (camState == RoomState.State.Off)
+    public void switchCamEnable() {
+        if (camState.getValue() == RoomState.State.Off)
             getRoomClient().enableCam();
-        else if (camState== RoomState.State.On)
+        else if (camState.getValue() == RoomState.State.On)
             getRoomClient().disableCam();
     }
 
-    public void onMin() {
-
+    public void switchSpeakerphoneEnable() {
+        if (speakerState.getValue() == RoomState.State.On)
+        {
+            setSpeakerphoneOn(false);
+            speakerState.setValue(RoomState.State.Off);
+        }
+        else if (camState.getValue() == RoomState.State.Off){
+            setSpeakerphoneOn(true);
+            speakerState.setValue(RoomState.State.On);
+        }
     }
 
-    public void onAdd() {
-
+    public void switchCamDevice() {
+        getRoomClient().changeCam();
     }
+    // endregion
 
-    public RoomState.State getMicState() {
-        return micState;
-    }
-
-    public RoomViewModel setMicState(RoomState.State micState) {
-        this.micState = micState;
-        return this;
-    }
-
-    public RoomState.State getCamState() {
-        return camState;
-    }
-
-    public RoomViewModel setCamState(RoomState.State camState) {
-        this.camState = camState;
-        return this;
-    }
-
-    public RoomState.State getSpeakerState() {
-        return speakerState;
-    }
-
-    public RoomViewModel setSpeakerState(RoomState.State speakerState) {
-        this.speakerState = speakerState;
-        return this;
-    }
-
-    public RoomState.State getSwitchCamState() {
-        return switchCamState;
-    }
-
-    public RoomViewModel setSwitchCamState(RoomState.State switchCamState) {
-        this.switchCamState = switchCamState;
-        return this;
-    }
-
-    public RoomClient.ConnectionState getConnectionState() {
-        return connectionState;
-    }
-
-    public RoomViewModel setConnectionState(RoomClient.ConnectionState connectionState) {
-        this.connectionState = connectionState;
-        return this;
-    }
-
-    public MultiFragment.Action getLeft() {
-        return left;
-    }
-
-    public RoomViewModel setLeft(MultiFragment.Action left) {
-        this.left = left;
-        return this;
-    }
-
-    public MultiFragment.Action getRight() {
-        return right;
-    }
-
-    public RoomViewModel setRight(MultiFragment.Action right) {
-        this.right = right;
-        return this;
-    }
-
-    public MultiFragment.Action getCenter() {
-        return center;
-    }
-
-    public RoomViewModel setCenter(MultiFragment.Action center) {
-        this.center = center;
-        return this;
-    }
-
-    public MultiFragment.Action getBottom() {
-        return bottom;
-    }
-
-    public RoomViewModel setBottom(MultiFragment.Action bottom) {
-        this.bottom = bottom;
-        return this;
-    }
-
-    public RoomInfo getRoomInfo() {
-        return roomInfo;
-    }
-
-    public RoomViewModel setRoomInfo(RoomInfo roomInfo) {
-        this.roomInfo = roomInfo;
-        return this;
-    }
 }

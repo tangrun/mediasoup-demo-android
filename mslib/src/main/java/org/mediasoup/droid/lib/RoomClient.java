@@ -20,6 +20,7 @@ import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.RecvTransport;
 import org.mediasoup.droid.SendTransport;
 import org.mediasoup.droid.Transport;
+import org.mediasoup.droid.lib.model.DeviceInfo;
 import org.mediasoup.droid.lib.model.RoomState;
 import org.mediasoup.droid.lib.socket.WebSocketTransport;
 import org.mediasoup.droid.lib.lv.RoomStore;
@@ -113,6 +114,7 @@ public class RoomClient extends RoomMessageHandler {
         this.mMineId = options.me.getId();
         this.mClosed = false;
         this.mStore.addBuddy(options.me);
+        PeerConnectionUtils.setPreferCameraFace(options.defaultFrontCam ? Constant.camera_front : Constant.camera_rear);
         // init worker handler.
         HandlerThread handlerThread = new HandlerThread("worker");
         handlerThread.start();
@@ -126,7 +128,7 @@ public class RoomClient extends RoomMessageHandler {
         String url = mOptions.getProtooUrl();
         Logger.d(TAG, "connect() " + url);
         mOptions.connectedJoin = join;
-        mStore.setRoomState(ConnectionState.CONNECTING);
+        mStore.setConnectionState(ConnectionState.CONNECTING);
         mWorkHandler.post(
                 () -> {
                     WebSocketTransport transport = new WebSocketTransport(url);
@@ -136,9 +138,25 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void hangup() {
-        mWorkHandler.post(()->{
+        mWorkHandler.post(() -> {
             try {
                 String routerRtpCapabilities = mProtoo.syncRequest("hangup");
+            } catch (ProtooException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    @Async
+    public void addPeers(JSONArray jsonArray) {
+        mWorkHandler.post(()->{
+            try {
+                mProtoo.syncRequest("addPeers", new Protoo.RequestGenerator() {
+                    @Override
+                    public void request(JSONObject req) {
+                        JsonUtils.jsonPut(req, "peers", jsonArray);
+                    }
+                });
             } catch (ProtooException e) {
                 e.printStackTrace();
             }
@@ -157,13 +175,21 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void enableMic() {
         Logger.d(TAG, "enableMic()");
-        mWorkHandler.post(this::enableMicImpl);
+        mStore.setMicrophoneState(RoomState.State.InProgress);
+        mWorkHandler.post(() -> {
+            enableMicImpl();
+            mStore.setMicrophoneState(mLocalAudioTrack == null ? RoomState.State.Off : RoomState.State.On);
+        });
     }
 
     @Async
     public void disableMic() {
         Logger.d(TAG, "disableMic()");
-        mWorkHandler.post(this::disableMicImpl);
+        mStore.setMicrophoneState(RoomState.State.InProgress);
+        mWorkHandler.post(() -> {
+            disableMicImpl();
+            mStore.setMicrophoneState(mLocalAudioTrack == null ? RoomState.State.Off : RoomState.State.On);
+        });
     }
 
     @Async
@@ -181,20 +207,20 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void enableCam() {
         Logger.d(TAG, "enableCam()");
-        mStore.setCamInProgress(RoomState.State.InProgress);
+        mStore.setCameraState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
             enableCamImpl();
-            mStore.setCamInProgress(RoomState.State.On);
+            mStore.setCameraState(mLocalVideoTrack == null ? RoomState.State.Off : RoomState.State.On);
         });
     }
 
     @Async
     public void disableCam() {
         Logger.d(TAG, "disableCam()");
-        mStore.setCamInProgress(RoomState.State.InProgress);
+        mStore.setCameraState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
             disableCamImpl();
-            mStore.setCamInProgress(RoomState.State.Off);
+            mStore.setCameraState(mLocalVideoTrack == null ? RoomState.State.Off : RoomState.State.On);
         });
 
     }
@@ -202,21 +228,21 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void changeCam() {
         Logger.d(TAG, "changeCam()");
-        mStore.setCamSwitchInProgress(RoomState.State.InProgress);
+        mStore.setCameraSwitchDeviceState(RoomState.State.InProgress);
         mWorkHandler.post(
                 () ->
                         mPeerConnectionUtils.switchCam(
                                 new CameraVideoCapturer.CameraSwitchHandler() {
                                     @Override
                                     public void onCameraSwitchDone(boolean b) {
-                                        mStore.setCamInProgress(RoomState.State.On);
+                                        mStore.setCameraState(b ? RoomState.State.On : RoomState.State.Off);
                                     }
 
                                     @Override
                                     public void onCameraSwitchError(String s) {
                                         Logger.w(TAG, "changeCam() | failed: " + s);
                                         mStore.addNotify("error", "Could not change cam: " + s);
-                                        mStore.setCamInProgress(RoomState.State.Off);
+                                        mStore.setCameraState(RoomState.State.Unknown);
                                     }
                                 }));
     }
@@ -236,7 +262,7 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void restartIce() {
         Logger.d(TAG, "restartIce()");
-        mStore.setRestartIceInProgress(RoomState.State.InProgress);
+        mStore.setRestartIceState(RoomState.State.InProgress);
         mWorkHandler.post(
                 () -> {
                     try {
@@ -252,12 +278,12 @@ public class RoomClient extends RoomMessageHandler {
                                             "restartIce", req -> jsonPut(req, "transportId", mRecvTransport.getId()));
                             mRecvTransport.restartIce(iceParameters);
                         }
-                        mStore.setRestartIceInProgress(RoomState.State.On);
+                        mStore.setRestartIceState(RoomState.State.On);
                     } catch (Exception e) {
                         e.printStackTrace();
                         logError("restartIce() | failed:", e);
                         mStore.addNotify("error", "ICE restart failed: " + e.getMessage());
-                        mStore.setRestartIceInProgress(RoomState.State.Off);
+                        mStore.setRestartIceState(RoomState.State.Off);
                     }
                 });
     }
@@ -462,7 +488,7 @@ public class RoomClient extends RoomMessageHandler {
         mCompositeDisposable.dispose();
 
         // Set room state.
-        mStore.setRoomState(ConnectionState.CLOSED);
+        mStore.setConnectionState(ConnectionState.CLOSED);
     }
 
     @WorkerThread
@@ -493,8 +519,8 @@ public class RoomClient extends RoomMessageHandler {
                 @Override
                 public void onOpen() {
                     mWorkHandler.post(() -> {
-                        mStore.setRoomState(ConnectionState.CONNECTED);
-                        if (mOptions.connectedJoin){
+                        mStore.setConnectionState(ConnectionState.CONNECTED);
+                        if (mOptions.connectedJoin) {
                             mOptions.connectedJoin = false;
                             join();
                         }
@@ -506,7 +532,7 @@ public class RoomClient extends RoomMessageHandler {
                     mWorkHandler.post(
                             () -> {
                                 mStore.addNotify("error", "WebSocket connection failed");
-                                mStore.setRoomState(ConnectionState.RECONNECTING);
+                                mStore.setConnectionState(ConnectionState.RECONNECTING);
                             });
                 }
 
@@ -560,7 +586,7 @@ public class RoomClient extends RoomMessageHandler {
                     mWorkHandler.post(
                             () -> {
                                 mStore.addNotify("error", "WebSocket disconnected");
-                                mStore.setRoomState(ConnectionState.DISCONNECTED);
+                                mStore.setConnectionState(ConnectionState.DISCONNECTED);
 
                                 // Close All Transports created by device.
                                 // All will reCreated After ReJoin.
@@ -610,14 +636,14 @@ public class RoomClient extends RoomMessageHandler {
                             "join",
                             req -> {
                                 //jsonPut(req, "displayName", mOptions.me.getDisplayName());
-                                jsonPut(req, "device", mOptions.mConsumeVideo);
+                                jsonPut(req, "device", DeviceInfo.androidDevice().toJSONObject());
                                 //jsonPut(req, "avatar", mOptions.me.getAvatar());
                                 jsonPut(req, "rtpCapabilities", toJsonObject(rtpCapabilities));
                                 // TODO (HaiyangWu): add sctpCapabilities
                                 jsonPut(req, "sctpCapabilities", "");
                             });
 
-            mStore.setRoomState(ConnectionState.JOINED);
+            mStore.setConnectionState(ConnectionState.JOINED);
 
             JSONObject resObj = JsonUtils.toJsonObject(joinResponse);
             JSONArray peers = resObj.optJSONArray("peers");

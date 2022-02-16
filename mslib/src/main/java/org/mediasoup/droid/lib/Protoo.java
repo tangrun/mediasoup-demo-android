@@ -75,7 +75,9 @@ public class Protoo extends org.protoojs.droid.Peer {
     Logger.d(TAG, "syncRequest(), method: " + method);
 
     try {
-      return request(method, data).blockingFirst();
+      String s = request(method, data).blockingFirst();
+      Logger.d(TAG, "syncRequest(), method: " + method+" resualt: \n"+s);
+      return s;
     } catch (Throwable throwable) {
       throw new ProtooException(-1, throwable.getMessage());
     }

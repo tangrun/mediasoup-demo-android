@@ -56,19 +56,23 @@ public class RoomStore {
 
 
     // region roomState
-    public void setRestartIceInProgress(RoomState.State state) {
-        roomState.postValue(value -> value.setRestartIce(state));
+    public void setRestartIceState(RoomState.State state) {
+        roomState.postValue(value -> value.setRestartIceState(state));
     }
 
-    public void setCamSwitchInProgress(RoomState.State state) {
-        roomState.postValue(value -> value.setCamSwitch(state));
+    public void setCameraSwitchDeviceState(RoomState.State state) {
+        roomState.postValue(value -> value.setCameraSwitchDeviceState(state));
     }
 
-    public void setCamInProgress(RoomState.State state) {
-        roomState.postValue(value -> value.setCam(state));
+    public void setMicrophoneState(RoomState.State state) {
+        roomState.postValue(value -> value.setMicrophoneState(state));
     }
 
-    public void setRoomState(RoomClient.ConnectionState state) {
+    public void setCameraState(RoomState.State state) {
+        roomState.postValue(value -> value.setCameraState(state));
+    }
+
+    public void setConnectionState(RoomClient.ConnectionState state) {
         roomState.postValue(value -> value.setConnectionState(state));
     }
     // endregion
@@ -169,7 +173,7 @@ public class RoomStore {
     public void updateBuddy(String peerId, JSONObject jsonObject) {
         getBuddyPost(peerId, value -> {
             Buddy buddy = new Buddy(false, jsonObject);
-            
+
         });
     }
 
