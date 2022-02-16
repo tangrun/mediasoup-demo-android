@@ -173,7 +173,8 @@ public class RoomStore {
     public void updateBuddy(String peerId, JSONObject jsonObject) {
         getBuddyPost(peerId, value -> {
             Buddy buddy = new Buddy(false, jsonObject);
-
+            value.setConnectionState(buddy.getConnectionState());
+            value.setConversationState(buddy.getConversationState());
         });
     }
 

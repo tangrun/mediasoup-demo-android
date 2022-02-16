@@ -63,9 +63,9 @@ public class RoomViewModel extends RoomStoreViewModel {
         int i = new Random().nextInt(6);
         i = Math.max(i,1);
         try {
-            for (int j = 0; j < i; j++) {
+            for (int j = 0; j < 2; j++) {
                 JSONObject jsonObject = new JSONObject();
-                jsonObject.put("id", j+"");
+                jsonObject.put("id", (j+1)+"");
                 jsonObject.put("displayName", j+" name");
                 jsonObject.put("avatar", "");
                 jsonArray.put(jsonObject);
@@ -123,6 +123,7 @@ public class RoomViewModel extends RoomStoreViewModel {
     }
 
     public void switchCamDevice() {
+        if (camState.getValue() != RoomState.State.On)return;
         getRoomClient().changeCam();
     }
     // endregion

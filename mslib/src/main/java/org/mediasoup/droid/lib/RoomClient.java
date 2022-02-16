@@ -178,7 +178,7 @@ public class RoomClient extends RoomMessageHandler {
         mStore.setMicrophoneState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
             enableMicImpl();
-            mStore.setMicrophoneState(mLocalAudioTrack == null ? RoomState.State.Off : RoomState.State.On);
+            mStore.setMicrophoneState(mMicProducer == null ? RoomState.State.Off : RoomState.State.On);
         });
     }
 
@@ -188,7 +188,7 @@ public class RoomClient extends RoomMessageHandler {
         mStore.setMicrophoneState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
             disableMicImpl();
-            mStore.setMicrophoneState(mLocalAudioTrack == null ? RoomState.State.Off : RoomState.State.On);
+            mStore.setMicrophoneState(mMicProducer == null ? RoomState.State.Off : RoomState.State.On);
         });
     }
 
@@ -210,7 +210,7 @@ public class RoomClient extends RoomMessageHandler {
         mStore.setCameraState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
             enableCamImpl();
-            mStore.setCameraState(mLocalVideoTrack == null ? RoomState.State.Off : RoomState.State.On);
+            mStore.setCameraState(mCamProducer == null ? RoomState.State.Off : RoomState.State.On);
         });
     }
 
@@ -220,7 +220,7 @@ public class RoomClient extends RoomMessageHandler {
         mStore.setCameraState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
             disableCamImpl();
-            mStore.setCameraState(mLocalVideoTrack == null ? RoomState.State.Off : RoomState.State.On);
+            mStore.setCameraState(mCamProducer == null ? RoomState.State.Off : RoomState.State.On);
         });
 
     }
@@ -235,14 +235,14 @@ public class RoomClient extends RoomMessageHandler {
                                 new CameraVideoCapturer.CameraSwitchHandler() {
                                     @Override
                                     public void onCameraSwitchDone(boolean b) {
-                                        mStore.setCameraState(b ? RoomState.State.On : RoomState.State.Off);
+                                        mStore.setCameraSwitchDeviceState(b ? RoomState.State.On : RoomState.State.Off);
                                     }
 
                                     @Override
                                     public void onCameraSwitchError(String s) {
                                         Logger.w(TAG, "changeCam() | failed: " + s);
                                         mStore.addNotify("error", "Could not change cam: " + s);
-                                        mStore.setCameraState(RoomState.State.Unknown);
+                                        mStore.setCameraSwitchDeviceState(RoomState.State.Unknown);
                                     }
                                 }));
     }
@@ -539,7 +539,7 @@ public class RoomClient extends RoomMessageHandler {
                 @Override
                 public void onRequest(
                         @NonNull Message.Request request, @NonNull Protoo.ServerRequestHandler handler) {
-                    Logger.d(TAG, "onRequest() " + request.getData().toString());
+                    Logger.d(TAG, "onRequest() " +request.getMethod()+ request.getData().toString());
                     mWorkHandler.post(
                             () -> {
                                 try {

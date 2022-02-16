@@ -1,15 +1,10 @@
 package org.mediasoup.droid.lib.model;
 
-import android.widget.VideoView;
-
 import androidx.annotation.NonNull;
-import androidx.core.util.Supplier;
-import androidx.lifecycle.MutableLiveData;
 
 import org.json.JSONObject;
 import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
 
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -19,7 +14,7 @@ public class Buddy {
         /**
          * 初始化
          */
-        NEW("NEW"),
+        NEW("New"),
 
         /**
          * socket连接上
@@ -34,7 +29,7 @@ public class Buddy {
         /**
          * 主动离开
          */
-        LEFT("LEFT"),
+        Left("Left"),
         ;
         String value;
 
@@ -43,7 +38,7 @@ public class Buddy {
         }
         public static ConnectionState get(String value){
             for (ConnectionState state : values()) {
-                if (state.value == value)return state;
+                if (state.value.equals(value))return state;
             }
             return NEW;
         }
@@ -60,7 +55,7 @@ public class Buddy {
         /**
          * 初始化
          */
-        NEW("NEW"),
+        New("New"),
 
         /**
          * 被邀请中
@@ -100,9 +95,9 @@ public class Buddy {
 
         public static ConversationState get(String value){
             for (ConversationState state : values()) {
-                if (state.value == value)return state;
+                if (state.value.equals(value))return state;
             }
-            return NEW;
+            return New;
         }
 
         @Override
@@ -122,7 +117,7 @@ public class Buddy {
     private Integer volume;
     private final Set<String> ids = new HashSet<>();
     private ConnectionState connectionState = ConnectionState.NEW;
-    private ConversationState conversationState = ConversationState.NEW;
+    private ConversationState conversationState = ConversationState.New;
 
     /**
      * 属性变化

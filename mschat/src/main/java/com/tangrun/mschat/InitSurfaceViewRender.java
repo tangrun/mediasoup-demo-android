@@ -21,10 +21,17 @@ public class InitSurfaceViewRender extends SurfaceViewRenderer {
     }
 
 
-    boolean init= false;
-    public void init(){
-        if (init)return;
+    boolean init = false;
+
+    public void init() {
+        if (init) return;
         init = true;
-        init(PeerConnectionUtils.getEglContext(),null);
+        init(PeerConnectionUtils.getEglContext(), null);
+    }
+
+    public void clear() {
+        if (!init) return;
+        init = false;
+        release();
     }
 }

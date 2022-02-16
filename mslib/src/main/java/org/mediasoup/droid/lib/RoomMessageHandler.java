@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 class RoomMessageHandler {
 
-    static final String TAG = "RoomClient";
+    static final String TAG = "MS_RoomClient";
 
     // Stored Room States.
     @NonNull
@@ -115,6 +115,7 @@ class RoomMessageHandler {
                 break;
             }
             case "consumerScore": {
+                //{"consumerId":"f0aaaad6-cf61-40c6-9f51-a75ef07243bd","score":{"producerScore":10,"producerScores":[10],"score":10}}
                 String consumerId = data.getString("consumerId");
                 JSONArray score = data.optJSONArray("score");
                 ConsumerHolder holder = mConsumers.get(consumerId);
@@ -131,6 +132,10 @@ class RoomMessageHandler {
             }
             case "dataConsumerClosed":
             case "peerDisplayNameChanged": {
+                break;
+            }
+            case "downlinkBwe":{
+                //{"desiredBitrate":1505587,"effectiveDesiredBitrate":1505587,"availableBitrate":2013253}
                 break;
             }
             default: {

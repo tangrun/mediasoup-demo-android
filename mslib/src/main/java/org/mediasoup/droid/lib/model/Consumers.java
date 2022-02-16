@@ -63,7 +63,7 @@ public class Consumers implements TrackInvoker {
             mConsumer = consumer;
             mPreferredSpatialLayer = -1;
             mPreferredTemporalLayer = -1;
-            consumerWrapperSupplierMutableLiveData = new SupplierMutableLiveData<>(() -> ConsumerWrapper.this);
+            consumerWrapperSupplierMutableLiveData = new SupplierMutableLiveData<>(ConsumerWrapper.this);
         }
 
         public SupplierMutableLiveData<WrapperCommon> getConsumerWrapperSupplierMutableLiveData() {

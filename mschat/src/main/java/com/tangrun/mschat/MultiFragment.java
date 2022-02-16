@@ -2,6 +2,7 @@ package com.tangrun.mschat;
 
 import android.app.Application;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -40,6 +42,8 @@ import java.util.List;
  * @date :2022/2/13 21:35
  */
 public class MultiFragment extends Fragment {
+
+    private static final String TAG = "MS_MultiFragment";
 
     public static MultiFragment newInstance() {
 
@@ -75,6 +79,7 @@ public class MultiFragment extends Fragment {
         roomViewModel.getRoomStore().getBuddys().observe(this, new Observer<Buddys>() {
             @Override
             public void onChanged(Buddys buddys) {
+                Log.d(TAG, "buddys onChanged: ");
                 for (BuddyItemViewModel model : adapter.list) {
                     model.disconnect();
                 }
@@ -92,7 +97,18 @@ public class MultiFragment extends Fragment {
         roomViewModel.connectionState.observe(this, connectionState -> {
             binding.tvTitle.setText(connectionState.toString());
         });
-
+        roomViewModel.camState.observe(this, state -> {
+            binding.llActionTopRight.ivImg.setSelected(state == RoomState.State.Off);
+        });
+        roomViewModel.micState.observe(this, state -> {
+            binding.llActionTopLeft.ivImg.setSelected(state == RoomState.State.Off);
+        });
+        roomViewModel.speakerState.observe(this, state -> {
+            binding.llActionBottomLeft.ivImg.setSelected(state == RoomState.State.On);
+        });
+        roomViewModel.switchCamState.observe(this, state -> {
+            binding.llActionBottomRight.ivImg.setSelected(state == RoomState.State.Off);
+        });
         setAction(binding.llActionTopLeft, "麦克风", R.drawable.selector_call_mute, v -> {
             roomViewModel.switchMicEnable();
         });
@@ -114,6 +130,7 @@ public class MultiFragment extends Fragment {
         binding.ivAdd.setOnClickListener(v -> {
             roomViewModel.onAddBuddy();
         });
+
     }
 
     public void setAction(ItemActionBinding binding, String text, int id, View.OnClickListener v) {
@@ -159,6 +176,8 @@ public class MultiFragment extends Fragment {
                 if (videoTrack != null) {
                     binding.vRenderer.init();
                     videoTrack.addSink(binding.vRenderer);
+                }else {
+                    binding.vRenderer.clear();
                 }
             });
             model.mDisabledMic.observe(lifecycleOwner, aBoolean -> {
@@ -173,8 +192,12 @@ public class MultiFragment extends Fragment {
             model.mStateTip.observe(lifecycleOwner, s -> {
                 binding.tvTip.setText(s);
             });
-            model.connectionState.observe(lifecycleOwner, connectionState -> {
-                binding.tvDebug.setText(connectionState.toString());
+
+            model.conversationState.observe(lifecycleOwner, new Observer<Buddy.ConversationState>() {
+                @Override
+                public void onChanged(Buddy.ConversationState conversationState) {
+                    binding.tvDebug.setText(model.connectionState.getValue().toString()+" "+model.conversationState.getValue().toString());
+                }
             });
         }
 
@@ -184,7 +207,8 @@ public class MultiFragment extends Fragment {
         }
 
         public void setList(List<BuddyItemViewModel> list) {
-            this.list = list;
+            this.list.clear();
+            this.list.addAll(list);
             notifyDataSetChanged();
         }
 
