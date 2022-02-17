@@ -10,7 +10,6 @@ import java.util.Collection;
  * @description:
  * @date :2022/2/14 23:00
  */
-public interface TrackInvoker {
-    AudioTrack getAudioTrack(Collection<String> ids);
-    VideoTrack getVideoTrack(Collection<String> ids);
+public interface CommonInvoker {
+    WrapperCommon getCommonInfo(Collection<String> ids,String kind);
 }

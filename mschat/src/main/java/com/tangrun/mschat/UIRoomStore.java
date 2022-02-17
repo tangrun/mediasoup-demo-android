@@ -98,8 +98,15 @@ public class UIRoomStore {
             }
         } else if (connectionState1 == RoomClient.ConnectionState.JOINED) {
             // 网络中断重连时 join后 重连transport
+            // 用重连transport无效 因为socket重连后是新的对象 之前的数据都没了 所以只能根据自己本地的状态判断去在重连上后主动传流
             if (hasJoined){
                 //getRoomClient().restartIce();
+                if (camState.getValue() == RoomState.State.On){
+                    getRoomClient().enableCam();
+                }
+                if (micState.getValue() == RoomState.State.On){
+                    getRoomClient().enableMic();
+                }
             }
             hasJoined = true;
 

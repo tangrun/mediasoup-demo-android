@@ -87,10 +87,10 @@ public class MultiFragment extends Fragment {
             }
         });
         uiRoomStore.restIceState.observe(this, state -> {
-            if (state == RoomState.State.InProgress){
+            if (state == RoomState.State.InProgress) {
                 binding.tvTip.setVisibility(View.VISIBLE);
                 binding.tvTip.setText("网络加载中...");
-            }else {
+            } else {
                 binding.tvTip.setVisibility(View.GONE);
             }
         });
@@ -177,7 +177,7 @@ public class MultiFragment extends Fragment {
                 if (videoTrack != null) {
                     binding.vRenderer.init();
                     videoTrack.addSink(binding.vRenderer);
-                }else {
+                } else {
                     binding.vRenderer.clear();
                 }
             });
@@ -190,6 +190,15 @@ public class MultiFragment extends Fragment {
             model.mVolume.observe(lifecycleOwner, integer -> {
                 binding.ivVoiceOn.setVisibility(integer != null && integer != 0 ? View.VISIBLE : View.GONE);
             });
+            Observer<Integer> scoreObserver = integer -> {
+                if (integer == 0) {
+                    binding.tvTip.setText("对方网络不稳定");
+                } else {
+                    binding.tvTip.setText("");
+                }
+            };
+            model.mAudioScore.observe(lifecycleOwner, scoreObserver);
+            model.mVideoScore.observe(lifecycleOwner, scoreObserver);
             model.mStateTip.observe(lifecycleOwner, s -> {
                 binding.tvTip.setText(s);
             });
@@ -197,7 +206,7 @@ public class MultiFragment extends Fragment {
             model.conversationState.observe(lifecycleOwner, new Observer<Buddy.ConversationState>() {
                 @Override
                 public void onChanged(Buddy.ConversationState conversationState) {
-                    binding.tvDebug.setText(model.connectionState.getValue().toString()+" "+model.conversationState.getValue().toString());
+                    binding.tvDebug.setText(model.connectionState.getValue().toString() + " " + model.conversationState.getValue().toString());
                 }
             });
         }

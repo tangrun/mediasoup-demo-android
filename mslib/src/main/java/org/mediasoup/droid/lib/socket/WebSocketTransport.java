@@ -227,11 +227,11 @@ public class WebSocketTransport extends AbsWebSocketTransport {
             }
             if (scheduleReconnect()) {
                 if (mListener != null) {
-                    if (mConnected) {
-                        mListener.onFail();
-                    } else {
+//                    if (mConnected) {
+//                        mListener.onFail();
+//                    } else {
                         mListener.onDisconnected();
-                    }
+//                    }
                 }
             } else {
                 Logger.e(TAG, "give up reconnect. notify closed");

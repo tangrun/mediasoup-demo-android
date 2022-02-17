@@ -3,8 +3,10 @@ package com.tangrun.mschat;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 
+import org.mediasoup.droid.lib.Constant;
 import org.mediasoup.droid.lib.RoomClient;
-import org.mediasoup.droid.lib.TrackInvoker;
+import org.mediasoup.droid.lib.CommonInvoker;
+import org.mediasoup.droid.lib.WrapperCommon;
 import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;
 import org.mediasoup.droid.lib.model.Buddy;
 import org.webrtc.AudioTrack;
@@ -34,10 +36,13 @@ public class BuddyItemViewModel {
     Observer<Buddy> buddyObserver = new Observer<Buddy>() {
         @Override
         public void onChanged(Buddy buddy) {
-            TrackInvoker trackInvoker = buddy.isProducer() ? roomClient.getStore().getProducers() : roomClient.getStore().getConsumers();
+            CommonInvoker commonInvoker = buddy.isProducer() ? roomClient.getStore().getProducers() : roomClient.getStore().getConsumers();
 
-            AudioTrack audioTrack = trackInvoker.getAudioTrack(buddy.getIds());
-            VideoTrack videoTrack = trackInvoker.getVideoTrack(buddy.getIds());
+            WrapperCommon videoCommon = commonInvoker.getCommonInfo(buddy.getIds(), Constant.kind_video);
+            WrapperCommon audioCommon = commonInvoker.getCommonInfo(buddy.getIds(), Constant.kind_audio);
+
+            AudioTrack audioTrack = audioCommon == null ? null : audioCommon.getTrack();
+            VideoTrack videoTrack = videoCommon == null ? null : videoCommon.getTrack();
             boolean disabledMic = roomClient.getOptions().mConsumeAudio && audioTrack == null;
             boolean disabledCam = roomClient.getOptions().mConsumeVideo && videoTrack == null;
 
@@ -48,6 +53,8 @@ public class BuddyItemViewModel {
             mDisabledMic.applySet(disabledMic);
             connectionState.applySet(buddy.getConnectionState());
             conversationState.applySet(buddy.getConversationState());
+            mAudioScore.applySet(audioCommon == null ? null : audioCommon.getConsumerScore());
+            mVideoScore.applySet(videoCommon == null ? null : videoCommon.getConsumerScore());
         }
     };
 

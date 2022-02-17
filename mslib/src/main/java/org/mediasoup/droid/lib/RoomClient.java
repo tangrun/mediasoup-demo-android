@@ -605,15 +605,9 @@ public class RoomClient extends RoomMessageHandler {
 
                 @Override
                 public void onClose() {
-                    Log.d(TAG, "Protoo.Listener onClose: "+mClosed);
-                    if (mClosed) {
-                        return;
-                    }
+                    Log.d(TAG, "Protoo.Listener onClose: " + mClosed);
                     mWorkHandler.post(
                             () -> {
-                                if (mClosed) {
-                                    return;
-                                }
                                 close();
                             });
                 }
@@ -624,23 +618,21 @@ public class RoomClient extends RoomMessageHandler {
         Logger.d(TAG, "joinImpl()");
 
         try {
-            if (mMediasoupDevice==null) {
-                mMediasoupDevice = new Device();
-                String routerRtpCapabilities = mProtoo.syncRequest("getRouterRtpCapabilities");
-                mMediasoupDevice.load(routerRtpCapabilities);
 
-                // Create mediasoup Transport for sending (unless we don't want to produce).
-                if (mOptions.mProduce) {
-                    createSendTransport();
-                }
+            mMediasoupDevice = new Device();
+            String routerRtpCapabilities = mProtoo.syncRequest("getRouterRtpCapabilities");
+            mMediasoupDevice.load(routerRtpCapabilities);
 
-                // Create mediasoup Transport for sending (unless we don't want to consume).
-                if (mOptions.mConsume) {
-                    createRecvTransport();
-                }
-            }else {
-                restartIce();
+            // Create mediasoup Transport for sending (unless we don't want to produce).
+            if (mOptions.mProduce) {
+                createSendTransport();
             }
+
+            // Create mediasoup Transport for sending (unless we don't want to consume).
+            if (mOptions.mConsume) {
+                createRecvTransport();
+            }
+
             String rtpCapabilities = mMediasoupDevice.getRtpCapabilities();
             // Join now into the room.
             // TODO(HaiyangWu): Don't send our RTP capabilities if we don't want to consume.
@@ -691,14 +683,14 @@ public class RoomClient extends RoomMessageHandler {
     private void enableMicImpl() {
         Logger.d(TAG, "enableMicImpl()");
         try {
-            if (mMicProducer != null) {
+            if (mMicProducer != null || mMediasoupDevice ==null) {
                 return;
             }
             if (!mMediasoupDevice.isLoaded()) {
                 Logger.w(TAG, "enableMic() | not loaded");
                 return;
             }
-            if (!mMediasoupDevice.canProduce("audio")) {
+            if (!mMediasoupDevice.canProduce(Constant.kind_audio)) {
                 Logger.w(TAG, "enableMic() | cannot produce audio");
                 return;
             }
@@ -768,14 +760,14 @@ public class RoomClient extends RoomMessageHandler {
     private void enableCamImpl() {
         Logger.d(TAG, "enableCamImpl()");
         try {
-            if (mCamProducer != null) {
+            if (mCamProducer != null || mMediasoupDevice ==null) {
                 return;
             }
             if (!mMediasoupDevice.isLoaded()) {
                 Logger.w(TAG, "enableCam() | not loaded");
                 return;
             }
-            if (!mMediasoupDevice.canProduce("video")) {
+            if (!mMediasoupDevice.canProduce(Constant.kind_video)) {
                 Logger.w(TAG, "enableCam() | cannot produce video");
                 return;
             }

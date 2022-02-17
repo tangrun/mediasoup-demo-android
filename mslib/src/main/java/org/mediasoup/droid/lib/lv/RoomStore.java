@@ -104,7 +104,12 @@ public class RoomStore {
 
 
     // region consumer
-    public void setConsumerScore(String consumerId, JSONArray score) {
+
+    public void setConsumerCurrentLayers(String consumerId, int spatialLayer, int temporalLayer) {
+        consumers.setConsumerCurrentLayers(consumerId, spatialLayer, temporalLayer);
+    }
+
+    public void setConsumerScore(String consumerId, JSONObject score) {
         consumers.setConsumerScore(consumerId, score);
     }
 
@@ -207,4 +212,6 @@ public class RoomStore {
     public SupplierMutableLiveData<Buddys> getBuddys() {
         return buddys;
     }
+
+
 }

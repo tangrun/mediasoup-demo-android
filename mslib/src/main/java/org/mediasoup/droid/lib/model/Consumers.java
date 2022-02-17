@@ -1,39 +1,27 @@
 package org.mediasoup.droid.lib.model;
 
-import androidx.lifecycle.MutableLiveData;
-
-import org.json.JSONArray;
+import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.lib.Constant;
-import org.mediasoup.droid.lib.TrackInvoker;
+import org.mediasoup.droid.lib.CommonInvoker;
 import org.mediasoup.droid.lib.WrapperCommon;
 import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
 import org.webrtc.AudioTrack;
+import org.webrtc.MediaStreamTrack;
 import org.webrtc.VideoTrack;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Consumers implements TrackInvoker {
+public class Consumers implements CommonInvoker {
 
     @Override
-    public AudioTrack getAudioTrack(Collection<String> ids) {
+    public WrapperCommon getCommonInfo(Collection<String> ids,String kind) {
         for (String id : ids) {
             ConsumerWrapper wrapper = getConsumer(id);
-            if (wrapper != null && wrapper.getConsumer() !=null && Constant.kind_audio.equals(wrapper.getConsumer().getKind())) {
-                    return (AudioTrack) wrapper.getConsumer().getTrack();
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public VideoTrack getVideoTrack(Collection<String> ids) {
-        for (String id : ids) {
-            ConsumerWrapper wrapper = getConsumer(id);
-            if (wrapper != null && wrapper.getConsumer() !=null && Constant.kind_video.equals(wrapper.getConsumer().getKind())) {
-                    return (VideoTrack) wrapper.getConsumer().getTrack();
+            if (wrapper != null && wrapper.getConsumer() != null && Constant.kind_audio.equals(wrapper.getConsumer().getKind())) {
+                return wrapper;
             }
         }
         return null;
@@ -94,16 +82,25 @@ public class Consumers implements TrackInvoker {
             return mPreferredTemporalLayer;
         }
 
-        private void setLocallyPaused(boolean b){
+        private void setLocallyPaused(boolean b) {
             mLocallyPaused = b;
         }
 
-        private void setRemotelyPaused(boolean b){
+        private void setRemotelyPaused(boolean b) {
             mRemotelyPaused = b;
         }
 
-        private void setScore(JSONArray jsonArray){
-            mScore = jsonArray;
+        private void setConsumerScore(int score) {
+            mProducerScore = score;
+        }
+
+        private void setProducerScore(int score) {
+            mConsumerScore = score;
+        }
+
+        @Override
+        public MediaStreamTrack getTrack() {
+            return mConsumer == null ? null : mConsumer.getTrack();
         }
     }
 
@@ -152,13 +149,22 @@ public class Consumers implements TrackInvoker {
     }
 
 
-    public void setConsumerScore(String consumerId, JSONArray score) {
+    public void setConsumerScore(String consumerId, JSONObject score) {
         ConsumerWrapper wrapper = consumers.get(consumerId);
         if (wrapper == null) {
             return;
         }
-
-        wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> wrapper.setScore(score));
+        try {
+            //{"consumerId":"f0aaaad6-cf61-40c6-9f51-a75ef07243bd","score":{"producerScore":10,"producerScores":[10],"score":10}}
+            int producerScore = score.optInt("producerScore");
+            int consumerScore = score.optInt("score");
+            wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> {
+                wrapper.setConsumerScore(consumerScore);
+                wrapper.setProducerScore(producerScore);
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void setConsumerCurrentLayers(String consumerId, int spatialLayer, int temporalLayer) {

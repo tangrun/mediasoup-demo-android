@@ -1,40 +1,28 @@
 package org.mediasoup.droid.lib.model;
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.MutableLiveData;
-
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.lib.Constant;
-import org.mediasoup.droid.lib.TrackInvoker;
+import org.mediasoup.droid.lib.CommonInvoker;
 import org.mediasoup.droid.lib.WrapperCommon;
 import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
 import org.webrtc.AudioTrack;
+import org.webrtc.MediaStreamTrack;
 import org.webrtc.VideoTrack;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Producers implements TrackInvoker {
+public class Producers implements CommonInvoker {
 
     @Override
-    public AudioTrack getAudioTrack(Collection<String> ids) {
-        for (String id : ids) {
-            ProducersWrapper wrapper = getProducer(id);
-            if (wrapper != null && wrapper.getProducer() !=null && Constant.kind_audio.equals(wrapper.getProducer().getKind())) {
-                    return (AudioTrack) wrapper.getProducer().getTrack();
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public VideoTrack getVideoTrack(Collection<String> ids) {
+    public WrapperCommon getCommonInfo(Collection<String> ids,String kind) {
         for (String id : ids) {
             ProducersWrapper wrapper = getProducer(id);
             if (wrapper != null && wrapper.getProducer() !=null && Constant.kind_video.equals(wrapper.getProducer().getKind())) {
-                    return (VideoTrack) wrapper.getProducer().getTrack();
+                return wrapper;
             }
         }
         return null;
@@ -67,10 +55,6 @@ public class Producers implements TrackInvoker {
             return mProducer;
         }
 
-        public JSONArray getScore() {
-            return mScore;
-        }
-
         public String getType() {
             return mType;
         }
@@ -83,11 +67,18 @@ public class Producers implements TrackInvoker {
             mRemotelyPaused = b;
         }
 
-        private void setScore(JSONArray jsonArray) {
-            mScore = jsonArray;
+        private void setConsumerScore(int score) {
+            mProducerScore = score;
         }
 
+        private void setProducerScore(int score) {
+            mConsumerScore = score;
+        }
 
+        @Override
+        public MediaStreamTrack getTrack() {
+            return mProducer == null ? null : mProducer.getTrack();
+        }
     }
 
     private final Map<String, ProducersWrapper> mProducers;
@@ -131,12 +122,22 @@ public class Producers implements TrackInvoker {
     }
 
     public void setProducerScore(String producerId, JSONArray score) {
+        if (score ==null || score.length() ==0)return;
         ProducersWrapper wrapper = mProducers.get(producerId);
         if (wrapper == null) {
             return;
         }
 
-        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> wrapper.setScore(score));
+        try {
+            // {"producerId":"bdc2e83e-5294-451e-a986-a29c7d591d73","score":[{"score":10,"ssrc":196184265}]}
+            JSONObject jsonObject = score.getJSONObject(0);
+            int scoreNum = jsonObject.optInt("score");
+            wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> {
+                wrapper.setProducerScore(scoreNum);
+            });
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public ProducersWrapper getProducer(String producerId) {

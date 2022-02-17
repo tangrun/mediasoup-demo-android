@@ -46,13 +46,6 @@ class RoomMessageHandler {
     void handleNotification(Message.Notification notification) throws JSONException {
         JSONObject data = notification.getData();
         switch (notification.getMethod()) {
-            case "producerScore": {
-                // {"producerId":"bdc2e83e-5294-451e-a986-a29c7d591d73","score":[{"score":10,"ssrc":196184265}]}
-                String producerId = data.getString("producerId");
-                JSONArray score = data.getJSONArray("score");
-                mStore.setProducerScore(producerId, score);
-                break;
-            }
             case "newPeer": {
                 String id = data.getString("id");
                 mStore.addBuddyForPeer(id, data);
@@ -111,13 +104,18 @@ class RoomMessageHandler {
                 if (holder == null) {
                     break;
                 }
-                //mStore.setConsumerCurrentLayers(consumerId, spatialLayer, temporalLayer);
+                mStore.setConsumerCurrentLayers(consumerId, spatialLayer, temporalLayer);
+                break;
+            }
+            case "producerScore": {
+                String producerId = data.getString("producerId");
+                JSONArray score = data.getJSONArray("score");
+                mStore.setProducerScore(producerId, score);
                 break;
             }
             case "consumerScore": {
-                //{"consumerId":"f0aaaad6-cf61-40c6-9f51-a75ef07243bd","score":{"producerScore":10,"producerScores":[10],"score":10}}
                 String consumerId = data.getString("consumerId");
-                JSONArray score = data.optJSONArray("score");
+                JSONObject score = data.optJSONObject("score");
                 ConsumerHolder holder = mConsumers.get(consumerId);
                 if (holder == null) {
                     break;
@@ -128,14 +126,6 @@ class RoomMessageHandler {
             case "activeSpeaker": {
                 String peerId = data.getString("peerId");
                 mStore.setSpeakerVolume(peerId, data.optInt("volume"));
-                break;
-            }
-            case "dataConsumerClosed":
-            case "peerDisplayNameChanged": {
-                break;
-            }
-            case "downlinkBwe":{
-                //{"desiredBitrate":1505587,"effectiveDesiredBitrate":1505587,"availableBitrate":2013253}
                 break;
             }
             default: {
