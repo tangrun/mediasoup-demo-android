@@ -1,26 +1,14 @@
 package com.tangrun.mschat;
 
-import android.app.Application;
-
-import androidx.annotation.NonNull;
 import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
-import org.mediasoup.droid.Consumer;
-import org.mediasoup.droid.Producer;
-import org.mediasoup.droid.lib.Constant;
-import org.mediasoup.droid.lib.RoomOptions;
+import org.mediasoup.droid.lib.RoomClient;
 import org.mediasoup.droid.lib.TrackInvoker;
+import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;
 import org.mediasoup.droid.lib.model.Buddy;
-import org.mediasoup.droid.lib.model.Buddys;
-import org.mediasoup.droid.lib.model.Consumers;
-import org.mediasoup.droid.lib.model.Producers;
 import org.webrtc.AudioTrack;
 import org.webrtc.VideoTrack;
-
-import java.security.acl.Owner;
-import java.util.Collection;
 
 /**
  * @author RainTang
@@ -29,38 +17,37 @@ import java.util.Collection;
  */
 public class BuddyItemViewModel {
 
-    MutableLiveData<VideoTrack> mVideoTrack = new MutableLiveData<>();
-    MutableLiveData<AudioTrack> mAudioTrack = new MutableLiveData<>();
-    MutableLiveData<Boolean> mDisabledCam = new MutableLiveData<>();
-    MutableLiveData<Boolean> mDisabledMic = new MutableLiveData<>();
-    MutableLiveData<Integer> mAudioScore = new MutableLiveData<>();
-    MutableLiveData<Integer> mVideoScore = new MutableLiveData<>();
-    MutableLiveData<Integer> mVolume = new MutableLiveData<>();
-    MutableLiveData<String> mStateTip = new MutableLiveData<>();
-    MutableLiveData<Buddy.ConnectionState> connectionState = new MutableLiveData<>();
-    MutableLiveData<Buddy.ConversationState> conversationState = new MutableLiveData<>();
+    ChangedMutableLiveData<VideoTrack> mVideoTrack = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<AudioTrack> mAudioTrack = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<Boolean> mDisabledCam = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<Boolean> mDisabledMic = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<Integer> mAudioScore = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<Integer> mVideoScore = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<Integer> mVolume = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<String> mStateTip = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<Buddy.ConnectionState> connectionState = new ChangedMutableLiveData<>();
+    ChangedMutableLiveData<Buddy.ConversationState> conversationState = new ChangedMutableLiveData<>();
 
 
     public Buddy buddy;
-    private RoomViewModel roomViewModel;
+    private RoomClient roomClient;
     Observer<Buddy> buddyObserver = new Observer<Buddy>() {
         @Override
         public void onChanged(Buddy buddy) {
-            mVolume.setValue(buddy.getVolume());
+            TrackInvoker trackInvoker = buddy.isProducer() ? roomClient.getStore().getProducers() : roomClient.getStore().getConsumers();
 
-            TrackInvoker trackInvoker = buddy.isProducer() ? roomViewModel.getRoomStore().getProducers() : roomViewModel.getRoomStore().getConsumers();
             AudioTrack audioTrack = trackInvoker.getAudioTrack(buddy.getIds());
             VideoTrack videoTrack = trackInvoker.getVideoTrack(buddy.getIds());
+            boolean disabledMic = roomClient.getOptions().mConsumeAudio && audioTrack == null;
+            boolean disabledCam = roomClient.getOptions().mConsumeVideo && videoTrack == null;
 
-            boolean disabledMic = roomViewModel.getRoomOptions().mConsumeAudio && audioTrack == null;
-            boolean disabledCam = roomViewModel.getRoomOptions().mConsumeVideo && videoTrack == null;
-
-            mAudioTrack.setValue(audioTrack);
-            mVideoTrack.setValue(videoTrack);
-            mDisabledCam.setValue(disabledCam);
-            mDisabledMic.setValue(disabledMic);
-            connectionState.setValue(buddy.getConnectionState());
-            conversationState.setValue(buddy.getConversationState());
+            mVolume.applySet(buddy.getVolume());
+            mAudioTrack.applySet(audioTrack);
+            mVideoTrack.applySet(videoTrack);
+            mDisabledCam.applySet(disabledCam);
+            mDisabledMic.applySet(disabledMic);
+            connectionState.applySet(buddy.getConnectionState());
+            conversationState.applySet(buddy.getConversationState());
         }
     };
 
@@ -70,8 +57,8 @@ public class BuddyItemViewModel {
         }
     }
 
-    public void connect(LifecycleOwner owner, Buddy buddy, RoomViewModel roomViewModel) {
-        this.roomViewModel = roomViewModel;
+    public void connect(LifecycleOwner owner, Buddy buddy, RoomClient roomClient) {
+        this.roomClient = roomClient;
         this.buddy = buddy;
         buddy.getBuddyMutableLiveData().removeObserver(buddyObserver);
         buddy.getBuddyMutableLiveData().observe(owner, buddyObserver);

@@ -54,8 +54,8 @@
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/iv_mic_disable"
-            android:layout_width="@dimen/peer_state_icon_size"
-            android:layout_height="@dimen/peer_state_icon_size"
+            android:layout_width="@dimen/ms_peer_state_icon_size"
+            android:layout_height="@dimen/ms_peer_state_icon_size"
             android:layout_marginRight="8dp"
             android:layout_marginBottom="12dp"
             android:src="@drawable/ic_mic_off"
@@ -66,8 +66,8 @@
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/iv_cam_disable"
-            android:layout_width="@dimen/peer_state_icon_size"
-            android:layout_height="@dimen/peer_state_icon_size"
+            android:layout_width="@dimen/ms_peer_state_icon_size"
+            android:layout_height="@dimen/ms_peer_state_icon_size"
             android:layout_marginRight="8dp"
             android:layout_marginBottom="12dp"
             android:src="@drawable/ic_cam_off"
@@ -79,8 +79,8 @@
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/iv_voice_on"
-            android:layout_width="@dimen/peer_state_icon_size"
-            android:layout_height="@dimen/peer_state_icon_size"
+            android:layout_width="@dimen/ms_peer_state_icon_size"
+            android:layout_height="@dimen/ms_peer_state_icon_size"
             android:layout_marginRight="8dp"
             android:layout_marginBottom="12dp"
             android:src="@drawable/ic_voice_on"

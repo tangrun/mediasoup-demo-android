@@ -5,8 +5,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:paddingVertical="16dp"
+    android:paddingHorizontal="16dp"
     tools:context=".MainActivity">
 
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/tv_room"
+        android:hint="room"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/tv_id"
@@ -17,6 +24,12 @@
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/tv_name"
         android:hint="name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <androidx.appcompat.widget.AppCompatCheckBox
+        android:hint="audioOnly"
+        android:id="@+id/cb_audioOnly"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 

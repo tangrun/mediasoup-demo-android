@@ -2,7 +2,7 @@
     android:width="20dp"
     android:height="20dp"
     android:viewportWidth="200"
-    android:tint="@color/chat_green"
+    android:tint="@color/ms_chat_green"
     android:viewportHeight="200">
     <path
         android:fillColor="@android:color/white"

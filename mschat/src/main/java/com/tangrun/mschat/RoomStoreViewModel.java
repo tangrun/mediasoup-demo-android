@@ -26,9 +26,12 @@ public class RoomStoreViewModel extends AndroidViewModel {
     }
 
     public void setRoomStore( RoomClient roomClient) {
-        this.roomClient = roomClient;
-        this.roomStore = roomClient.getStore();
-        this.roomOptions = roomClient.getOptions();
+        if (this.roomClient == null){
+            this.roomClient = roomClient;
+            this.roomStore = roomClient.getStore();
+            this.roomOptions = roomClient.getOptions();
+            this.roomClient.connect();
+        }
     }
 
     public RoomStore getRoomStore() {

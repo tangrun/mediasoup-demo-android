@@ -3,6 +3,7 @@
     package="com.example.main">
 
     <application
+        android:name=".App"
         android:allowBackup="true"
         android:icon="@drawable/ic_diagram"
         android:label="sssssss"

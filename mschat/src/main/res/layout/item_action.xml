@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center"
-        android:textColor="@color/chat_white"
+        android:textColor="@color/ms_chat_white"
         android:textSize="15sp"
         android:textStyle="bold"
         tools:text="dddddddd" />

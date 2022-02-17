@@ -121,7 +121,7 @@ public class Buddy {
 
     /**
      * 属性变化
-     * ids volume
+     * ids volume connectionState conversationState
      */
     private final SupplierMutableLiveData<Buddy> buddyMutableLiveData;
 

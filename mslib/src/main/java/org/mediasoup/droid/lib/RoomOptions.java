@@ -1,20 +1,30 @@
 package org.mediasoup.droid.lib;
 
+import android.net.Uri;
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.DeviceInfo;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class RoomOptions {
 
     public String serverHost;
     public String serverPort;
     public String roomId;
-    public Buddy me;
+    public String mineId;
+    public String mineDisplayName;
+    public String mineAvatar;
     public boolean defaultFrontCam = true;
-    public boolean connectedJoin;
     // Whether we want to force RTC over TCP.
     public boolean mForceTcp = false;
     // Whether we want to produce audio/video.
@@ -31,20 +41,28 @@ public class RoomOptions {
     public boolean forceH264 = false;
     public boolean forceVP9 = false;
 
-    public void setMe(String id, String name, String avatar) {
-        me = new Buddy(true, id, name, avatar, DeviceInfo.androidDevice());
-    }
-
     public String getProtooUrl() {
-        String url =
-                String.format(
-                        Locale.US, "wss://%s:%s/?roomId=%s&peerId=%s&displayName=%s&avatar=%s", serverHost, serverPort,
-                        roomId, me.getId(), me.getDisplayName(), me.getAvatar());
-        if (forceH264) {
-            url += "&forceH264=true";
-        } else if (forceVP9) {
-            url += "&forceVP9=true";
+        Map<String, Object> params = new HashMap<>();
+        params.put("roomId", roomId);
+        params.put("peerId", mineId);
+        params.put("displayName", mineDisplayName);
+        params.put("avatar", mineAvatar);
+        params.put("forceH264", forceH264);
+        params.put("forceVP9", forceVP9);
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("wss://")
+                .append(serverHost)
+                .append(":")
+                .append(serverPort);
+        String a ="?";
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            stringBuilder.append(a)
+                    .append(entry.getKey())
+                    .append("=")
+                    .append(Uri.encode(String.valueOf(entry.getValue())));
+            a="&";
         }
-        return url;
+        return stringBuilder.toString();
     }
 }

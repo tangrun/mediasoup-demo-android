@@ -1,6 +1,5 @@
 package com.tangrun.mschat;
 
-import android.app.Application;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -11,7 +10,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -26,11 +24,8 @@ import com.example.mschat.databinding.ItemActionBinding;
 import com.example.mschat.databinding.ItemPeerBinding;
 
 import org.mediasoup.droid.lib.RoomClient;
-import org.mediasoup.droid.lib.lv.RoomStore;
 import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.Buddys;
-import org.mediasoup.droid.lib.model.Peers;
-import org.mediasoup.droid.lib.model.RoomInfo;
 import org.mediasoup.droid.lib.model.RoomState;
 
 import java.util.ArrayList;
@@ -69,14 +64,12 @@ public class MultiFragment extends Fragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-
-        RoomViewModel roomViewModel = ViewModelProviders.of(getActivity()).get(RoomViewModel.class);
-
-        MultiAdapter adapter = new MultiAdapter(roomViewModel.getRoomClient(), this);
+        UIRoomStore uiRoomStore = Start.getCurrent();
+        MultiAdapter adapter = new MultiAdapter(uiRoomStore.getRoomClient(), this);
         binding.rvBuddys.setAdapter(adapter);
         GridLayoutManager layout = new GridLayoutManager(getContext(), 2);
         binding.rvBuddys.setLayoutManager(layout);
-        roomViewModel.getRoomStore().getBuddys().observe(this, new Observer<Buddys>() {
+        uiRoomStore.getRoomStore().getBuddys().observe(this, new Observer<Buddys>() {
             @Override
             public void onChanged(Buddys buddys) {
                 Log.d(TAG, "buddys onChanged: ");
@@ -87,48 +80,56 @@ public class MultiFragment extends Fragment {
                 List<BuddyItemViewModel> list = new ArrayList<>();
                 for (Buddy buddy : buddyList) {
                     BuddyItemViewModel viewModel = new BuddyItemViewModel();
-                    viewModel.connect(MultiFragment.this, buddy, roomViewModel);
+                    viewModel.connect(MultiFragment.this, buddy, uiRoomStore.getRoomClient());
                     list.add(viewModel);
                 }
                 adapter.setList(list);
             }
         });
-        roomViewModel.connectSwitchState(this);
-        roomViewModel.connectionState.observe(this, connectionState -> {
+        uiRoomStore.restIceState.observe(this, state -> {
+            if (state == RoomState.State.InProgress){
+                binding.tvTip.setVisibility(View.VISIBLE);
+                binding.tvTip.setText("网络加载中...");
+            }else {
+                binding.tvTip.setVisibility(View.GONE);
+            }
+        });
+
+        uiRoomStore.connectionState.observe(this, connectionState -> {
             binding.tvTitle.setText(connectionState.toString());
         });
-        roomViewModel.camState.observe(this, state -> {
+        uiRoomStore.camState.observe(this, state -> {
             binding.llActionTopRight.ivImg.setSelected(state == RoomState.State.Off);
         });
-        roomViewModel.micState.observe(this, state -> {
+        uiRoomStore.micState.observe(this, state -> {
             binding.llActionTopLeft.ivImg.setSelected(state == RoomState.State.Off);
         });
-        roomViewModel.speakerState.observe(this, state -> {
+        uiRoomStore.speakerState.observe(this, state -> {
             binding.llActionBottomLeft.ivImg.setSelected(state == RoomState.State.On);
         });
-        roomViewModel.switchCamState.observe(this, state -> {
+        uiRoomStore.switchCamState.observe(this, state -> {
             binding.llActionBottomRight.ivImg.setSelected(state == RoomState.State.Off);
         });
         setAction(binding.llActionTopLeft, "麦克风", R.drawable.selector_call_mute, v -> {
-            roomViewModel.switchMicEnable();
+            uiRoomStore.switchMicEnable();
         });
         setAction(binding.llActionBottomLeft, "扬声器", R.drawable.selector_call_speaker, v -> {
-            roomViewModel.switchSpeakerphoneEnable();
+            uiRoomStore.switchSpeakerphoneEnable();
         });
         setAction(binding.llActionTopCenter, "接听", R.drawable.selector_call_audio_answer, v -> {
-            roomViewModel.join();
+            uiRoomStore.join();
         });
         setAction(binding.llActionBottomCenter, "挂断", R.drawable.selector_call_hangup, v -> {
-            roomViewModel.hangup();
+            uiRoomStore.hangup();
         });
         setAction(binding.llActionTopRight, "摄像头", R.drawable.selector_call_enable_camera, v -> {
-            roomViewModel.switchCamEnable();
+            uiRoomStore.switchCamEnable();
         });
         setAction(binding.llActionBottomRight, "切换", R.drawable.selector_call_switch_camera, v -> {
-            roomViewModel.switchCamDevice();
+            uiRoomStore.switchCamDevice();
         });
         binding.ivAdd.setOnClickListener(v -> {
-            roomViewModel.onAddBuddy();
+
         });
 
     }

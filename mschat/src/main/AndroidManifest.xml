@@ -7,11 +7,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <application
-        android:networkSecurityConfig="@xml/network_security_config"
-        android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+    <application>
         <activity
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
             android:name="com.tangrun.mschat.RoomActivity"
             android:launchMode="singleTask"
             android:screenOrientation="portrait" />

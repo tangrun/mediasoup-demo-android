@@ -13,7 +13,7 @@ import io.reactivex.Observable;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Protoo extends org.protoojs.droid.Peer {
 
-  private static final String TAG = "Protoo";
+  private static final String TAG = "MS_Protoo";
 
   interface RequestGenerator {
     void request(JSONObject req);

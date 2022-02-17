@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.text.TextUtils;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
@@ -20,6 +21,7 @@ import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.RecvTransport;
 import org.mediasoup.droid.SendTransport;
 import org.mediasoup.droid.Transport;
+import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.DeviceInfo;
 import org.mediasoup.droid.lib.model.RoomState;
 import org.mediasoup.droid.lib.socket.WebSocketTransport;
@@ -82,7 +84,6 @@ public class RoomClient extends RoomMessageHandler {
     private SendTransport mSendTransport;
     // mediasoup Transport for receiving.
     private RecvTransport mRecvTransport;
-    private String mMineId;
     // Local Audio Track for mic.
     private AudioTrack mLocalAudioTrack;
     // Local mic mediasoup Producer.
@@ -111,9 +112,8 @@ public class RoomClient extends RoomMessageHandler {
         super(roomStore);
         this.mContext = context.getApplicationContext();
         this.mOptions = options;
-        this.mMineId = options.me.getId();
         this.mClosed = false;
-        this.mStore.addBuddy(options.me);
+        this.mStore.addBuddy(new Buddy(true, options.mineId, options.mineDisplayName, options.mineAvatar, DeviceInfo.androidDevice()));
         PeerConnectionUtils.setPreferCameraFace(options.defaultFrontCam ? Constant.camera_front : Constant.camera_rear);
         // init worker handler.
         HandlerThread handlerThread = new HandlerThread("worker");
@@ -124,10 +124,9 @@ public class RoomClient extends RoomMessageHandler {
     }
 
     @Async
-    public void connect(boolean join) {
+    public void connect() {
         String url = mOptions.getProtooUrl();
         Logger.d(TAG, "connect() " + url);
-        mOptions.connectedJoin = join;
         mStore.setConnectionState(ConnectionState.CONNECTING);
         mWorkHandler.post(
                 () -> {
@@ -140,7 +139,8 @@ public class RoomClient extends RoomMessageHandler {
     public void hangup() {
         mWorkHandler.post(() -> {
             try {
-                String routerRtpCapabilities = mProtoo.syncRequest("hangup");
+                mProtoo.syncRequest("hangup");
+                close();
             } catch (ProtooException e) {
                 e.printStackTrace();
             }
@@ -149,7 +149,7 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void addPeers(JSONArray jsonArray) {
-        mWorkHandler.post(()->{
+        mWorkHandler.post(() -> {
             try {
                 mProtoo.syncRequest("addPeers", new Protoo.RequestGenerator() {
                     @Override
@@ -174,6 +174,8 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void enableMic() {
+        if (!mOptions.mProduce || !mOptions.mProduceAudio)
+            return;
         Logger.d(TAG, "enableMic()");
         mStore.setMicrophoneState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
@@ -184,6 +186,8 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void disableMic() {
+        if (!mOptions.mProduce || !mOptions.mProduceAudio)
+            return;
         Logger.d(TAG, "disableMic()");
         mStore.setMicrophoneState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
@@ -206,6 +210,8 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void enableCam() {
+        if (!mOptions.mProduce || !mOptions.mProduceVideo)
+            return;
         Logger.d(TAG, "enableCam()");
         mStore.setCameraState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
@@ -216,6 +222,8 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void disableCam() {
+        if (!mOptions.mProduce || !mOptions.mProduceVideo)
+            return;
         Logger.d(TAG, "disableCam()");
         mStore.setCameraState(RoomState.State.InProgress);
         mWorkHandler.post(() -> {
@@ -227,6 +235,8 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void changeCam() {
+        if (!mOptions.mProduce || !mOptions.mProduceVideo)
+            return;
         Logger.d(TAG, "changeCam()");
         mStore.setCameraSwitchDeviceState(RoomState.State.InProgress);
         mWorkHandler.post(
@@ -278,12 +288,12 @@ public class RoomClient extends RoomMessageHandler {
                                             "restartIce", req -> jsonPut(req, "transportId", mRecvTransport.getId()));
                             mRecvTransport.restartIce(iceParameters);
                         }
-                        mStore.setRestartIceState(RoomState.State.On);
+                        mStore.setRestartIceState(RoomState.State.Off);
                     } catch (Exception e) {
                         e.printStackTrace();
                         logError("restartIce() | failed:", e);
                         mStore.addNotify("error", "ICE restart failed: " + e.getMessage());
-                        mStore.setRestartIceState(RoomState.State.Off);
+                        mStore.setRestartIceState(RoomState.State.Unknown);
                     }
                 });
     }
@@ -518,17 +528,15 @@ public class RoomClient extends RoomMessageHandler {
             new Protoo.Listener() {
                 @Override
                 public void onOpen() {
+                    Log.d(TAG, "Protoo.Listener onOpen: ");
                     mWorkHandler.post(() -> {
                         mStore.setConnectionState(ConnectionState.CONNECTED);
-                        if (mOptions.connectedJoin) {
-                            mOptions.connectedJoin = false;
-                            join();
-                        }
                     });
                 }
 
                 @Override
                 public void onFail() {
+                    Log.d(TAG, "Protoo.Listener onFail: ");
                     mWorkHandler.post(
                             () -> {
                                 mStore.addNotify("error", "WebSocket connection failed");
@@ -539,7 +547,7 @@ public class RoomClient extends RoomMessageHandler {
                 @Override
                 public void onRequest(
                         @NonNull Message.Request request, @NonNull Protoo.ServerRequestHandler handler) {
-                    Logger.d(TAG, "onRequest() " +request.getMethod()+ request.getData().toString());
+                    Logger.d(TAG, "Protoo.Listener onRequest() " + request.getMethod() + request.getData().toString());
                     mWorkHandler.post(
                             () -> {
                                 try {
@@ -567,7 +575,7 @@ public class RoomClient extends RoomMessageHandler {
                 public void onNotification(@NonNull Message.Notification notification) {
                     Logger.d(
                             TAG,
-                            "onNotification() "
+                            "Protoo.Listener onNotification() "
                                     + notification.getMethod()
                                     + ", "
                                     + notification.getData().toString());
@@ -583,6 +591,7 @@ public class RoomClient extends RoomMessageHandler {
 
                 @Override
                 public void onDisconnected() {
+                    Log.d(TAG, "Protoo.Listener onDisconnected: ");
                     mWorkHandler.post(
                             () -> {
                                 mStore.addNotify("error", "WebSocket disconnected");
@@ -596,6 +605,7 @@ public class RoomClient extends RoomMessageHandler {
 
                 @Override
                 public void onClose() {
+                    Log.d(TAG, "Protoo.Listener onClose: "+mClosed);
                     if (mClosed) {
                         return;
                     }
@@ -614,21 +624,24 @@ public class RoomClient extends RoomMessageHandler {
         Logger.d(TAG, "joinImpl()");
 
         try {
-            mMediasoupDevice = new Device();
-            String routerRtpCapabilities = mProtoo.syncRequest("getRouterRtpCapabilities");
-            mMediasoupDevice.load(routerRtpCapabilities);
+            if (mMediasoupDevice==null) {
+                mMediasoupDevice = new Device();
+                String routerRtpCapabilities = mProtoo.syncRequest("getRouterRtpCapabilities");
+                mMediasoupDevice.load(routerRtpCapabilities);
+
+                // Create mediasoup Transport for sending (unless we don't want to produce).
+                if (mOptions.mProduce) {
+                    createSendTransport();
+                }
+
+                // Create mediasoup Transport for sending (unless we don't want to consume).
+                if (mOptions.mConsume) {
+                    createRecvTransport();
+                }
+            }else {
+                restartIce();
+            }
             String rtpCapabilities = mMediasoupDevice.getRtpCapabilities();
-
-            // Create mediasoup Transport for sending (unless we don't want to produce).
-            if (mOptions.mProduce) {
-                createSendTransport();
-            }
-
-            // Create mediasoup Transport for sending (unless we don't want to consume).
-            if (mOptions.mConsume) {
-                createRecvTransport();
-            }
-
             // Join now into the room.
             // TODO(HaiyangWu): Don't send our RTP capabilities if we don't want to consume.
             String joinResponse =
@@ -702,14 +715,14 @@ public class RoomClient extends RoomMessageHandler {
                             producer -> {
                                 Logger.e(TAG, "onTransportClose(), micProducer");
                                 if (mMicProducer != null) {
-                                    mStore.removeProducer(mMineId, mMicProducer.getId());
+                                    mStore.removeProducer(mOptions.mineId, mMicProducer.getId());
                                     mMicProducer = null;
                                 }
                             },
                             mLocalAudioTrack,
                             null,
                             null);
-            mStore.addProducer(mMineId, mMicProducer);
+            mStore.addProducer(mOptions.mineId, mMicProducer);
         } catch (MediasoupException e) {
             e.printStackTrace();
             logError("enableMic() | failed:", e);
@@ -728,7 +741,7 @@ public class RoomClient extends RoomMessageHandler {
         }
 
         mMicProducer.close();
-        mStore.removeProducer(mMineId, mMicProducer.getId());
+        mStore.removeProducer(mOptions.mineId, mMicProducer.getId());
 
         try {
             mProtoo.syncRequest("closeProducer", req -> jsonPut(req, "producerId", mMicProducer.getId()));
@@ -780,14 +793,14 @@ public class RoomClient extends RoomMessageHandler {
                             producer -> {
                                 Logger.e(TAG, "onTransportClose(), camProducer");
                                 if (mCamProducer != null) {
-                                    mStore.removeProducer(mMineId, mCamProducer.getId());
+                                    mStore.removeProducer(mOptions.mineId, mCamProducer.getId());
                                     mCamProducer = null;
                                 }
                             },
                             mLocalVideoTrack,
                             null,
                             null);
-            mStore.addProducer(mMineId, mCamProducer);
+            mStore.addProducer(mOptions.mineId, mCamProducer);
         } catch (MediasoupException e) {
             e.printStackTrace();
             logError("enableWebcam() | failed:", e);
@@ -805,7 +818,7 @@ public class RoomClient extends RoomMessageHandler {
             return;
         }
         mCamProducer.close();
-        mStore.removeProducer(mMineId, mCamProducer.getId());
+        mStore.removeProducer(mOptions.mineId, mCamProducer.getId());
 
         try {
             mProtoo.syncRequest("closeProducer", req -> jsonPut(req, "producerId", mCamProducer.getId()));

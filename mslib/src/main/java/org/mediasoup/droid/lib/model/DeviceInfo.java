@@ -45,12 +45,12 @@ public class DeviceInfo {
         return new DeviceInfo()
                 .setFlag("android")
                 .setName(
-                        Build.BRAND + " " +
-                                Build.MODEL + " " +
-                                Build.VERSION.RELEASE + " " +
+                        Build.BRAND + "|" +
+                                Build.MODEL + "|" +
+                                Build.VERSION.RELEASE + "|" +
                                 Build.VERSION.SDK_INT
                 )
-                .setVersion(BuildConfig.VERSION_NAME + " " + BuildConfig.VERSION_CODE);
+                .setVersion(BuildConfig.VERSION_NAME + "|" + BuildConfig.VERSION_CODE);
     }
 
     public static DeviceInfo unknownDevice() {

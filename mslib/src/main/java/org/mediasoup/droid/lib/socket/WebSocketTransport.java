@@ -31,7 +31,7 @@ import static org.apache.http.conn.ssl.SSLSocketFactory.SSL;
 public class WebSocketTransport extends AbsWebSocketTransport {
 
     // Log tag.
-    private static final String TAG = "WebSocketTransport";
+    private static final String TAG = "MS_WebSocketTransport";
     // Closed flag.
     private boolean mClosed;
     // Connected flag.
@@ -99,11 +99,23 @@ public class WebSocketTransport extends AbsWebSocketTransport {
         mHandler.post(this::newWebSocket);
     }
 
+    Request request;
+
     private void newWebSocket() {
         mWebSocket = null;
+        if (request == null)
+            request = new Request.Builder().url(mUrl).addHeader("Sec-WebSocket-Protocol", "protoo").build();
         mOkHttpClient.newWebSocket(
-                new Request.Builder().url(mUrl).addHeader("Sec-WebSocket-Protocol", "protoo").build(),
+                request,
                 new ProtooWebSocketListener());
+    }
+
+    private boolean scheduleReconnect1() {
+        int reconnectInterval = mRetryStrategy.getReconnectInterval();
+        if (reconnectInterval == -1) {
+            return false;
+        }
+        return true;
     }
 
     private boolean scheduleReconnect() {
