@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -121,6 +122,10 @@ public class MultiFragment extends Fragment {
         });
         setAction(binding.llActionBottomCenter, "挂断", R.drawable.selector_call_hangup, v -> {
             uiRoomStore.hangup();
+            Start.stopCall();
+            binding.llActionBottomCenter.ivImg.postDelayed(() -> {
+                getActivity().finish();
+            }, 1000);
         });
         setAction(binding.llActionTopRight, "摄像头", R.drawable.selector_call_enable_camera, v -> {
             uiRoomStore.switchCamEnable();
@@ -188,27 +193,52 @@ public class MultiFragment extends Fragment {
                 binding.ivCamDisable.setVisibility(aBoolean ? View.VISIBLE : View.GONE);
             });
             model.mVolume.observe(lifecycleOwner, integer -> {
-                binding.ivVoiceOn.setVisibility(integer != null && integer != 0 ? View.VISIBLE : View.GONE);
+                binding.ivVoiceOn.setVisibility(integer == null ? View.GONE : View.VISIBLE);
             });
+
+
             Observer<Integer> scoreObserver = integer -> {
-                if (integer == 0) {
-                    binding.tvTip.setText("对方网络不稳定");
+                if (integer != null && Integer.valueOf(0).equals(integer)) {
+                    binding.tvTip.setText("网络连接中...");
                 } else {
                     binding.tvTip.setText("");
                 }
             };
-            model.mAudioScore.observe(lifecycleOwner, scoreObserver);
-            model.mVideoScore.observe(lifecycleOwner, scoreObserver);
+            model.mAudioPScore.observe(lifecycleOwner, scoreObserver);
+            model.mVideoPScore.observe(lifecycleOwner, scoreObserver);
+
+
             model.mStateTip.observe(lifecycleOwner, s -> {
                 binding.tvTip.setText(s);
             });
 
-            model.conversationState.observe(lifecycleOwner, new Observer<Buddy.ConversationState>() {
-                @Override
-                public void onChanged(Buddy.ConversationState conversationState) {
-                    binding.tvDebug.setText(model.connectionState.getValue().toString() + " " + model.conversationState.getValue().toString());
-                }
+
+            Runnable stateRunnable = ()->{
+                binding.tvDebug.setText(model.connectionState.getValue() +
+                        " " + model.conversationState.getValue() +
+                        " A(p" + model.mAudioPScore.getValue() +" c"+model.mAudioCScore.getValue()+")"+
+                        " V(p" + model.mVideoPScore.getValue() +" c"+model.mVideoCScore.getValue()+")"
+                );
+            };
+            model.conversationState.observe(lifecycleOwner, value -> {
+                stateRunnable.run();
             });
+            model.connectionState.observe(lifecycleOwner, value -> {
+                stateRunnable.run();
+            });
+            model.mAudioPScore.observe(lifecycleOwner, value -> {
+                stateRunnable.run();
+            });
+            model.mAudioCScore.observe(lifecycleOwner, value -> {
+                stateRunnable.run();
+            });
+            model.mVideoPScore.observe(lifecycleOwner, value -> {
+                stateRunnable.run();
+            });
+            model.mVideoCScore.observe(lifecycleOwner, value -> {
+                stateRunnable.run();
+            });
+
         }
 
         @Override

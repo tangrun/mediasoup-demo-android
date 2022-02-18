@@ -6,9 +6,7 @@ import org.mediasoup.droid.lib.Constant;
 import org.mediasoup.droid.lib.CommonInvoker;
 import org.mediasoup.droid.lib.WrapperCommon;
 import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
-import org.webrtc.AudioTrack;
 import org.webrtc.MediaStreamTrack;
-import org.webrtc.VideoTrack;
 
 import java.util.Collection;
 import java.util.Map;
@@ -20,7 +18,7 @@ public class Consumers implements CommonInvoker {
     public WrapperCommon getCommonInfo(Collection<String> ids,String kind) {
         for (String id : ids) {
             ConsumerWrapper wrapper = getConsumer(id);
-            if (wrapper != null && wrapper.getConsumer() != null && Constant.kind_audio.equals(wrapper.getConsumer().getKind())) {
+            if (wrapper != null && wrapper.getConsumer() != null && kind.equals(wrapper.getConsumer().getKind())) {
                 return wrapper;
             }
         }
@@ -54,7 +52,8 @@ public class Consumers implements CommonInvoker {
             consumerWrapperSupplierMutableLiveData = new SupplierMutableLiveData<>(ConsumerWrapper.this);
         }
 
-        public SupplierMutableLiveData<WrapperCommon> getConsumerWrapperSupplierMutableLiveData() {
+        @Override
+        public SupplierMutableLiveData<WrapperCommon> getWrapperCommonLiveData() {
             return consumerWrapperSupplierMutableLiveData;
         }
 
@@ -91,11 +90,11 @@ public class Consumers implements CommonInvoker {
         }
 
         private void setConsumerScore(int score) {
-            mProducerScore = score;
+            mConsumerScore = score;
         }
 
         private void setProducerScore(int score) {
-            mConsumerScore = score;
+            mProducerScore = score;
         }
 
         @Override
@@ -124,13 +123,13 @@ public class Consumers implements CommonInvoker {
             return;
         }
 
-        wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> {
+//        wrapper.getWrapperCommonLiveData().postValue(value -> {
             if (Constant.originator_local.equals(originator)) {
                 wrapper.setLocallyPaused(true);
             } else {
                 wrapper.setRemotelyPaused(true);
             }
-        });
+//        });
     }
 
     public void setConsumerResumed(String consumerId, String originator) {
@@ -139,32 +138,34 @@ public class Consumers implements CommonInvoker {
             return;
         }
 
-        wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> {
+//        wrapper.getWrapperCommonLiveData().postValue(value -> {
             if (Constant.originator_local.equals(originator)) {
                 wrapper.setLocallyPaused(false);
             } else {
                 wrapper.setRemotelyPaused(false);
             }
-        });
+//        });
     }
 
 
-    public void setConsumerScore(String consumerId, JSONObject score) {
+    public boolean setConsumerScore(String consumerId, JSONObject score) {
         ConsumerWrapper wrapper = consumers.get(consumerId);
         if (wrapper == null) {
-            return;
+            return false;
         }
         try {
             //{"consumerId":"f0aaaad6-cf61-40c6-9f51-a75ef07243bd","score":{"producerScore":10,"producerScores":[10],"score":10}}
             int producerScore = score.optInt("producerScore");
             int consumerScore = score.optInt("score");
-            wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> {
+//            wrapper.getWrapperCommonLiveData().postValue(value -> {
                 wrapper.setConsumerScore(consumerScore);
                 wrapper.setProducerScore(producerScore);
-            });
+//            });
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return false;
     }
 
     public void setConsumerCurrentLayers(String consumerId, int spatialLayer, int temporalLayer) {
@@ -173,10 +174,10 @@ public class Consumers implements CommonInvoker {
             return;
         }
 
-        wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(value -> {
+//        wrapper.getWrapperCommonLiveData().postValue(value -> {
             wrapper.mSpatialLayer = spatialLayer;
             wrapper.mTemporalLayer = temporalLayer;
-        });
+//        });
 
     }
 

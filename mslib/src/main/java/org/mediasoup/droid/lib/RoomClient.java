@@ -136,6 +136,19 @@ public class RoomClient extends RoomMessageHandler {
     }
 
     @Async
+    public void getPeers() {
+        mWorkHandler.post(() -> {
+            try {
+                String request = mProtoo.syncRequest("getPeers");
+                JSONArray jsonArray = JsonUtils.toJsonArray(request);
+                mStore.addBuddyForPeers(jsonArray);
+            } catch (ProtooException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    @Async
     public void hangup() {
         mWorkHandler.post(() -> {
             try {

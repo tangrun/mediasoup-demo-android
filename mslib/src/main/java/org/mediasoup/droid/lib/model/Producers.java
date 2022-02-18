@@ -1,5 +1,7 @@
 package org.mediasoup.droid.lib.model;
 
+import androidx.lifecycle.LiveData;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mediasoup.droid.Producer;
@@ -18,10 +20,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Producers implements CommonInvoker {
 
     @Override
-    public WrapperCommon getCommonInfo(Collection<String> ids,String kind) {
+    public WrapperCommon getCommonInfo(Collection<String> ids, String kind) {
         for (String id : ids) {
             ProducersWrapper wrapper = getProducer(id);
-            if (wrapper != null && wrapper.getProducer() !=null && Constant.kind_video.equals(wrapper.getProducer().getKind())) {
+            if (wrapper != null && wrapper.getProducer() != null && kind.equals(wrapper.getProducer().getKind())) {
                 return wrapper;
             }
         }
@@ -47,7 +49,8 @@ public class Producers implements CommonInvoker {
             producersWrapperSupplierMutableLiveData = new SupplierMutableLiveData<>(ProducersWrapper.this);
         }
 
-        public SupplierMutableLiveData<WrapperCommon> getProducersWrapperSupplierMutableLiveData() {
+        @Override
+        public SupplierMutableLiveData<WrapperCommon> getWrapperCommonLiveData() {
             return producersWrapperSupplierMutableLiveData;
         }
 
@@ -68,16 +71,16 @@ public class Producers implements CommonInvoker {
         }
 
         private void setConsumerScore(int score) {
-            mProducerScore = score;
-        }
-
-        private void setProducerScore(int score) {
             mConsumerScore = score;
         }
 
+        private void setProducerScore(int score) {
+            mProducerScore = score;
+        }
+
         @Override
-        public MediaStreamTrack getTrack() {
-            return mProducer == null ? null : mProducer.getTrack();
+        public <T extends MediaStreamTrack> T getTrack() {
+            return mProducer == null ? null : (T) mProducer.getTrack();
         }
     }
 
@@ -101,10 +104,10 @@ public class Producers implements CommonInvoker {
             return;
         }
 
-        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> {
+//        wrapper.getWrapperCommonLiveData().postValue(value -> {
             wrapper.setRemotelyPaused(false);
             wrapper.mProducer.pause();
-        });
+//        });
     }
 
     public void setProducerResumed(String producerId) {
@@ -113,31 +116,32 @@ public class Producers implements CommonInvoker {
             return;
         }
 
-        wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> {
+//        wrapper.getWrapperCommonLiveData().postValue(value -> {
                     wrapper.setLocallyPaused(false);
                     wrapper.mProducer.resume();
 
-                }
-        );
+//                });
     }
 
-    public void setProducerScore(String producerId, JSONArray score) {
-        if (score ==null || score.length() ==0)return;
+    public boolean setProducerScore(String producerId, JSONArray score) {
+        if (score == null || score.length() == 0) return false;
         ProducersWrapper wrapper = mProducers.get(producerId);
         if (wrapper == null) {
-            return;
+            return false;
         }
 
         try {
             // {"producerId":"bdc2e83e-5294-451e-a986-a29c7d591d73","score":[{"score":10,"ssrc":196184265}]}
             JSONObject jsonObject = score.getJSONObject(0);
             int scoreNum = jsonObject.optInt("score");
-            wrapper.getProducersWrapperSupplierMutableLiveData().postValue(value -> {
+            wrapper.getWrapperCommonLiveData().postValue(value -> {
                 wrapper.setProducerScore(scoreNum);
             });
-        }catch (Exception e){
+            return true;
+        } catch (Exception e) {
             e.printStackTrace();
         }
+        return false;
     }
 
     public ProducersWrapper getProducer(String producerId) {

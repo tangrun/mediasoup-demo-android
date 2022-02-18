@@ -95,6 +95,10 @@ public class Start {
         context.startActivity(new Intent(context, RoomActivity.class));
     }
 
+    public static void stopCall(){
+        uiRoomStore = null;
+    }
+
     public static void startSingleCall(Context context, String roomId, User me, boolean audioOnly, @Nullable User target) {
         startCall(context, roomId,me, audioOnly, false, target == null ? null : Arrays.asList(target));
     }
@@ -121,7 +125,7 @@ public class Start {
         RoomClient roomClient = new RoomClient(context, roomStore, roomOptions);
         uiRoomStore = new UIRoomStore((Application) context.getApplicationContext(), roomClient);
         uiRoomStore.roomType = multi ? 1 : 0;
-        uiRoomStore.firstConnectedAutoJoin = true;
+        uiRoomStore.firstConnectedAutoJoin = false;
         uiRoomStore.firstJoinedAutoProduce = false;
         uiRoomStore.audioOnly = audioOnly;
         uiRoomStore.addBuddy(inviteUser);

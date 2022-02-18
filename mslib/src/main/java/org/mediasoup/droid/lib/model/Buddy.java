@@ -172,7 +172,7 @@ public class Buddy {
         return this;
     }
 
-    public SupplierMutableLiveData<Buddy> getBuddyMutableLiveData() {
+    public SupplierMutableLiveData<Buddy> getBuddyLiveData() {
         return buddyMutableLiveData;
     }
 

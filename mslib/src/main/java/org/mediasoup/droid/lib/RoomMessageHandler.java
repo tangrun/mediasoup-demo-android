@@ -108,24 +108,26 @@ class RoomMessageHandler {
                 break;
             }
             case "producerScore": {
+                String peerId = data.getString("peerId");
                 String producerId = data.getString("producerId");
                 JSONArray score = data.getJSONArray("score");
-                mStore.setProducerScore(producerId, score);
+                mStore.setProducerScore(peerId,producerId, score);
                 break;
             }
             case "consumerScore": {
+                String peerId = data.getString("peerId");
                 String consumerId = data.getString("consumerId");
                 JSONObject score = data.optJSONObject("score");
                 ConsumerHolder holder = mConsumers.get(consumerId);
                 if (holder == null) {
                     break;
                 }
-                mStore.setConsumerScore(consumerId, score);
+                mStore.setConsumerScore(peerId,consumerId, score);
                 break;
             }
             case "activeSpeaker": {
-                String peerId = data.getString("peerId");
-                mStore.setSpeakerVolume(peerId, data.optInt("volume"));
+                JSONArray jsonArray = data.optJSONArray("volumes");
+                mStore.setSpeakerVolume(jsonArray);
                 break;
             }
             default: {

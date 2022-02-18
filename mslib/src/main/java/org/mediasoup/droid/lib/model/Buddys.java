@@ -1,10 +1,5 @@
 package org.mediasoup.droid.lib.model;
 
-import androidx.annotation.NonNull;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Logger;
 
 import java.util.ArrayList;
@@ -38,7 +33,7 @@ public class Buddys {
             return;
         }
 
-        buddy.getBuddyMutableLiveData().postValue(value -> value.setVolume(volume));
+        buddy.getBuddyLiveData().postValue(value -> value.setVolume(volume));
     }
 
     public void addId(String buddyId, String id) {
@@ -48,7 +43,7 @@ public class Buddys {
             return;
         }
 
-        buddy.getBuddyMutableLiveData().postValue(value -> value.getIds().add(id));
+        buddy.getBuddyLiveData().postValue(value -> value.getIds().add(id));
     }
 
     public void removeId(String buddyId, String consumerId) {
@@ -57,7 +52,7 @@ public class Buddys {
             return;
         }
 
-        buddy.getBuddyMutableLiveData().postValue(value -> value.getIds().remove(consumerId));
+        buddy.getBuddyLiveData().postValue(value -> value.getIds().remove(consumerId));
     }
 
     public Buddy getBuddy(String peerId) {

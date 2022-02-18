@@ -79,8 +79,12 @@ public class RoomStore {
 
 
     // region producer
-    public void setProducerScore(String producerId, JSONArray score) {
-        producers.setProducerScore(producerId, score);
+    public void setProducerScore(String peerId, String producerId, JSONArray score) {
+        if (producers.setProducerScore(producerId, score)) {
+            getBuddyPost(peerId, value -> {
+
+            });
+        }
     }
 
     public void setProducerResumed(String producerId) {
@@ -109,8 +113,12 @@ public class RoomStore {
         consumers.setConsumerCurrentLayers(consumerId, spatialLayer, temporalLayer);
     }
 
-    public void setConsumerScore(String consumerId, JSONObject score) {
-        consumers.setConsumerScore(consumerId, score);
+    public void setConsumerScore(String peerId, String consumerId, JSONObject score) {
+        if (consumers.setConsumerScore(consumerId, score)) {
+            getBuddyPost(peerId, value -> {
+
+            });
+        }
     }
 
     public void setConsumerResumed(String consumerId, String type) {
@@ -185,22 +193,42 @@ public class RoomStore {
 
     // endregion
 
-    public void setSpeakerVolume(String peerId, Integer volume) {
-        getBuddyPost(peerId, value -> value.setVolume(volume));
+    public void setSpeakerVolume(JSONArray jsonArray) {
+        if (jsonArray == null) {
+            for (Buddy buddy : buddys.getValue().getAllPeers()) {
+                if (buddy.getVolume() == null) continue;
+                buddy.getBuddyLiveData().postValue(value1 -> {
+                    value1.setVolume(null);
+                });
+            }
+        } else {
+            try {
+                for (int i = 0, j = jsonArray.length(); i < j; i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String peerId = jsonObject.optString("peerId");
+                    int volume = jsonObject.optInt("volume");
+                    getBuddyPost(peerId, value -> {
+                        value.setVolume(volume);
+                    });
+                }
+            } catch (Exception e) {
+
+            }
+        }
     }
 
 
     private void getBuddyPost(String buddyId, SupplierMutableLiveData.Invoker<Buddy> invoker) {
         Buddy buddy = getBuddy(buddyId);
         if (buddy != null) {
-            buddy.getBuddyMutableLiveData().postValue(invoker);
+            buddy.getBuddyLiveData().postValue(invoker);
         }
     }
 
     private void getConsumerPost(String consumerId, SupplierMutableLiveData.Invoker<Consumers.ConsumerWrapper> invoker) {
         Consumers.ConsumerWrapper wrapper = consumers.getConsumer(consumerId);
         if (wrapper != null) {
-            wrapper.getConsumerWrapperSupplierMutableLiveData().postValue(new SupplierMutableLiveData.Invoker<WrapperCommon>() {
+            wrapper.getWrapperCommonLiveData().postValue(new SupplierMutableLiveData.Invoker<WrapperCommon>() {
                 @Override
                 public void invokeAction(WrapperCommon value) {
                     invoker.invokeAction(wrapper);

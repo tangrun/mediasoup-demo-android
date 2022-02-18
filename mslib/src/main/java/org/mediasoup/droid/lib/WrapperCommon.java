@@ -1,7 +1,10 @@
 package org.mediasoup.droid.lib;
 
+import androidx.lifecycle.LiveData;
+
 import org.json.JSONArray;
 import org.mediasoup.droid.Consumer;
+import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
 import org.webrtc.MediaStreamTrack;
 
 /**
@@ -12,8 +15,10 @@ import org.webrtc.MediaStreamTrack;
 public abstract class WrapperCommon {
     protected boolean mLocallyPaused;
     protected boolean mRemotelyPaused;
-    protected int mProducerScore = 10;
-    protected int mConsumerScore = 10;
+    protected Integer mProducerScore ;
+    protected Integer mConsumerScore ;
+
+    public abstract LiveData<WrapperCommon> getWrapperCommonLiveData() ;
 
     public boolean isLocallyPaused() {
         return mLocallyPaused;
@@ -23,11 +28,11 @@ public abstract class WrapperCommon {
         return mRemotelyPaused;
     }
 
-    public int getProducerScore() {
+    public Integer getProducerScore() {
         return mProducerScore;
     }
 
-    public int getConsumerScore() {
+    public Integer getConsumerScore() {
         return mConsumerScore;
     }
 
