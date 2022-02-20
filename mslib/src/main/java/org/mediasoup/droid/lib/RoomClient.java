@@ -30,6 +30,7 @@ import org.protoojs.droid.Message;
 import org.protoojs.droid.ProtooException;
 import org.webrtc.AudioTrack;
 import org.webrtc.CameraVideoCapturer;
+import org.webrtc.MediaStreamTrack;
 import org.webrtc.VideoTrack;
 
 import io.reactivex.disposables.CompositeDisposable;
@@ -280,6 +281,44 @@ public class RoomClient extends RoomMessageHandler {
     public void enableShare() {
         Logger.d(TAG, "enableShare()");
         // TODO(feature): share
+    }
+
+    @Async
+    public void restartIceForRecvTransport() {
+        mWorkHandler.post(
+                () -> {
+                    try {
+                        if (mRecvTransport != null) {
+                            String iceParameters =
+                                    mProtoo.syncRequest(
+                                            "restartIce", req -> jsonPut(req, "transportId", mRecvTransport.getId()));
+                            mRecvTransport.restartIce(iceParameters);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        logError("restartIce() | failed:", e);
+                        mStore.addNotify("error", "ICE restart failed: " + e.getMessage());
+                    }
+                });
+    }
+
+    @Async
+    public void restartIceForSendTransport() {
+        mWorkHandler.post(
+                () -> {
+                    try {
+                        if (mSendTransport != null) {
+                            String iceParameters =
+                                    mProtoo.syncRequest(
+                                            "restartIce", req -> jsonPut(req, "transportId", mSendTransport.getId()));
+                            mSendTransport.restartIce(iceParameters);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        logError("restartIce() | failed:", e);
+                        mStore.addNotify("error", "ICE restart failed: " + e.getMessage());
+                    }
+                });
     }
 
     @Async
@@ -554,6 +593,8 @@ public class RoomClient extends RoomMessageHandler {
                             () -> {
                                 mStore.addNotify("error", "WebSocket connection failed");
                                 mStore.setConnectionState(ConnectionState.RECONNECTING);
+
+                                disposeTransportDevice();
                             });
                 }
 
@@ -711,7 +752,7 @@ public class RoomClient extends RoomMessageHandler {
                 Logger.w(TAG, "enableMic() | mSendTransport doesn't ready");
                 return;
             }
-            if (mLocalAudioTrack == null) {
+            if (mLocalAudioTrack == null || mLocalAudioTrack.state() == MediaStreamTrack.State.ENDED) {
                 mLocalAudioTrack = mPeerConnectionUtils.createAudioTrack(mContext, "mic");
                 mLocalAudioTrack.setEnabled(true);
             }
@@ -789,7 +830,7 @@ public class RoomClient extends RoomMessageHandler {
                 return;
             }
 
-            if (mLocalVideoTrack == null) {
+            if (mLocalVideoTrack == null || mLocalVideoTrack.state() == MediaStreamTrack.State.ENDED) {
                 mLocalVideoTrack = mPeerConnectionUtils.createVideoTrack(mContext, "cam");
                 mLocalVideoTrack.setEnabled(true);
             }
@@ -933,7 +974,11 @@ public class RoomClient extends RoomMessageHandler {
 
                 @Override
                 public void onConnectionStateChange(Transport transport, String connectionState) {
+                    // connected completed disconnected failed
                     Logger.d(listenerTAG, "onConnectionStateChange: " + connectionState);
+                    if ("failed".equals(connectionState)){
+                        restartIceForSendTransport();
+                    }
                 }
             };
 
@@ -964,6 +1009,9 @@ public class RoomClient extends RoomMessageHandler {
                 @Override
                 public void onConnectionStateChange(Transport transport, String connectionState) {
                     Logger.d(listenerTAG, "onConnectionStateChange: " + connectionState);
+                    if ("failed".equals(connectionState)){
+                        restartIceForRecvTransport();
+                    }
                 }
             };
 

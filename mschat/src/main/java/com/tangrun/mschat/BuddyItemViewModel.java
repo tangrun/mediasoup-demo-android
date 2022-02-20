@@ -102,7 +102,6 @@ public class BuddyItemViewModel {
             mAudioCScore.applySet(audioCommon == null ? null : audioCommon.getConsumerScore());
             mVideoPScore.applySet(videoCommon == null ? null : videoCommon.getProducerScore());
             mVideoCScore.applySet(videoCommon == null ? null : videoCommon.getConsumerScore());
-            Log.d("MS_TAG", "onChanged: "+buddy.getId()+mAudioPScore.getValue()+mAudioCScore.getValue()+mVideoPScore.getValue()+mVideoCScore.getValue());
         }
     };
 

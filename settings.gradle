@@ -1,4 +1,3 @@
 include ':main'
 include ':mschat'
 include ':mslib'
-include ':app'

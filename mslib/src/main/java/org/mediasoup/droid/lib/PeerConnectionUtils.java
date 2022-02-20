@@ -230,7 +230,7 @@ public class PeerConnectionUtils {
         SurfaceTextureHelper.create("CaptureThread", mEglBase.getEglBaseContext());
 
     mCamCapture.initialize(surfaceTextureHelper, context, mVideoSource.getCapturerObserver());
-    mCamCapture.startCapture(640, 480, 30);
+    mCamCapture.startCapture(640, 480, 25);
   }
 
   // Audio track creation.
