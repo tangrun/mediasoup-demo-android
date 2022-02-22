@@ -136,7 +136,9 @@ public class RoomStore {
 
     public void removeConsumer(String peerId, String consumerId) {
         consumers.removeConsumer(consumerId);
-        getBuddyPost(peerId, value -> value.getIds().remove(consumerId));
+        getBuddyPost(peerId, value -> {
+            value.getIds().remove(consumerId);
+        });
     }
     // endregion
 

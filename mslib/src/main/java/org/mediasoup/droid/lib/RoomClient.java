@@ -649,7 +649,7 @@ public class RoomClient extends RoomMessageHandler {
                     mWorkHandler.post(
                             () -> {
                                 mStore.addNotify("error", "WebSocket disconnected");
-                                mStore.setConnectionState(ConnectionState.DISCONNECTED);
+                                mStore.setConnectionState(ConnectionState.RECONNECTING);
 
                                 // Close All Transports created by device.
                                 // All will reCreated After ReJoin.
@@ -695,7 +695,7 @@ public class RoomClient extends RoomMessageHandler {
                             "join",
                             req -> {
                                 //jsonPut(req, "displayName", mOptions.me.getDisplayName());
-                                jsonPut(req, "device", DeviceInfo.androidDevice().toJSONObject());
+//                                jsonPut(req, "device", DeviceInfo.androidDevice().toJSONObject());
                                 //jsonPut(req, "avatar", mOptions.me.getAvatar());
                                 jsonPut(req, "rtpCapabilities", toJsonObject(rtpCapabilities));
                                 // TODO (HaiyangWu): add sctpCapabilities

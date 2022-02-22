@@ -13,10 +13,18 @@ import org.mediasoup.droid.lib.RoomClient;
 import org.mediasoup.droid.lib.RoomOptions;
 import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;
 import org.mediasoup.droid.lib.lv.RoomStore;
+import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.Buddys;
 import org.mediasoup.droid.lib.model.RoomState;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.Observable;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.observers.DisposableObserver;
 
 /**
  * @author RainTang
@@ -27,17 +35,22 @@ public class UIRoomStore {
 
     private static final String TAG = "MS_UIRoomStore";
 
-    private RoomStore roomStore;
-    private RoomClient roomClient;
-    private RoomOptions roomOptions;
+    private final RoomStore roomStore;
+    private final RoomClient roomClient;
+    private final RoomOptions roomOptions;
 
+    public ChangedMutableLiveData<Buddy.ConversationState> conversationState = new ChangedMutableLiveData<>(Buddy.ConversationState.New);
     public ChangedMutableLiveData<RoomClient.ConnectionState> connectionState = new ChangedMutableLiveData<>(RoomClient.ConnectionState.NEW);
     public ChangedMutableLiveData<RoomState.State> micState = new ChangedMutableLiveData<>(RoomState.State.Off);
     public ChangedMutableLiveData<RoomState.State> camState = new ChangedMutableLiveData<>(RoomState.State.Off);
     public ChangedMutableLiveData<RoomState.State> speakerState = new ChangedMutableLiveData<>(RoomState.State.Off);
     public ChangedMutableLiveData<RoomState.State> switchCamState = new ChangedMutableLiveData<>(RoomState.State.Off);
     public ChangedMutableLiveData<RoomState.State> restIceState = new ChangedMutableLiveData<>(RoomState.State.Off);
-    private AudioManager audioManager;
+    public ChangedMutableLiveData<Long> callTime = new ChangedMutableLiveData<>(null);
+    public ChangedMutableLiveData<List<BuddyItemViewModel>> buddys = new ChangedMutableLiveData<>(new ArrayList<>());
+    private final AudioManager audioManager;
+    private Date callStart;
+
     /**
      * 0 单人
      * 1 多人
@@ -45,6 +58,10 @@ public class UIRoomStore {
      */
     public int roomType;
 
+    /**
+     * 邀请通话者
+     */
+    public boolean owner = false;
     /**
      * 最开始 自动join 一般是房主
      * 默认 false
@@ -66,6 +83,8 @@ public class UIRoomStore {
     private boolean firstJoinedAutoProduced = false;
     private boolean hasJoined = false;// 网络重连时自动连接标记
 
+    private int callEnd = 0;// 通话已结束标记 1挂断 2超时
+
     Observer<RoomState> roomStateObserver = new Observer<RoomState>() {
         @Override
         public void onChanged(RoomState roomState) {
@@ -78,7 +97,7 @@ public class UIRoomStore {
         }
     };
     Observer<RoomClient.ConnectionState> localConnectionStateChangedLogic = connectionState1 -> {
-        Log.d(TAG, "ConnectionState changed: "+connectionState1);
+        Log.d(TAG, "ConnectionState changed: " + connectionState1);
         if (connectionState1 == RoomClient.ConnectionState.CONNECTED) {
             boolean needJoin = false;
 
@@ -89,26 +108,30 @@ public class UIRoomStore {
             }
 
             // 重连时自动join
-            if (hasJoined){
+            if (hasJoined) {
                 needJoin = true;
             }
 
             if (needJoin) {
                 getRoomClient().join();
             }
+
+            // 不是邀请者 且还没join过
+            if (!owner && !hasJoined) {
+                conversationState.setValue(Buddy.ConversationState.Invited);
+            }
         } else if (connectionState1 == RoomClient.ConnectionState.JOINED) {
             // 网络中断重连时 join后 重连transport
             // 用重连transport无效 因为socket重连后是新的对象 之前的数据都没了 所以只能根据自己本地的状态判断去在重连上后主动传流
-            if (hasJoined){
-                //getRoomClient().restartIce();
-                if (camState.getValue() == RoomState.State.On){
+            if (hasJoined) {
+                if (camState.getValue() == RoomState.State.On) {
                     getRoomClient().enableCam();
                 }
-                if (micState.getValue() == RoomState.State.On){
+                if (micState.getValue() == RoomState.State.On) {
                     getRoomClient().enableMic();
                 }
             }
-            hasJoined = true;
+
 
             // 首次join后 自动发送流
             if (firstJoinedAutoProduce && !firstJoinedAutoProduced) {
@@ -118,12 +141,60 @@ public class UIRoomStore {
                 if (micState.getValue() == RoomState.State.Off)
                     switchMicEnable();
             }
+
+            conversationState.setValue(Buddy.ConversationState.Joined);
+
+            hasJoined = true;
+        } else if (connectionState1 == RoomClient.ConnectionState.CLOSED) {
+            if (callEnd == 1) {
+                if (owner)
+                    conversationState.setValue(Buddy.ConversationState.Left);
+                else {
+                    if (hasJoined) {
+                        conversationState.setValue(Buddy.ConversationState.Left);
+                    } else {
+                        conversationState.setValue(Buddy.ConversationState.InviteReject);
+                    }
+                }
+            } else if (callEnd == 2) {
+                conversationState.setValue(Buddy.ConversationState.InviteTimeout);
+            }
+            if (callEnd != 0)
+                release();
         }
     };
-
-    public void addBuddyChangeObserve(LifecycleOwner owner, Observer<Buddys> buddysObserver) {
-        getRoomStore().getBuddys().observe(owner, buddysObserver);
-    }
+    Observer<Buddy> buddyObserver = new Observer<Buddy>() {
+        @Override
+        public void onChanged(Buddy buddy) {
+            if (callStart == null) {
+                if (!buddy.isProducer() &&
+                        buddy.getConnectionState() == Buddy.ConnectionState.Online && buddy.getConversationState() == Buddy.ConversationState.Joined) {
+                    callStart = new Date();
+                    startCallTime();
+                }
+            }
+            for (BuddyItemViewModel model : buddys.getValue()) {
+                if (model.buddy.getId().equals(buddy.getId())) {
+                    model.onChanged(buddy);
+                    break;
+                }
+            }
+        }
+    };
+    Observer<Buddys> buddysObserver = new Observer<Buddys>() {
+        @Override
+        public void onChanged(Buddys buddys) {
+            List<Buddy> allPeers = buddys.getAllPeers();
+            List<BuddyItemViewModel> itemViewModels = new ArrayList<>();
+            for (Buddy peer : allPeers) {
+                peer.getBuddyLiveData().removeObserver(buddyObserver);
+                peer.getBuddyLiveData().observeForever(buddyObserver);
+                BuddyItemViewModel model = new BuddyItemViewModel(peer.getId(), getRoomClient());
+                itemViewModels.add(model);
+            }
+            UIRoomStore.this.buddys.applySet(itemViewModels);
+        }
+    };
 
     public UIRoomStore(Application application, RoomClient roomClient) {
         this.roomClient = roomClient;
@@ -133,13 +204,43 @@ public class UIRoomStore {
         init();
     }
 
+    private DisposableObserver<Long> callTimeObserver = new DisposableObserver<Long>() {
+        @Override
+        public void onNext(@NonNull Long aLong) {
+            callTime.applyPost(System.currentTimeMillis() - callStart.getTime());
+        }
+
+        @Override
+        public void onError(@NonNull Throwable e) {
+
+        }
+
+        @Override
+        public void onComplete() {
+
+        }
+    };
+
+    private void startCallTime() {
+        callTimeObserver.dispose();
+        Observable.interval(0, 1, TimeUnit.SECONDS)
+                .subscribe(callTimeObserver);
+    }
+
+    private void stopCallTime() {
+        callTimeObserver.dispose();
+    }
+
     private void init() {
         getRoomStore().getRoomState().observeForever(roomStateObserver);
+        getRoomStore().getBuddys().observeForever(buddysObserver);
         connectionState.observeForever(localConnectionStateChangedLogic);
+
     }
 
     private void release() {
         getRoomStore().getRoomState().removeObserver(roomStateObserver);
+        getRoomStore().getBuddys().removeObserver(buddysObserver);
         connectionState.removeObserver(localConnectionStateChangedLogic);
     }
 
@@ -149,6 +250,7 @@ public class UIRoomStore {
     }
 
     public void hangup() {
+        callEnd = 1;
         if (connectionState.getValue() == RoomClient.ConnectionState.JOINED
                 || connectionState.getValue() == RoomClient.ConnectionState.CONNECTED)
             getRoomClient().hangup();

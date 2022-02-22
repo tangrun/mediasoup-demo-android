@@ -59,6 +59,7 @@
         app:spanCount="3"
         tools:listitem="@layout/item_peer" />
 
+
     <LinearLayout
         android:id="@+id/ms_ll_top"
         android:layout_width="match_parent"
@@ -136,11 +137,11 @@
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tv_tip"
-        android:textColor="@color/ms_chat_white"
-        android:textStyle="bold"
-        android:textSize="15sp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textColor="@color/ms_chat_white"
+        android:textSize="15sp"
+        android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"

@@ -25,7 +25,7 @@ import io.reactivex.observers.DisposableObserver;
  * @description:
  * @date :2022/2/14 10:27
  */
-public class BuddyItemViewModel {
+public class BuddyItemViewModel implements Observer<Buddy> {
 
     ChangedMutableLiveData<VideoTrack> mVideoTrack = new ChangedMutableLiveData<>();
     ChangedMutableLiveData<AudioTrack> mAudioTrack = new ChangedMutableLiveData<>();
@@ -40,82 +40,70 @@ public class BuddyItemViewModel {
     ChangedMutableLiveData<Buddy.ConnectionState> connectionState = new ChangedMutableLiveData<>();
     ChangedMutableLiveData<Buddy.ConversationState> conversationState = new ChangedMutableLiveData<>();
 
-
-    public Buddy buddy;
+    Buddy buddy;
     private RoomClient roomClient;
     private DisposableObserver<Long> disposableObserver;
 
+    public BuddyItemViewModel(Buddy buddy,RoomClient roomClient) {
+        this.buddy = buddy;
+        this.roomClient = roomClient;
+    }
 
-    Observer<Buddy> buddyObserver = new Observer<Buddy>() {
-        @Override
-        public void onChanged(Buddy buddy) {
-            CommonInvoker commonInvoker = buddy.isProducer() ? roomClient.getStore().getProducers() : roomClient.getStore().getConsumers();
+    @Override
+    public void onChanged(Buddy buddy) {
+        this.buddy = buddy;
+        CommonInvoker commonInvoker = buddy.isProducer() ? roomClient.getStore().getProducers() : roomClient.getStore().getConsumers();
 
-            WrapperCommon videoCommon = commonInvoker.getCommonInfo(buddy.getIds(), Constant.kind_video);
-            WrapperCommon audioCommon = commonInvoker.getCommonInfo(buddy.getIds(), Constant.kind_audio);
+        WrapperCommon videoCommon = commonInvoker.getCommonInfo(buddy.getIds(), Constant.kind_video);
+        WrapperCommon audioCommon = commonInvoker.getCommonInfo(buddy.getIds(), Constant.kind_audio);
 
 
 
-            AudioTrack audioTrack = audioCommon == null ? null : audioCommon.getTrack();
-            VideoTrack videoTrack = videoCommon == null ? null : videoCommon.getTrack();
-            boolean disabledMic = roomClient.getOptions().mConsumeAudio && audioTrack == null;
-            boolean disabledCam = roomClient.getOptions().mConsumeVideo && videoTrack == null;
+        AudioTrack audioTrack = audioCommon == null ? null : audioCommon.getTrack();
+        VideoTrack videoTrack = videoCommon == null ? null : videoCommon.getTrack();
+        boolean disabledMic = roomClient.getOptions().mConsumeAudio && audioTrack == null;
+        boolean disabledCam = roomClient.getOptions().mConsumeVideo && videoTrack == null;
 
-            mVolume.applySet(buddy.getVolume());
-            if (buddy.getVolume() != null) {
-                if (disposableObserver != null && !disposableObserver.isDisposed()) {
-                    disposableObserver.dispose();
-                    disposableObserver = null;
-                }
-
-                Observable.timer(1500, TimeUnit.MILLISECONDS)
-                        .subscribe(new DisposableObserver<Long>() {
-                                       @Override
-                                       public void onNext(@NonNull Long aLong) {
-
-                                       }
-
-                                       @Override
-                                       public void onError(@NonNull Throwable e) {
-
-                                       }
-
-                                       @Override
-                                       public void onComplete() {
-                                           mVolume.applySet(null);
-                                           if (!isDisposed()) {
-                                               dispose();
-                                           }
-                                       }
-                                   }
-                        );
-
+        mVolume.applySet(buddy.getVolume());
+        if (buddy.getVolume() != null) {
+            if (disposableObserver != null && !disposableObserver.isDisposed()) {
+                disposableObserver.dispose();
+                disposableObserver = null;
             }
 
-            mAudioTrack.applySet(audioTrack);
-            mVideoTrack.applySet(videoTrack);
-            mDisabledCam.applySet(disabledCam);
-            mDisabledMic.applySet(disabledMic);
-            connectionState.applySet(buddy.getConnectionState());
-            conversationState.applySet(buddy.getConversationState());
-            mAudioPScore.applySet(audioCommon == null ? null : audioCommon.getProducerScore());
-            mAudioCScore.applySet(audioCommon == null ? null : audioCommon.getConsumerScore());
-            mVideoPScore.applySet(videoCommon == null ? null : videoCommon.getProducerScore());
-            mVideoCScore.applySet(videoCommon == null ? null : videoCommon.getConsumerScore());
+            Observable.timer(1500, TimeUnit.MILLISECONDS)
+                    .subscribe(new DisposableObserver<Long>() {
+                                   @Override
+                                   public void onNext(@NonNull Long aLong) {
+
+                                   }
+
+                                   @Override
+                                   public void onError(@NonNull Throwable e) {
+
+                                   }
+
+                                   @Override
+                                   public void onComplete() {
+                                       mVolume.applySet(null);
+                                       if (!isDisposed()) {
+                                           dispose();
+                                       }
+                                   }
+                               }
+                    );
+
         }
-    };
 
-    public void disconnect() {
-        if (buddy != null) {
-            buddy.getBuddyLiveData().removeObserver(buddyObserver);
-        }
+        mAudioTrack.applySet(audioTrack);
+        mVideoTrack.applySet(videoTrack);
+        mDisabledCam.applySet(disabledCam);
+        mDisabledMic.applySet(disabledMic);
+        connectionState.applySet(buddy.getConnectionState());
+        conversationState.applySet(buddy.getConversationState());
+        mAudioPScore.applySet(audioCommon == null ? null : audioCommon.getProducerScore());
+        mAudioCScore.applySet(audioCommon == null ? null : audioCommon.getConsumerScore());
+        mVideoPScore.applySet(videoCommon == null ? null : videoCommon.getProducerScore());
+        mVideoCScore.applySet(videoCommon == null ? null : videoCommon.getConsumerScore());
     }
-
-    public void connect(LifecycleOwner owner, Buddy buddy, RoomClient roomClient) {
-        this.roomClient = roomClient;
-        this.buddy = buddy;
-        buddy.getBuddyLiveData().removeObserver(buddyObserver);
-        buddy.getBuddyLiveData().observe(owner, buddyObserver);
-    }
-
 }

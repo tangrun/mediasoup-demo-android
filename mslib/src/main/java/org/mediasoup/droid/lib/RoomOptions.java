@@ -49,6 +49,7 @@ public class RoomOptions {
         params.put("avatar", mineAvatar);
         params.put("forceH264", forceH264);
         params.put("forceVP9", forceVP9);
+        params.put("device", DeviceInfo.androidDevice().toJSONObject().toString());
 
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("wss://")
