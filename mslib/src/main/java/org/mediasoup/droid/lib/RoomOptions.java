@@ -53,16 +53,18 @@ public class RoomOptions {
 
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("wss://")
-                .append(serverHost)
-                .append(":")
-                .append(serverPort);
-        String a ="?";
+                .append(serverHost);
+        if (serverPort != null && serverPort.trim().length() > 0) {
+            stringBuilder.append(":")
+                    .append(serverPort);
+        }
+        String a = "?";
         for (Map.Entry<String, Object> entry : params.entrySet()) {
             stringBuilder.append(a)
                     .append(entry.getKey())
                     .append("=")
                     .append(Uri.encode(String.valueOf(entry.getValue())));
-            a="&";
+            a = "&";
         }
         return stringBuilder.toString();
     }

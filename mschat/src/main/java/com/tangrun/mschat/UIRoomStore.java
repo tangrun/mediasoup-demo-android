@@ -189,7 +189,7 @@ public class UIRoomStore {
             for (Buddy peer : allPeers) {
                 peer.getBuddyLiveData().removeObserver(buddyObserver);
                 peer.getBuddyLiveData().observeForever(buddyObserver);
-                BuddyItemViewModel model = new BuddyItemViewModel(peer.getId(), getRoomClient());
+                BuddyItemViewModel model = new BuddyItemViewModel(peer, getRoomClient());
                 itemViewModels.add(model);
             }
             UIRoomStore.this.buddys.applySet(itemViewModels);

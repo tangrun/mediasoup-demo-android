@@ -14,6 +14,7 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        Start.init(this, "192.168.0.218", "4443", BuildConfig.DEBUG);
+        //Start.init(this, "192.168.0.218", "4443", BuildConfig.DEBUG);
+        Start.init(this, "ms.trhd11.xyz", null, BuildConfig.DEBUG);
     }
 }

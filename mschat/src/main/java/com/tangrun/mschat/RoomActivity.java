@@ -26,7 +26,7 @@ public class RoomActivity extends AppCompatActivity {
                     .commit();
         }else if (uiRoomStore.roomType == 1){
             getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, MultiFragment.newInstance())
+                    .add(R.id.container, MultiFragmentV1.newInstance())
                     .commit();
         }
     }

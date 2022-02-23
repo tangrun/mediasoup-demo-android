@@ -7,7 +7,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.appcompat.widget.AppCompatEditText;
-import androidx.databinding.ObservableArrayList;
 
 import com.tangrun.mschat.Start;
 
@@ -56,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
             user.setAvatar(icons[new Random().nextInt(icons.length)]);
             Start.startMultiCall(this, tvRoom.getText().toString(), user, cbAudioOnly.isChecked(), null);
         });
-        ObservableArrayList
     }
 
     private void initView() {

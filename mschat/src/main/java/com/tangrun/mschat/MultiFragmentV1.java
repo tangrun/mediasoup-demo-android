@@ -87,7 +87,7 @@ public class MultiFragmentV1 extends Fragment {
             }
         });
         uiRoomStore.conversationState.observe(this, conversationState -> {
-            
+
         });
 
         uiRoomStore.connectionState.observe(this, connectionState -> {
