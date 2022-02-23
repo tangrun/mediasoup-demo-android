@@ -1,13 +1,10 @@
 package com.tangrun.mschat;
 
 import android.os.Bundle;
-import android.widget.FrameLayout;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mschat.R;
-
-import org.mediasoup.droid.lib.lv.RoomStore;
 
 public class RoomActivity extends AppCompatActivity {
 
@@ -15,7 +12,7 @@ public class RoomActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
-        UIRoomStore uiRoomStore = Start.getCurrent();
+        UIRoomStore uiRoomStore = MSManager.getCurrent();
         if (uiRoomStore==null) {
             finish();
             return;

@@ -5,7 +5,6 @@ import android.content.Context;
 import android.media.AudioManager;
 import android.util.Log;
 
-import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 
 import org.json.JSONArray;
@@ -259,7 +258,7 @@ public class UIRoomStore {
         }
     }
 
-    public void addBuddy(List<Start.User> list) {
+    public void addBuddy(List<MSManager.User> list) {
         if (list == null || list.isEmpty()) return;
         connectionState.observeForever(new Observer<RoomClient.ConnectionState>() {
             @Override
@@ -267,7 +266,7 @@ public class UIRoomStore {
                 if (state == RoomClient.ConnectionState.CONNECTED) {
                     connectionState.removeObserver(this);
                     JSONArray jsonArray = new JSONArray();
-                    for (Start.User user : list) {
+                    for (MSManager.User user : list) {
                         jsonArray.put(user.toJsonObj());
                     }
                     getRoomClient().addPeers(jsonArray);
@@ -311,6 +310,19 @@ public class UIRoomStore {
         if (camState.getValue() != RoomState.State.On) return;
         getRoomClient().changeCam();
     }
+
+    public void onAddUserClick(Context context) {
+        List<Buddy> allPeers = getRoomStore().getBuddys().getValue().getAllPeers();
+        List<MSManager.User> list = new ArrayList<>();
+        for (Buddy buddy : allPeers) {
+            MSManager.User user = new MSManager.User();
+            user.setId(buddy.getId());
+            user.setAvatar(buddy.getAvatar());
+            user.setDisplayName(buddy.getDisplayName());
+            list.add(user);
+        }
+        AddUserHandler.start(context,list);
+    }
     // endregion
 
 
@@ -325,4 +337,6 @@ public class UIRoomStore {
     public RoomOptions getRoomOptions() {
         return roomOptions;
     }
+
+
 }

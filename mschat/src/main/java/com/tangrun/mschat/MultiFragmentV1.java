@@ -1,7 +1,6 @@
 package com.tangrun.mschat;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,14 +22,10 @@ import com.example.mschat.databinding.ItemActionBinding;
 import com.example.mschat.databinding.ItemPeerBinding;
 
 import org.mediasoup.droid.lib.RoomClient;
-import org.mediasoup.droid.lib.model.Buddy;
-import org.mediasoup.droid.lib.model.Buddys;
 import org.mediasoup.droid.lib.model.RoomState;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import okhttp3.MultipartBody;
 
 /**
  * @author RainTang
@@ -65,7 +60,7 @@ public class MultiFragmentV1 extends Fragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        UIRoomStore uiRoomStore = Start.getCurrent();
+        UIRoomStore uiRoomStore = MSManager.getCurrent();
         MultiAdapter adapter = new MultiAdapter(uiRoomStore.getRoomClient(), this);
         binding.rvBuddys.setAdapter(adapter);
         GridLayoutManager layout = new GridLayoutManager(getContext(), 2);
@@ -116,8 +111,8 @@ public class MultiFragmentV1 extends Fragment {
         });
         setAction(binding.llActionBottomCenter, "挂断", R.drawable.selector_call_hangup, v -> {
             uiRoomStore.hangup();
-            Start.stopCall();
             binding.llActionBottomCenter.ivImg.postDelayed(() -> {
+                MSManager.stopCall();
                 getActivity().finish();
             }, 1000);
         });
@@ -128,7 +123,7 @@ public class MultiFragmentV1 extends Fragment {
             uiRoomStore.switchCamDevice();
         });
         binding.ivAdd.setOnClickListener(v -> {
-
+            uiRoomStore.onAddUserClick(getContext());
         });
 
     }
