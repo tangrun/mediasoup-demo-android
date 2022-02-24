@@ -132,7 +132,7 @@ public class MSManager {
     }
 
     public static void openCallActivity(Context context) {
-        context.startActivity(new Intent(context, RoomActivity.class));
+        context.startActivity(new Intent(context, RoomActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
     public interface Callback<T> {

@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private AppCompatButton btJoin;
     SharedPreferences aaa;
     private AppCompatButton btBusy;
+    private AppCompatButton btOpen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -127,6 +128,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         });
+        btOpen.setOnClickListener(v -> {
+            MSManager.openCallActivity(this);
+        });
     }
 
     void saveInfo() {
@@ -150,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
         cbMulti = (AppCompatCheckBox) findViewById(R.id.cb_multi);
         btJoin = (AppCompatButton) findViewById(R.id.bt_join);
         btBusy = (AppCompatButton) findViewById(R.id.bt_busy);
+        btOpen = (AppCompatButton) findViewById(R.id.bt_open);
     }
 
     public void onPick(View view) {

@@ -1,7 +1,9 @@
 package com.tangrun.mschat;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioManager;
 import android.util.Log;
 
@@ -68,6 +70,7 @@ public class UIRoomStore {
     public ChangedMutableLiveData<RoomState.State> CamIsFrontState = new ChangedMutableLiveData<>(RoomState.State.Off);
     public ChangedMutableLiveData<Long> callTime = new ChangedMutableLiveData<>(null);
     public ChangedMutableLiveData<Boolean> finished = new ChangedMutableLiveData<>();
+    public ChangedMutableLiveData<Boolean> showActivity = new ChangedMutableLiveData<>(true);
     public ChangedMutableLiveData<List<BuddyItemViewModel>> buddys = new ChangedMutableLiveData<>(new ArrayList<>());
     private final AudioManager audioManager;
     private LifecycleOwner lifecycleOwner;
@@ -296,17 +299,31 @@ public class UIRoomStore {
         callTimeObserver.dispose();
     }
 
+    private void startWindowService(Context context) {
+        context.startService(new Intent(context, CallWindowService.class));
+    }
+
     private void init() {
         getRoomStore().getRoomState().observeForever(roomStateObserver);
         getRoomStore().getBuddys().observeForever(buddysObserver);
         connectionState.observeForever(localConnectionStateChangedLogic);
+        showActivity.observeForever(new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean aBoolean) {
+                if (aBoolean) {
+                    MSManager.openCallActivity(application);
+                } else {
+                    startWindowService(application);
+                }
+            }
+        });
         Action_JoinAction = new DefaultButtonAction("", audioOnly ? R.drawable.selector_call_audio_answer : R.drawable.selector_call_video_answer) {
             @Override
             public void onClick(View v) {
                 join();
             }
         };
-        Action_HangupAction = new DefaultButtonAction("",R.drawable.selector_call_hangup) {
+        Action_HangupAction = new DefaultButtonAction("", R.drawable.selector_call_hangup) {
             @Override
             public void onClick(View v) {
                 hangup();
@@ -316,25 +333,25 @@ public class UIRoomStore {
                 }, 1000);
             }
         };
-        Action_MicDisabledAction =new DefaultButtonAction("麦克风",R.drawable.ms_mic_disabled) {
+        Action_MicDisabledAction = new DefaultButtonAction("麦克风", R.drawable.ms_mic_disabled) {
             @Override
             public void onClick(View v) {
                 switchMicEnable(v.getContext());
             }
         };
-        Action_SpeakerOnAction =new DefaultButtonAction("免提",R.drawable.ms_speaker_on) {
+        Action_SpeakerOnAction = new DefaultButtonAction("免提", R.drawable.ms_speaker_on) {
             @Override
             public void onClick(View v) {
                 switchSpeakerphoneEnable();
             }
         };
-        Action_CamDisabledAction =new DefaultButtonAction("摄像头",R.drawable.ms_cam_disabled) {
+        Action_CamDisabledAction = new DefaultButtonAction("摄像头", R.drawable.ms_cam_disabled) {
             @Override
             public void onClick(View v) {
                 switchCamEnable(v.getContext());
             }
         };
-        Action_CamNotIsFrontAction = new DefaultButtonAction("切换摄像头",R.drawable.ms_cam_changed) {
+        Action_CamNotIsFrontAction = new DefaultButtonAction("切换摄像头", R.drawable.ms_cam_changed) {
             @Override
             public void onClick(View v) {
                 switchCamDevice();
@@ -348,7 +365,7 @@ public class UIRoomStore {
         connectionState.removeObserver(localConnectionStateChangedLogic);
     }
 
-    private void toast(String text){
+    private void toast(String text) {
         Toast.makeText(application, text, Toast.LENGTH_SHORT).show();
     }
 
@@ -405,7 +422,8 @@ public class UIRoomStore {
 
     private void showDialog(Context context, String title, String msg,
                             String negativeText, Runnable negative,
-                            String positiveText, Runnable positive) {
+                            String positiveText, Runnable positive,
+                            String neutralText, Runnable neutral) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context).setTitle(title).setMessage(msg);
         if (negativeText != null) builder.setNegativeButton(negativeText, (dialog, which) -> {
             dialog.dismiss();
@@ -415,33 +433,45 @@ public class UIRoomStore {
             dialog.dismiss();
             if (positive != null) positive.run();
         });
+        if (neutralText != null) builder.setNeutralButton(neutralText, (dialog, which) -> {
+            dialog.dismiss();
+            if (neutral != null) neutral.run();
+        });
         builder.setCancelable(false).show();
+    }
+
+    private void showDialog(Context context, String title, String msg,
+                            String negativeText, Runnable negative,
+                            String positiveText, Runnable positive) {
+        showDialog(context, title, msg, negativeText, negative, positiveText, positive, null, null);
     }
 
     public void switchMicEnable(Context context) {
         if (!XXPermissions.isGranted(context, Permission.RECORD_AUDIO)) {
-            showDialog(context, "权限请求", "通话中语音需要录音权限，请授予", "取消", null, "好的", new Runnable() {
-                @Override
-                public void run() {
-                    XXPermissions.with(context).permission(Permission.RECORD_AUDIO).request((PermissionCallback) (all, never) -> {
-                        if (all) {
-                            switchMicEnable(context);
-                        } else {
-                            if (never) {
-                                showDialog(context, "权限请求", "麦克风权限已经被永久拒绝了，再次开启需要前往应用权限页面手动开启",
-                                        "取消", null,
-                                        "打开权限页面", () -> {
-                                            XXPermissions.startPermissionActivity(context, Permission.RECORD_AUDIO);
-                                        });
-                            } else {
-                                showDialog(context, "权限请求", "没有麦克风权限将无法进行正常的语音通话，是否重新授予？",
-                                        "取消", null,
-                                        "是的", this);
-                            }
+            showDialog(context, "权限请求", "通话中语音需要录音权限，请授予",
+                    "取消", null,
+                    "好的", new Runnable() {
+                        @Override
+                        public void run() {
+                            XXPermissions.with(context).permission(Permission.RECORD_AUDIO).request((PermissionCallback) (all, never) -> {
+                                if (all) {
+                                    switchMicEnable(context);
+                                } else {
+                                    if (never) {
+                                        showDialog(context, "权限请求", "麦克风权限已经被永久拒绝了，再次开启需要前往应用权限页面手动开启",
+                                                "取消", null,
+                                                "打开权限页面", () -> {
+                                                    XXPermissions.startPermissionActivity(context, Permission.RECORD_AUDIO);
+                                                });
+                                    } else {
+                                        showDialog(context, "权限请求", "没有麦克风权限将无法进行正常的语音通话，是否重新授予？",
+                                                "取消", null,
+                                                "是的", this);
+                                    }
+                                }
+                            });
                         }
                     });
-                }
-            });
             return;
         }
         if (micEnabledState.getValue() == RoomState.State.Off)
@@ -503,6 +533,38 @@ public class UIRoomStore {
     public void switchCamDevice() {
         if (camEnabledState.getValue() != RoomState.State.On) return;
         getRoomClient().changeCam();
+    }
+
+    public void onMinimize(Activity activity) {
+        if (!XXPermissions.isGranted(activity, Permission.SYSTEM_ALERT_WINDOW)) {
+            showDialog(activity, "权限请求", "窗口显示需要开启悬浮窗权限，请授予",
+                    "取消", null,
+                    "好的", new Runnable() {
+                        @Override
+                        public void run() {
+                            XXPermissions.with(activity).permission(Permission.SYSTEM_ALERT_WINDOW).request((PermissionCallback) (all, never) -> {
+                                if (all) {
+                                    onMinimize(activity);
+                                } else {
+                                    if (never) {
+                                        showDialog(activity, "权限请求", "悬浮窗权限已经被永久拒绝了，再次开启需要前往应用权限页面手动开启",
+                                                "取消", null,
+                                                "打开权限页面", () -> {
+                                                    XXPermissions.startPermissionActivity(activity, Permission.SYSTEM_ALERT_WINDOW);
+                                                });
+                                    } else {
+                                        showDialog(activity, "权限请求", "没有悬浮窗权限将无法进行窗口显示，是否重新授予？",
+                                                "取消", null,
+                                                "是的", this);
+                                    }
+                                }
+                            });
+                        }
+                    },
+                    "关闭页面", activity::finish);
+            return;
+        }
+        activity.finish();
     }
 
     public void onAddUserClick(Context context) {

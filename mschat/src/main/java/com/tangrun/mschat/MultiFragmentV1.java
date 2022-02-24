@@ -62,15 +62,22 @@ public class MultiFragmentV1 extends Fragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+
+        // 初始化
         UIRoomStore uiRoomStore = MSManager.getCurrent();
         uiRoomStore.bindLifeOwner(this);
 
+        // 列表
         MultiAdapter adapter = new MultiAdapter(uiRoomStore.getRoomClient(), this);
         binding.rvBuddys.setAdapter(adapter);
-        GridLayoutManager layout = new GridLayoutManager(getContext(), 2);
-        binding.rvBuddys.setLayoutManager(layout);
+        GridLayoutManager layoutManager = new GridLayoutManager(getContext(), 2);
+        binding.rvBuddys.setLayoutManager(layoutManager);
+
+        // 数据变化页面显示
         uiRoomStore.buddys.observe(this, buddyItemViewModels -> {
             adapter.setList(buddyItemViewModels);
+            int size = buddyItemViewModels.size();
+            layoutManager.setSpanCount(size < 5 ? 2 : size < 10 ? 3 : 4);
         });
         uiRoomStore.callTime.observe(this, new Observer<Long>() {
             @Override
@@ -87,54 +94,48 @@ public class MultiFragmentV1 extends Fragment {
         });
         uiRoomStore.conversationState.observe(this, conversationState -> {
             hideAllAction();
-            if (conversationState == Buddy.ConversationState.Invited){
+            if (conversationState == Buddy.ConversationState.Invited) {
                 // 接听/挂断
                 uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomLeft);
                 uiRoomStore.Action_JoinAction.bindView(binding.llActionBottomRight);
-            }else if (conversationState == Buddy.ConversationState.Joined){
-                if (uiRoomStore.audioOnly){
+            } else if (conversationState == Buddy.ConversationState.Joined) {
+                if (uiRoomStore.audioOnly) {
                     // 麦克风/挂断/扬声器
                     uiRoomStore.Action_MicDisabledAction.bindView(binding.llActionBottomLeft);
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
                     uiRoomStore.Action_SpeakerOnAction.bindView(binding.llActionBottomRight);
-                }else {
+                } else {
                     // 麦克风/摄像头/切换摄像头 挂断
                     uiRoomStore.Action_MicDisabledAction.bindView(binding.llActionTopLeft);
                     uiRoomStore.Action_CamDisabledAction.bindView(binding.llActionTopCenter);
                     uiRoomStore.Action_CamNotIsFrontAction.bindView(binding.llActionTopRight);
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
                 }
-            }else {
+            } else {
                 uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
             }
         });
-
+        // 点击事件
         binding.ivAdd.setOnClickListener(v -> {
             uiRoomStore.onAddUserClick(getContext());
+        });
+        binding.ivMin.setOnClickListener(v -> {
+            uiRoomStore.onMinimize(getActivity());
         });
 
     }
 
 
-    public void hideAllAction(){
+    public void hideAllAction() {
         for (ItemActionBinding itemActionBinding : Arrays.asList(
                 binding.llActionTopLeft,
                 binding.llActionTopRight,
                 binding.llActionTopCenter,
                 binding.llActionBottomLeft,
                 binding.llActionBottomRight,
-                binding.llActionBottomCenter
-        )) {
+                binding.llActionBottomCenter)) {
             itemActionBinding.llContent.setVisibility(View.GONE);
         }
-    }
-
-
-    public void setAction(ItemActionBinding binding, String text, int id, View.OnClickListener v) {
-        binding.llContent.setVisibility(View.VISIBLE);
-        binding.llContent.setOnClickListener(v);
-        binding.tvContent.setText(text);
-        binding.ivImg.setImageResource(id);
     }
 
     public static class MultiAdapter extends RecyclerView.Adapter<MultiAdapter.ViewHolder<ItemPeerBinding>> {
@@ -170,12 +171,8 @@ public class MultiFragmentV1 extends Fragment {
             model.mVideoTrack.observe(lifecycleOwner, videoTrack -> {
                 binding.vRenderer.setVisibility(videoTrack == null ? View.GONE : View.VISIBLE);
                 binding.ivCover.setVisibility(videoTrack != null ? View.GONE : View.VISIBLE);
-                if (videoTrack != null) {
-                    binding.vRenderer.init();
-                    videoTrack.addSink(binding.vRenderer);
-                } else {
-                    binding.vRenderer.clear();
-                }
+                binding.vRenderer.init(lifecycleOwner);
+                binding.vRenderer.bind(lifecycleOwner,videoTrack);
             });
             model.mDisabledMic.observe(lifecycleOwner, aBoolean -> {
                 binding.ivMicDisable.setVisibility(aBoolean ? View.VISIBLE : View.GONE);
@@ -267,63 +264,4 @@ public class MultiFragmentV1 extends Fragment {
         }
     }
 
-
-    public static class Action {
-        String name;
-        int imgId;
-        boolean checked;
-        boolean enabled;
-        Runnable click;
-
-        public Action(String name, int imgId, Runnable click) {
-            this.name = name;
-            this.imgId = imgId;
-            this.click = click;
-        }
-
-        public Runnable getClick() {
-            return click;
-        }
-
-        public Action setClick(Runnable click) {
-            this.click = click;
-            return this;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public Action setName(String name) {
-            this.name = name;
-            return this;
-        }
-
-        public int getImgId() {
-            return imgId;
-        }
-
-        public Action setImgId(int imgId) {
-            this.imgId = imgId;
-            return this;
-        }
-
-        public boolean isChecked() {
-            return checked;
-        }
-
-        public Action setChecked(boolean checked) {
-            this.checked = checked;
-            return this;
-        }
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public Action setEnabled(boolean enabled) {
-            this.enabled = enabled;
-            return this;
-        }
-    }
 }
