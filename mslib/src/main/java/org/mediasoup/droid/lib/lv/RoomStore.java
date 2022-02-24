@@ -56,20 +56,17 @@ public class RoomStore {
 
 
     // region roomState
-    public void setRestartIceState(RoomState.State state) {
-        roomState.postValue(value -> value.setRestartIceState(state));
-    }
 
     public void setCameraSwitchDeviceState(RoomState.State state) {
-        roomState.postValue(value -> value.setCameraSwitchDeviceState(state));
+        roomState.postValue(value -> value.setCameraIsFrontDeviceState(state));
     }
 
     public void setMicrophoneState(RoomState.State state) {
-        roomState.postValue(value -> value.setMicrophoneState(state));
+        roomState.postValue(value -> value.setMicrophoneEnabledState(state));
     }
 
     public void setCameraState(RoomState.State state) {
-        roomState.postValue(value -> value.setCameraState(state));
+        roomState.postValue(value -> value.setCameraEnabledState(state));
     }
 
     public void setConnectionState(RoomClient.ConnectionState state) {

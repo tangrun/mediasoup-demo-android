@@ -22,9 +22,11 @@ import com.example.mschat.databinding.ItemActionBinding;
 import com.example.mschat.databinding.ItemPeerBinding;
 
 import org.mediasoup.droid.lib.RoomClient;
+import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.RoomState;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -61,6 +63,8 @@ public class MultiFragmentV1 extends Fragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         UIRoomStore uiRoomStore = MSManager.getCurrent();
+        uiRoomStore.bindLifeOwner(this);
+
         MultiAdapter adapter = new MultiAdapter(uiRoomStore.getRoomClient(), this);
         binding.rvBuddys.setAdapter(adapter);
         GridLayoutManager layout = new GridLayoutManager(getContext(), 2);
@@ -71,8 +75,8 @@ public class MultiFragmentV1 extends Fragment {
         uiRoomStore.callTime.observe(this, new Observer<Long>() {
             @Override
             public void onChanged(Long aLong) {
-                if (aLong == null){
-                    binding.tvTitle.setVisibility(View.GONE);
+                if (aLong == null) {
+                    binding.tvTitle.setVisibility(View.INVISIBLE);
                     return;
                 }
                 binding.tvTitle.setVisibility(View.VISIBLE);
@@ -82,51 +86,49 @@ public class MultiFragmentV1 extends Fragment {
             }
         });
         uiRoomStore.conversationState.observe(this, conversationState -> {
-
+            hideAllAction();
+            if (conversationState == Buddy.ConversationState.Invited){
+                // 接听/挂断
+                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomLeft);
+                uiRoomStore.Action_JoinAction.bindView(binding.llActionBottomRight);
+            }else if (conversationState == Buddy.ConversationState.Joined){
+                if (uiRoomStore.audioOnly){
+                    // 麦克风/挂断/扬声器
+                    uiRoomStore.Action_MicDisabledAction.bindView(binding.llActionBottomLeft);
+                    uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+                    uiRoomStore.Action_SpeakerOnAction.bindView(binding.llActionBottomRight);
+                }else {
+                    // 麦克风/摄像头/切换摄像头 挂断
+                    uiRoomStore.Action_MicDisabledAction.bindView(binding.llActionTopLeft);
+                    uiRoomStore.Action_CamDisabledAction.bindView(binding.llActionTopCenter);
+                    uiRoomStore.Action_CamNotIsFrontAction.bindView(binding.llActionTopRight);
+                    uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+                }
+            }else {
+                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+            }
         });
 
-        uiRoomStore.connectionState.observe(this, connectionState -> {
-            binding.tvTitle.setText(connectionState.toString());
-        });
-        uiRoomStore.camState.observe(this, state -> {
-            binding.llActionTopRight.ivImg.setSelected(state == RoomState.State.Off);
-        });
-        uiRoomStore.micState.observe(this, state -> {
-            binding.llActionTopLeft.ivImg.setSelected(state == RoomState.State.Off);
-        });
-        uiRoomStore.speakerState.observe(this, state -> {
-            binding.llActionBottomLeft.ivImg.setSelected(state == RoomState.State.On);
-        });
-        uiRoomStore.switchCamState.observe(this, state -> {
-            binding.llActionBottomRight.ivImg.setSelected(state == RoomState.State.Off);
-        });
-        setAction(binding.llActionTopLeft, "麦克风", R.drawable.selector_call_mute, v -> {
-            uiRoomStore.switchMicEnable();
-        });
-        setAction(binding.llActionBottomLeft, "扬声器", R.drawable.selector_call_speaker, v -> {
-            uiRoomStore.switchSpeakerphoneEnable();
-        });
-        setAction(binding.llActionTopCenter, "接听", R.drawable.selector_call_audio_answer, v -> {
-            uiRoomStore.join();
-        });
-        setAction(binding.llActionBottomCenter, "挂断", R.drawable.selector_call_hangup, v -> {
-            uiRoomStore.hangup();
-            binding.llActionBottomCenter.ivImg.postDelayed(() -> {
-                MSManager.stopCall();
-                getActivity().finish();
-            }, 1000);
-        });
-        setAction(binding.llActionTopRight, "摄像头", R.drawable.selector_call_enable_camera, v -> {
-            uiRoomStore.switchCamEnable();
-        });
-        setAction(binding.llActionBottomRight, "切换", R.drawable.selector_call_switch_camera, v -> {
-            uiRoomStore.switchCamDevice();
-        });
         binding.ivAdd.setOnClickListener(v -> {
             uiRoomStore.onAddUserClick(getContext());
         });
 
     }
+
+
+    public void hideAllAction(){
+        for (ItemActionBinding itemActionBinding : Arrays.asList(
+                binding.llActionTopLeft,
+                binding.llActionTopRight,
+                binding.llActionTopCenter,
+                binding.llActionBottomLeft,
+                binding.llActionBottomRight,
+                binding.llActionBottomCenter
+        )) {
+            itemActionBinding.llContent.setVisibility(View.GONE);
+        }
+    }
+
 
     public void setAction(ItemActionBinding binding, String text, int id, View.OnClickListener v) {
         binding.llContent.setVisibility(View.VISIBLE);
@@ -210,7 +212,17 @@ public class MultiFragmentV1 extends Fragment {
                 );
             };
             model.conversationState.observe(lifecycleOwner, value -> {
-                stateRunnable.run();
+                String text = null;
+                if (value == Buddy.ConversationState.Invited) {
+                    text = "等待接听...";
+                } else if (value == Buddy.ConversationState.InviteBusy) {
+                    text = "对方忙线";
+                } else if (value == Buddy.ConversationState.InviteTimeout) {
+                    text = "无人接听";
+                }
+                binding.tvTip.setVisibility(text == null ? View.GONE : View.VISIBLE);
+                if (text != null)
+                    binding.tvTip.setText(text);
             });
             model.connectionState.observe(lifecycleOwner, value -> {
                 stateRunnable.run();

@@ -400,8 +400,8 @@ public class MSManager {
         RoomClient roomClient = new RoomClient(context, roomStore, roomOptions);
         uiRoomStore = new UIRoomStore((Application) context.getApplicationContext(), roomClient);
         uiRoomStore.roomType = multi ? 1 : 0;
-        uiRoomStore.firstConnectedAutoJoin = false;
-        uiRoomStore.firstJoinedAutoProduce = false;
+        uiRoomStore.firstConnectedAutoJoin = owner;
+        uiRoomStore.firstJoinedAutoProduce = !multi;
         uiRoomStore.audioOnly = audioOnly;
         uiRoomStore.addBuddy(inviteUser);
         roomClient.connect();

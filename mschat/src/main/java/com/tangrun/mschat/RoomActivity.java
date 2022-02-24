@@ -4,6 +4,7 @@ import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import androidx.lifecycle.Observer;
 import com.example.mschat.R;
 
 public class RoomActivity extends AppCompatActivity {
@@ -13,15 +14,22 @@ public class RoomActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
         UIRoomStore uiRoomStore = MSManager.getCurrent();
-        if (uiRoomStore==null) {
+        if (uiRoomStore == null) {
             finish();
             return;
         }
-        if (uiRoomStore.roomType == 0){
+        uiRoomStore.finished.observeForever(new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean aBoolean) {
+                if (aBoolean)
+                    finish();
+            }
+        });
+        if (uiRoomStore.roomType == 0) {
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.container, SingleFragment.newInstance())
                     .commit();
-        }else if (uiRoomStore.roomType == 1){
+        } else if (uiRoomStore.roomType == 1) {
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.container, MultiFragmentV1.newInstance())
                     .commit();
@@ -33,7 +41,7 @@ public class RoomActivity extends AppCompatActivity {
 
     }
 
-    public void onBack(){
+    public void onBack() {
         super.onBackPressed();
     }
 

@@ -17,13 +17,12 @@ public class RoomState {
   private boolean canSendCam;
   private boolean canChangeCam;
 
-  private State cameraState = State.Off;
-  private State microphoneState = State.Off;
+  private State cameraEnabledState = State.Off;
+  private State microphoneEnabledState = State.Off;
   /**
    * 前 / 后
    */
-  private State cameraSwitchDeviceState = State.On;
-  private State restartIceState = State.On;
+  private State cameraIsFrontDeviceState = State.On;
 
 
   public RoomClient.ConnectionState getConnectionState() {
@@ -58,35 +57,27 @@ public class RoomState {
     this.canChangeCam = canChangeCam;
   }
 
-  public State getCameraState() {
-    return cameraState;
+  public State getCameraEnabledState() {
+    return cameraEnabledState;
   }
 
-  public void setCameraState(State cameraState) {
-    this.cameraState = cameraState;
+  public void setCameraEnabledState(State cameraEnabledState) {
+    this.cameraEnabledState = cameraEnabledState;
   }
 
-  public State getMicrophoneState() {
-    return microphoneState;
+  public State getMicrophoneEnabledState() {
+    return microphoneEnabledState;
   }
 
-  public void setMicrophoneState(State microphoneState) {
-    this.microphoneState = microphoneState;
+  public void setMicrophoneEnabledState(State microphoneEnabledState) {
+    this.microphoneEnabledState = microphoneEnabledState;
   }
 
-  public State getCameraSwitchDeviceState() {
-    return cameraSwitchDeviceState;
+  public State getCameraIsFrontDeviceState() {
+    return cameraIsFrontDeviceState;
   }
 
-  public void setCameraSwitchDeviceState(State cameraSwitchDeviceState) {
-    this.cameraSwitchDeviceState = cameraSwitchDeviceState;
-  }
-
-  public State getRestartIceState() {
-    return restartIceState;
-  }
-
-  public void setRestartIceState(State restartIceState) {
-    this.restartIceState = restartIceState;
+  public void setCameraIsFrontDeviceState(State cameraIsFrontDeviceState) {
+    this.cameraIsFrontDeviceState = cameraIsFrontDeviceState;
   }
 }

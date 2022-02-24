@@ -324,7 +324,6 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void restartIce() {
         Logger.d(TAG, "restartIce()");
-        mStore.setRestartIceState(RoomState.State.InProgress);
         mWorkHandler.post(
                 () -> {
                     try {
@@ -340,12 +339,10 @@ public class RoomClient extends RoomMessageHandler {
                                             "restartIce", req -> jsonPut(req, "transportId", mRecvTransport.getId()));
                             mRecvTransport.restartIce(iceParameters);
                         }
-                        mStore.setRestartIceState(RoomState.State.Off);
                     } catch (Exception e) {
                         e.printStackTrace();
                         logError("restartIce() | failed:", e);
                         mStore.addNotify("error", "ICE restart failed: " + e.getMessage());
-                        mStore.setRestartIceState(RoomState.State.Unknown);
                     }
                 });
     }
@@ -526,18 +523,10 @@ public class RoomClient extends RoomMessageHandler {
                     disposeTransportDevice();
 
                     // dispose audio track.
-                    if (mLocalAudioTrack != null) {
-                        mLocalAudioTrack.setEnabled(false);
-                        mLocalAudioTrack.dispose();
-                        mLocalAudioTrack = null;
-                    }
+                    disposeAudioTrack();
 
                     // dispose video track.
-                    if (mLocalVideoTrack != null) {
-                        mLocalVideoTrack.setEnabled(false);
-                        mLocalVideoTrack.dispose();
-                        mLocalVideoTrack = null;
-                    }
+                    disposeVideoTrack();
 
                     // dispose peerConnection.
                     mPeerConnectionUtils.dispose();
@@ -551,6 +540,26 @@ public class RoomClient extends RoomMessageHandler {
 
         // Set room state.
         mStore.setConnectionState(ConnectionState.CLOSED);
+    }
+
+    @WorkerThread
+    private void disposeAudioTrack() {
+        if (mLocalAudioTrack != null) {
+            mLocalAudioTrack.setEnabled(false);
+            mLocalAudioTrack.dispose();
+            mLocalAudioTrack = null;
+        }
+        mPeerConnectionUtils.disposeAudioSource();
+    }
+
+    @WorkerThread
+    private void disposeVideoTrack() {
+        if (mLocalVideoTrack != null) {
+            mLocalVideoTrack.setEnabled(false);
+            mLocalVideoTrack.dispose();
+            mLocalVideoTrack = null;
+        }
+        mPeerConnectionUtils.disposeVideoSource();
     }
 
     @WorkerThread
@@ -795,6 +804,8 @@ public class RoomClient extends RoomMessageHandler {
             e.printStackTrace();
             mStore.addNotify("error", "Error closing server-side mic Producer: " + e.getMessage());
         }
+
+        disposeAudioTrack();
         mMicProducer = null;
     }
 
@@ -863,6 +874,7 @@ public class RoomClient extends RoomMessageHandler {
         if (mCamProducer == null) {
             return;
         }
+
         mCamProducer.close();
         mStore.removeProducer(mOptions.mineId, mCamProducer.getId());
 
@@ -872,6 +884,8 @@ public class RoomClient extends RoomMessageHandler {
             e.printStackTrace();
             mStore.addNotify("error", "Error closing server-side webcam Producer: " + e.getMessage());
         }
+
+        disposeVideoTrack();
         mCamProducer = null;
     }
 
