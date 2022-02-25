@@ -5,22 +5,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-import androidx.annotation.Nullable;
-
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.mediasoup.droid.Logger;
 import org.mediasoup.droid.MediasoupClient;
 import org.mediasoup.droid.lib.JsonUtils;
-import org.mediasoup.droid.lib.RoomClient;
 import org.mediasoup.droid.lib.RoomOptions;
-import org.mediasoup.droid.lib.lv.RoomStore;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.security.cert.CertificateException;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.net.ssl.SSLContext;
@@ -31,16 +25,10 @@ import javax.net.ssl.X509TrustManager;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.ObservableSource;
-import io.reactivex.Observer;
-import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.annotations.NonNull;
-import io.reactivex.functions.Consumer;
 import io.reactivex.observers.DisposableObserver;
 import io.reactivex.schedulers.Schedulers;
-import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -131,8 +119,8 @@ public class MSManager {
         MSManager.uiCallback = uiCallback;
     }
 
-    public static void openCallActivity(Context context) {
-        context.startActivity(new Intent(context, RoomActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    public static void openCallActivity() {
+        if (uiRoomStore !=null)uiRoomStore.openCallActivity();
     }
 
     public interface Callback<T> {
@@ -372,7 +360,7 @@ public class MSManager {
 
     public static void addUser(List<User> list) {
         if (uiRoomStore != null && list != null && !list.isEmpty())
-            uiRoomStore.addBuddy(list);
+            uiRoomStore.addUser(list);
     }
 
     public static void stopCall() {
@@ -387,25 +375,30 @@ public class MSManager {
             Log.d(TAG, "startCall: ");
             return;
         }
-        RoomStore roomStore = new RoomStore();
         RoomOptions roomOptions = new RoomOptions();
         roomOptions.serverHost = HOST;
         roomOptions.serverPort = PORT;
+
+        roomOptions.roomId = roomId;
+
         roomOptions.mineAvatar = me.getAvatar();
         roomOptions.mineDisplayName = me.getDisplayName();
         roomOptions.mineId = me.getId();
-        roomOptions.roomId = roomId;
+
         roomOptions.mProduceVideo = !audioOnly;
         roomOptions.mConsumeVideo = !audioOnly;
-        RoomClient roomClient = new RoomClient(context, roomStore, roomOptions);
-        uiRoomStore = new UIRoomStore((Application) context.getApplicationContext(), roomClient);
+
+        uiRoomStore = new UIRoomStore(context, roomOptions);
+
         uiRoomStore.roomType = multi ? 1 : 0;
         uiRoomStore.firstConnectedAutoJoin = owner;
-        uiRoomStore.firstJoinedAutoProduce = !multi;
+        uiRoomStore.firstJoinedAutoProduceAudio = true;
+        uiRoomStore.firstJoinedAutoProduceVideo = !audioOnly && !multi;
         uiRoomStore.audioOnly = audioOnly;
-        uiRoomStore.addBuddy(inviteUser);
-        roomClient.connect();
-        openCallActivity(context);
+
+        uiRoomStore.addUser(inviteUser);
+
+        uiRoomStore.connect();
     }
 
 }

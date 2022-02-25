@@ -36,6 +36,7 @@ public class AddUserHandler extends AppCompatActivity {
             if (MSManager.uiCallback != null) {
                 MSManager.uiCallback.onAddUserResult(resultCode, data);
             }
+            finish();
         }
     }
 }

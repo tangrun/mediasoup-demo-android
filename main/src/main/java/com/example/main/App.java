@@ -31,7 +31,7 @@ public class App extends Application {
             public void onAddUserResult(int resultCode, Intent intent) {
                 List<SelectUserActivity.User> arrayList = (List<SelectUserActivity.User>) intent.getSerializableExtra("data");
                 List<MSManager.User> list = new ArrayList<>(arrayList);
-                MSManager.getCurrent().addBuddy(list);
+                MSManager.addUser(list);
             }
         });
     }

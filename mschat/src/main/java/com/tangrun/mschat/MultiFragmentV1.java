@@ -134,7 +134,7 @@ public class MultiFragmentV1 extends Fragment {
                 binding.llActionBottomLeft,
                 binding.llActionBottomRight,
                 binding.llActionBottomCenter)) {
-            itemActionBinding.llContent.setVisibility(View.GONE);
+            itemActionBinding.llContent.setVisibility(View.INVISIBLE);
         }
     }
 

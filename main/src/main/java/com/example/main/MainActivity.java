@@ -1,5 +1,7 @@
 package com.example.main;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -15,13 +17,15 @@ import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.appcompat.widget.AppCompatTextView;
 
-import com.blankj.utilcode.util.ActivityUtils;
-import com.blankj.utilcode.util.PermissionUtils;
+import androidx.core.app.NotificationCompat;
+import com.blankj.utilcode.util.*;
 import com.tangrun.mschat.MSManager;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -128,8 +132,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         });
+        AtomicBoolean i = new AtomicBoolean(true);
         btOpen.setOnClickListener(v -> {
-            MSManager.openCallActivity(this);
+            MSManager.openCallActivity();
         });
     }
 

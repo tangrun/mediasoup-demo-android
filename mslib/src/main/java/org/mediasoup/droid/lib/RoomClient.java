@@ -108,9 +108,8 @@ public class RoomClient extends RoomMessageHandler {
 
     public RoomClient(
             @NonNull Context context,
-            @NonNull RoomStore roomStore,
             @NonNull RoomOptions options) {
-        super(roomStore);
+        super(new RoomStore());
         this.mContext = context.getApplicationContext();
         this.mOptions = options;
         this.mClosed = false;
