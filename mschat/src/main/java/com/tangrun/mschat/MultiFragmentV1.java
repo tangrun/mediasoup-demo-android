@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,8 +24,8 @@ import com.example.mschat.databinding.ItemActionBinding;
 import com.example.mschat.databinding.ItemPeerBinding;
 
 import org.mediasoup.droid.lib.RoomClient;
+import org.mediasoup.droid.lib.lv.MultiMutableLiveData;
 import org.mediasoup.droid.lib.model.Buddy;
-import org.mediasoup.droid.lib.model.RoomState;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -172,7 +174,7 @@ public class MultiFragmentV1 extends Fragment {
                 binding.vRenderer.setVisibility(videoTrack == null ? View.GONE : View.VISIBLE);
                 binding.ivCover.setVisibility(videoTrack != null ? View.GONE : View.VISIBLE);
                 binding.vRenderer.init(lifecycleOwner);
-                binding.vRenderer.bind(lifecycleOwner,videoTrack);
+                binding.vRenderer.bind(lifecycleOwner, videoTrack);
             });
             model.mDisabledMic.observe(lifecycleOwner, aBoolean -> {
                 binding.ivMicDisable.setVisibility(aBoolean ? View.VISIBLE : View.GONE);
@@ -184,23 +186,6 @@ public class MultiFragmentV1 extends Fragment {
                 binding.ivVoiceOn.setVisibility(integer == null ? View.GONE : View.VISIBLE);
             });
 
-
-            Observer<Integer> scoreObserver = integer -> {
-                if (integer != null && Integer.valueOf(0).equals(integer)) {
-                    binding.tvTip.setText("网络连接中...");
-                } else {
-                    binding.tvTip.setText("");
-                }
-            };
-            model.mAudioPScore.observe(lifecycleOwner, scoreObserver);
-            model.mVideoPScore.observe(lifecycleOwner, scoreObserver);
-
-
-            model.mStateTip.observe(lifecycleOwner, s -> {
-                binding.tvTip.setText(s);
-            });
-
-
             Runnable stateRunnable = () -> {
                 binding.tvDebug.setText(model.connectionState.getValue() +
                         " " + model.conversationState.getValue() +
@@ -208,15 +193,41 @@ public class MultiFragmentV1 extends Fragment {
                         " V(p" + model.mVideoPScore.getValue() + " c" + model.mVideoCScore.getValue() + ")"
                 );
             };
-            model.conversationState.observe(lifecycleOwner, value -> {
+            MultiMutableLiveData multiMutableLiveData = new MultiMutableLiveData();
+            multiMutableLiveData.addSource(model.connectionState);
+            multiMutableLiveData.addSource(model.conversationState);
+            multiMutableLiveData.observe(lifecycleOwner, value -> {
                 String text = null;
-                if (value == Buddy.ConversationState.Invited) {
-                    text = "等待接听...";
-                } else if (value == Buddy.ConversationState.InviteBusy) {
-                    text = "对方忙线";
-                } else if (value == Buddy.ConversationState.InviteTimeout) {
-                    text = "无人接听";
+
+                switch (model.connectionState.getValue() == null ? Buddy.ConnectionState.NEW : model.connectionState.getValue()) {
+                    case Offline: {
+                        text = "断线重连中...";
+                        break;
+                    }
+                    case Left: {
+                        text = "已离开";
+                        break;
+                    }
+                    default: {
+                        if (model.conversationState.getValue() == null) break;
+                        switch (model.conversationState.getValue()) {
+                            case Invited: {
+                                text = "等待接听...";
+                                break;
+                            }
+                            case InviteBusy: {
+                                text = "对方忙线";
+                                break;
+                            }
+                            case InviteTimeout: {
+                                text = "无人接听";
+                                break;
+                            }
+                        }
+                        break;
+                    }
                 }
+
                 binding.tvTip.setVisibility(text == null ? View.GONE : View.VISIBLE);
                 if (text != null)
                     binding.tvTip.setText(text);

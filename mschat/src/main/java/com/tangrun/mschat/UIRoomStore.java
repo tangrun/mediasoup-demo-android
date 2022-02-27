@@ -83,7 +83,7 @@ public class UIRoomStore {
     public ChangedMutableLiveData<Boolean> showActivity = new ChangedMutableLiveData<>(true);
     public ChangedMutableLiveData<List<BuddyItemViewModel>> buddys = new ChangedMutableLiveData<>(new ArrayList<>());
 
-    private Date callStart;
+    private Date callStartTime,callEndTime;
 
     private int connectedCount;
     private int joinedCount;
@@ -125,9 +125,9 @@ public class UIRoomStore {
      */
     public boolean audioOnly = true;
     /**
-     * 通话已结束标记 1挂断 2超时
+     * 通话已结束标记 0没挂断 1挂断 2超时
      */
-    private int callEnd = 0;
+    private int callEndType = 0;
 
 
     /**
@@ -174,9 +174,14 @@ public class UIRoomStore {
                 }
             }
 
+            //接听电话时 开始计时
+            if (callStartTime == null && !owner) {
+                startCallTime();
+            }
 
             // 首次join后 自动发送流
             if ((firstJoinedAutoProduceAudio || firstJoinedAutoProduceVideo) && joinedCount == 0) {
+                // 因为弹出窗口需要页面的content 所以用切换到前台时才开始调用方法 所以页面需要设置content 这里用的lifeOwner强转
                 ProcessLifecycleOwner.get().getLifecycle().addObserver(new LifecycleEventObserver() {
                     @Override
                     public void onStateChanged(@androidx.annotation.NonNull @NotNull LifecycleOwner source, @androidx.annotation.NonNull @NotNull Lifecycle.Event event) {
@@ -213,7 +218,7 @@ public class UIRoomStore {
 
             joinedCount++;
         } else if (connectionState1 == RoomClient.ConnectionState.CLOSED) {
-            if (callEnd == 1) {
+            if (callEndType == 1) {
                 if (owner)
                     conversationState.setValue(Buddy.ConversationState.Left);
                 else {
@@ -223,10 +228,10 @@ public class UIRoomStore {
                         conversationState.setValue(Buddy.ConversationState.InviteReject);
                     }
                 }
-            } else if (callEnd == 2) {
+            } else if (callEndType == 2) {
                 conversationState.setValue(Buddy.ConversationState.InviteTimeout);
             }
-            if (callEnd != 0)
+            if (callEndType != 0)
                 release();
         }
     };
@@ -253,11 +258,25 @@ public class UIRoomStore {
     Observer<Buddy> buddyObserver = new Observer<Buddy>() {
         @Override
         public void onChanged(Buddy buddy) {
-            if (callStart == null) {
-                if (!buddy.isProducer() &&
-                        buddy.getConnectionState() == Buddy.ConnectionState.Online && buddy.getConversationState() == Buddy.ConversationState.Joined) {
-                    callStart = new Date();
-                    startCallTime();
+            // 计时逻辑
+            // 开始
+            if (callStartTime == null && !buddy.isProducer() && joinedCount > 0) {
+                if (owner) {
+                    // 第一个人进来就算开始通话
+                    if (buddy.getConnectionState() == Buddy.ConnectionState.Online && buddy.getConversationState() == Buddy.ConversationState.Joined) {
+                        startCallTime();
+                    }
+                } else {
+                    // 自己接听就算开始通话
+                    if (buddy.getConversationState() == Buddy.ConversationState.Joined) {
+                        startCallTime();
+                    }
+                }
+            }
+            // 结束
+            if (callStartTime != null && callEndType == 0 && joinedCount > 0) {
+                if (buddys.getValue() != null && buddys.getValue().size() == 1) {
+                    hangup();
                 }
             }
             for (BuddyItemViewModel model : buddys.getValue()) {
@@ -416,31 +435,37 @@ public class UIRoomStore {
 
     //region 通话时间计时器
 
-    private DisposableObserver<Long> callTimeObserver = new DisposableObserver<Long>() {
-        @Override
-        public void onNext(@NonNull Long aLong) {
-            callTime.applyPost(System.currentTimeMillis() - callStart.getTime());
-        }
-
-        @Override
-        public void onError(@NonNull Throwable e) {
-
-        }
-
-        @Override
-        public void onComplete() {
-
-        }
-    };
+    private DisposableObserver<Long> callTimeObserver;
 
     private void startCallTime() {
-        callTimeObserver.dispose();
+        if (callStartTime != null) return;
+        callStartTime = new Date();
+        callTimeObserver = new DisposableObserver<Long>() {
+            @Override
+            public void onNext(@NonNull Long aLong) {
+                callTime.applyPost(System.currentTimeMillis() - callStartTime.getTime());
+            }
+
+            @Override
+            public void onError(@NonNull Throwable e) {
+
+            }
+
+            @Override
+            public void onComplete() {
+
+            }
+        };
         Observable.interval(0, 1, TimeUnit.SECONDS)
                 .subscribe(callTimeObserver);
     }
 
     private void stopCallTime() {
-        callTimeObserver.dispose();
+        if (callEndTime !=null)return;
+        if (callTimeObserver != null)
+            callTimeObserver.dispose();
+        callTimeObserver = null;
+        callEndTime = new Date();
     }
 
     //endregion
@@ -460,7 +485,8 @@ public class UIRoomStore {
     }
 
     public void hangup() {
-        callEnd = 1;
+        stopCallTime();
+        callEndType = 1;
         if (connectionState.getValue() == RoomClient.ConnectionState.JOINED
                 || connectionState.getValue() == RoomClient.ConnectionState.CONNECTED)
             getRoomClient().hangup();
@@ -608,7 +634,10 @@ public class UIRoomStore {
         connectionState.observeForever(new Observer<RoomClient.ConnectionState>() {
             @Override
             public void onChanged(RoomClient.ConnectionState state) {
-                if (state == RoomClient.ConnectionState.CONNECTED) {
+                if (
+                        state == RoomClient.ConnectionState.CONNECTED
+                                || state == RoomClient.ConnectionState.JOINED
+                ) {
                     connectionState.removeObserver(this);
                     JSONArray jsonArray = new JSONArray();
                     for (MSManager.User user : list) {

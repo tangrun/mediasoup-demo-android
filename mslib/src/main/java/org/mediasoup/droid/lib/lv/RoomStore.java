@@ -6,17 +6,16 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Producer;
+import org.mediasoup.droid.lib.Constant;
 import org.mediasoup.droid.lib.RoomClient;
 import org.mediasoup.droid.lib.WrapperCommon;
 import org.mediasoup.droid.lib.model.Buddy;
-import org.mediasoup.droid.lib.model.Buddys;
 import org.mediasoup.droid.lib.model.DeviceInfo;
-import org.mediasoup.droid.lib.model.RoomState;
-import org.mediasoup.droid.lib.model.Producers;
-import org.mediasoup.droid.lib.model.Consumers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Room state.
@@ -28,23 +27,17 @@ public class RoomStore {
 
     private static final String TAG = "RoomStore";
 
+    private final BuddyObservable buddyObservable = new BuddyObservable();
 
-    private final SupplierMutableLiveData<RoomState> roomState = new SupplierMutableLiveData<>(RoomState::new);
-    private final SupplierMutableLiveData<Buddys> buddys = new SupplierMutableLiveData<>(Buddys::new);
-    private final Producers producers = new Producers();
-    private final Consumers consumers = new Consumers();
+    private Constant.ConnectionState connectionState = Constant.ConnectionState.NEW;
+    private Constant.CameraState cameraState = Constant.CameraState.disabled;
+    private Constant.MicrophoneState microphoneState = Constant.MicrophoneState.disabled;
+    private Constant.CameraFacingState cameraFacingState = Constant.CameraFacingState.front;
+    private final Map<String, Buddy> buddys = new ConcurrentHashMap<>();
+    private final Map<String, ConsumerWrapper> consumers = new ConcurrentHashMap<>();
+    private final Map<String, ProducerWrapper> producers = new ConcurrentHashMap<>();
+    private final Map<String, WrapperCommon<?>> wrappers = new ConcurrentHashMap<>();
 
-    public SupplierMutableLiveData<RoomState> getRoomState() {
-        return roomState;
-    }
-
-    public Producers getProducers() {
-        return producers;
-    }
-
-    public Consumers getConsumers() {
-        return consumers;
-    }
 
     public void addNotify(String msg) {
         Log.d(TAG, "addNotify: " + msg);
@@ -54,123 +47,160 @@ public class RoomStore {
         Log.d(TAG, "addNotify: " + tag + " : " + msg);
     }
 
+    public BuddyObservable getBuddyObservable() {
+        return buddyObservable;
+    }
+
+
+    public Constant.ConnectionState getConnectionState() {
+        return connectionState;
+    }
+
+    public Constant.CameraState getCameraState() {
+        return cameraState;
+    }
+
+    public Constant.MicrophoneState getMicrophoneState() {
+        return microphoneState;
+    }
+
+    public Constant.CameraFacingState getCameraFacingState() {
+        return cameraFacingState;
+    }
+
+    public Map<String, Buddy> getBuddys() {
+        return buddys;
+    }
+
+    public Map<String, ConsumerWrapper> getConsumers() {
+        return consumers;
+    }
+
+    public Map<String, ProducerWrapper> getProducers() {
+        return producers;
+    }
+
+    public Map<String, WrapperCommon<?>> getWrappers() {
+        return wrappers;
+    }
 
     // region roomState
 
-    public void setCameraSwitchDeviceState(RoomState.State state) {
-        roomState.postValue(value -> value.setCameraIsFrontDeviceState(state));
+    public void setConnectionState(Constant.ConnectionState connectionState) {
+        this.connectionState = connectionState;
     }
 
-    public void setMicrophoneState(RoomState.State state) {
-        roomState.postValue(value -> value.setMicrophoneEnabledState(state));
+    public void setCameraState(Constant.CameraState cameraState) {
+        this.cameraState = cameraState;
     }
 
-    public void setCameraState(RoomState.State state) {
-        roomState.postValue(value -> value.setCameraEnabledState(state));
+    public void setMicrophoneState(Constant.MicrophoneState microphoneState) {
+        this.microphoneState = microphoneState;
     }
 
-    public void setConnectionState(RoomClient.ConnectionState state) {
-        roomState.postValue(value -> value.setConnectionState(state));
+    public void setCameraFacingState(Constant.CameraFacingState cameraFacingState) {
+        this.cameraFacingState = cameraFacingState;
     }
+
     // endregion
 
 
     // region producer
-    public void setProducerScore(String peerId, String producerId, JSONArray score) {
-        if (producers.setProducerScore(producerId, score)) {
-            getBuddyPost(peerId, value -> {
-
-            });
-        }
-    }
-
-    public void setProducerResumed(String producerId) {
-        producers.setProducerResumed(producerId);
-    }
-
-    public void setProducerPaused(String producerId) {
-        producers.setProducerPaused(producerId);
-    }
-
-    public void addProducer(String peerId, Producer producer) {
-        producers.addProducer(producer);
-        getBuddyPost(peerId, value -> value.getIds().add(producer.getId()));
-    }
-
-    public void removeProducer(String peerId, String producerId) {
-        producers.removeProducer(producerId);
-        getBuddyPost(peerId, value -> value.getIds().remove(producerId));
-    }
-    // endregion
-
-
-    // region consumer
-
-    public void setConsumerCurrentLayers(String consumerId, int spatialLayer, int temporalLayer) {
-        consumers.setConsumerCurrentLayers(consumerId, spatialLayer, temporalLayer);
-    }
-
-    public void setConsumerScore(String peerId, String consumerId, JSONObject score) {
-        if (consumers.setConsumerScore(consumerId, score)) {
-            getBuddyPost(peerId, value -> {
-
-            });
-        }
-    }
-
-    public void setConsumerResumed(String consumerId, String type) {
-        consumers.setConsumerResumed(consumerId, type);
-    }
-
-    public void setConsumerPaused(String consumerId, String type) {
-        consumers.setConsumerPaused(consumerId, type);
-    }
-
-    public void addConsumer(String peerId, String type, Consumer consumer, boolean remotelyPaused) {
-        consumers.addConsumer(type, consumer, remotelyPaused);
-        getBuddyPost(peerId, value -> value.getIds().add(consumer.getId()));
-    }
-
-    public void removeConsumer(String peerId, String consumerId) {
-        consumers.removeConsumer(consumerId);
-        getBuddyPost(peerId, value -> {
-            value.getIds().remove(consumerId);
+    public void setWrapperScore(String id, Integer producerScore, Integer consumerScore) {
+        getWrapperPost(id, value -> {
+            value.setProducerScore(producerScore);
+            value.setConsumerScore(consumerScore);
+            getBuddyPost(value.getBuddyId(), value1 -> buddyObservable.dispatcher()
+                    .onProducerScoreChanged(value.getBuddyId(), value1, id, value));
         });
     }
+
+    public void setWrapperResumed(String id, Constant.Originator originator) {
+        getWrapperPost(id, value -> {
+            if (Constant.Originator.local== originator) {
+                value.setLocallyPaused(false);
+            } else {
+                value.setRemotelyPaused(false);
+            }
+            getBuddyPost(value.getBuddyId(), value1 -> buddyObservable.dispatcher()
+                    .onProducerResumed(value.getBuddyId(), value1, id, value));
+        });
+    }
+
+    public void setWrapperPaused(String id, Constant.Originator originator) {
+        getWrapperPost(id, value -> {
+            if (Constant.Originator.local == originator) {
+                value.setLocallyPaused(true);
+            } else {
+                value.setRemotelyPaused(true);
+            }
+            getBuddyPost(value.getBuddyId(), value1 -> buddyObservable.dispatcher()
+                    .onProducerPaused(value.getBuddyId(), value1, id, value));
+        });
+    }
+
+    public void addWrapper(boolean producer, String buddyId, String id, String kind, Object data) {
+        WrapperCommon<?> wrapperCommon;
+        if (producer) {
+            ProducerWrapper producerWrapper = new ProducerWrapper(buddyId, id, kind, (Producer) data);
+            producers.put(producerWrapper.getId(), producerWrapper);
+            wrapperCommon = producerWrapper;
+        } else {
+            ConsumerWrapper consumerWrapper = new ConsumerWrapper(buddyId, id, kind, (Consumer) data);
+            consumers.put(consumerWrapper.getId(), consumerWrapper);
+            wrapperCommon = consumerWrapper;
+        }
+
+        getBuddyPost(buddyId, value -> buddyObservable.dispatcher()
+                .onProducerAdd(value.getId(), value, id, wrapperCommon));
+    }
+
+    public void removeWrapper(boolean needClose, String producerId) {
+        WrapperCommon<?> wrapperCommon = wrappers.remove(producerId);
+        if (wrapperCommon != null) {
+            wrapperCommon.close();
+            getBuddyPost(wrapperCommon.getBuddyId(), value -> buddyObservable.dispatcher()
+                    .onProducerRemove(value.getId(), value, producerId));
+        }
+    }
     // endregion
+
 
     // region buddy
     public Buddy getBuddy(String id) {
-        return buddys.getValue().getBuddy(id);
+        return buddys.get(id);
     }
 
     public void removeBuddy(String peerId) {
-        buddys.postValue(value -> value.remove(peerId));
+        Buddy buddy = buddys.remove(peerId);
+        if (buddy == null) {
+            return;
+        }
+        buddyObservable.dispatcher().onBuddyRemove(peerId);
     }
 
     public void addBuddy(Buddy buddy) {
-        buddys.postValue(value -> {
-            value.addBuddy(buddy);
-        });
+        Buddy oldBuddy = buddys.put(buddy.getId(), buddy);
+        if (oldBuddy == null) {
+            buddyObservable.dispatcher().onBuddyAdd(buddy.getId(), buddy);
+        }
     }
 
     public void addBuddyForPeers(JSONArray jsonArray) {
         List<Buddy> list = new ArrayList<>();
-        try {
-            for (int i = 0; jsonArray != null && i < jsonArray.length(); i++) {
+        for (int i = 0; jsonArray != null && i < jsonArray.length(); i++) {
+            try {
                 JSONObject peer = jsonArray.getJSONObject(i);
                 Buddy buddy = new Buddy(false, peer);
                 list.add(buddy);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
         if (!list.isEmpty()) {
-            buddys.postValue(value -> {
-                for (Buddy buddy : list) {
-                    value.addBuddy(buddy);
-                }
-            });
+            for (Buddy buddy : list) {
+                addBuddy(buddy);
+            }
         }
     }
 
@@ -182,63 +212,45 @@ public class RoomStore {
         addBuddy(new Buddy(true, id, name, avatar, deviceInfo));
     }
 
-    public void updateBuddy(String peerId, JSONObject jsonObject) {
-        getBuddyPost(peerId, value -> {
+    public void updateBuddy(String buddyId, JSONObject jsonObject) {
+        getBuddyPost(buddyId, value -> {
             Buddy buddy = new Buddy(false, jsonObject);
             value.setConnectionState(buddy.getConnectionState());
             value.setConversationState(buddy.getConversationState());
+            buddyObservable.dispatcher().onBuddyStateChanged(buddyId, value);
         });
     }
 
     // endregion
 
-    public void setSpeakerVolume(JSONArray jsonArray) {
-        if (jsonArray == null) {
-            for (Buddy buddy : buddys.getValue().getAllPeers()) {
-                if (buddy.getVolume() == null) continue;
-                buddy.getBuddyLiveData().postValue(value1 -> {
-                    value1.setVolume(null);
-                });
-            }
-        } else {
-            try {
-                for (int i = 0, j = jsonArray.length(); i < j; i++) {
-                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-                    String peerId = jsonObject.optString("peerId");
-                    int volume = jsonObject.optInt("volume");
-                    getBuddyPost(peerId, value -> {
-                        value.setVolume(volume);
-                    });
-                }
-            } catch (Exception e) {
-
+    public void setSpeakerSilent() {
+        for (Buddy buddy : buddys.values()) {
+            if (buddy.getVolume() != null) {
+                buddy.setVolume(null);
+                buddyObservable.dispatcher().onBuddyVolumeChanged(buddy.getId(), buddy);
             }
         }
+    }
+
+    public void setSpeakerVolume(String buddyId, Integer volume) {
+        getBuddyPost(buddyId, value -> {
+            value.setVolume(volume);
+            buddyObservable.dispatcher().onBuddyVolumeChanged(value.getId(), value);
+        });
     }
 
 
     private void getBuddyPost(String buddyId, SupplierMutableLiveData.Invoker<Buddy> invoker) {
         Buddy buddy = getBuddy(buddyId);
-        if (buddy != null) {
-            buddy.getBuddyLiveData().postValue(invoker);
+        if (buddy != null && invoker != null) {
+            invoker.invokeAction(buddy);
         }
     }
 
-    private void getConsumerPost(String consumerId, SupplierMutableLiveData.Invoker<Consumers.ConsumerWrapper> invoker) {
-        Consumers.ConsumerWrapper wrapper = consumers.getConsumer(consumerId);
-        if (wrapper != null) {
-            wrapper.getWrapperCommonLiveData().postValue(new SupplierMutableLiveData.Invoker<WrapperCommon>() {
-                @Override
-                public void invokeAction(WrapperCommon value) {
-                    invoker.invokeAction(wrapper);
-                }
-            });
+    private void getWrapperPost(String id, SupplierMutableLiveData.Invoker<WrapperCommon<?>> invoker) {
+        WrapperCommon<?> wrapper = wrappers.get(id);
+        if (wrapper != null && invoker != null) {
+            invoker.invokeAction(wrapper);
         }
     }
-
-    public SupplierMutableLiveData<Buddys> getBuddys() {
-        return buddys;
-    }
-
-
 }

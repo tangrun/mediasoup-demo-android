@@ -26,13 +26,13 @@ public class AddUserHandler extends AppCompatActivity {
             finish();
             return;
         }
-        startActivityForResult(intent, 0);
+        startActivityForResult(intent, 1);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 0) {
+        if (requestCode == 1) {
             if (MSManager.uiCallback != null) {
                 MSManager.uiCallback.onAddUserResult(resultCode, data);
             }

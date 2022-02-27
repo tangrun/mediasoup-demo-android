@@ -1,8 +1,5 @@
 package com.tangrun.mschat;
 
-import android.util.Log;
-
-import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 
 import org.mediasoup.droid.lib.Constant;
@@ -36,7 +33,6 @@ public class BuddyItemViewModel implements Observer<Buddy> {
     ChangedMutableLiveData<Integer> mVideoPScore = new ChangedMutableLiveData<>();
     ChangedMutableLiveData<Integer> mVideoCScore = new ChangedMutableLiveData<>();
     ChangedMutableLiveData<Integer> mVolume = new ChangedMutableLiveData<>(null);
-    ChangedMutableLiveData<String> mStateTip = new ChangedMutableLiveData<>();
     ChangedMutableLiveData<Buddy.ConnectionState> connectionState = new ChangedMutableLiveData<>();
     ChangedMutableLiveData<Buddy.ConversationState> conversationState = new ChangedMutableLiveData<>();
 
@@ -56,8 +52,6 @@ public class BuddyItemViewModel implements Observer<Buddy> {
 
         WrapperCommon videoCommon = commonInvoker.getCommonInfo(buddy.getIds(), Constant.kind_video);
         WrapperCommon audioCommon = commonInvoker.getCommonInfo(buddy.getIds(), Constant.kind_audio);
-
-
 
         AudioTrack audioTrack = audioCommon == null ? null : audioCommon.getTrack();
         VideoTrack videoTrack = videoCommon == null ? null : videoCommon.getTrack();

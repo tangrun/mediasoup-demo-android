@@ -136,6 +136,31 @@ public class PeerConnectionUtils {
         mAudioSource = mPeerConnectionFactory.createAudioSource(new MediaConstraints());
     }
 
+    public boolean canChangeCam(Context context) {
+        Logger.d(TAG, "canChangeCam()");
+        boolean isCamera2Supported = Camera2Enumerator.isSupported(context);
+        CameraEnumerator cameraEnumerator;
+
+        if (isCamera2Supported) {
+            cameraEnumerator = new Camera2Enumerator(context);
+        } else {
+            cameraEnumerator = new Camera1Enumerator();
+        }
+        final String[] deviceNames = cameraEnumerator.getDeviceNames();
+        if (deviceNames.length < 2) return false;
+        boolean hasFront = false;
+        boolean hasRear = false;
+        for (String deviceName : deviceNames) {
+            if (cameraEnumerator.isFrontFacing(deviceName)) {
+                hasFront = true;
+            } else {
+                hasRear = true;
+            }
+            if (hasFront && hasRear) return true;
+        }
+        return false;
+    }
+
     private void createCamCapture(Context context) {
         Logger.d(TAG, "createCamCapture()");
         mThreadChecker.checkIsOnValidThread();

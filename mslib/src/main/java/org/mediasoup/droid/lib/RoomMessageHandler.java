@@ -22,8 +22,6 @@ class RoomMessageHandler {
     @NonNull
     final RoomStore mStore;
     // mediasoup Consumers.
-    @NonNull
-    final Map<String, ConsumerHolder> mConsumers;
 
     static class ConsumerHolder {
         @NonNull
@@ -39,7 +37,6 @@ class RoomMessageHandler {
 
     RoomMessageHandler(@NonNull RoomStore store) {
         this.mStore = store;
-        this.mConsumers = new ConcurrentHashMap<>();
     }
 
     @WorkerThread
@@ -69,65 +66,68 @@ class RoomMessageHandler {
             }
             case "consumerClosed": {
                 String consumerId = data.getString("consumerId");
-                ConsumerHolder holder = mConsumers.remove(consumerId);
-                if (holder == null) {
-                    break;
-                }
-                holder.mConsumer.close();
-                mConsumers.remove(consumerId);
-                mStore.removeConsumer(holder.peerId, holder.mConsumer.getId());
+                mStore.removeWrapper(false,consumerId);
                 break;
             }
             case "consumerPaused": {
                 String consumerId = data.getString("consumerId");
-                ConsumerHolder holder = mConsumers.get(consumerId);
-                if (holder == null) {
-                    break;
-                }
-                mStore.setConsumerPaused(holder.mConsumer.getId(), Constant.originator_remote);
+                mStore.setWrapperPaused(consumerId, Constant.Originator.remote);
                 break;
             }
             case "consumerResumed": {
                 String consumerId = data.getString("consumerId");
-                ConsumerHolder holder = mConsumers.get(consumerId);
-                if (holder == null) {
-                    break;
-                }
-                mStore.setConsumerResumed(holder.mConsumer.getId(), Constant.originator_remote);
+                mStore.setWrapperResumed(consumerId, Constant.Originator.remote);
                 break;
             }
             case "consumerLayersChanged": {
                 String consumerId = data.getString("consumerId");
                 int spatialLayer = data.optInt("spatialLayer");
                 int temporalLayer = data.optInt("temporalLayer");
-                ConsumerHolder holder = mConsumers.get(consumerId);
-                if (holder == null) {
-                    break;
-                }
-                mStore.setConsumerCurrentLayers(consumerId, spatialLayer, temporalLayer);
+//                mStore.setConsumerCurrentLayers(consumerId, spatialLayer, temporalLayer);
                 break;
             }
             case "producerScore": {
                 String peerId = data.getString("peerId");
                 String producerId = data.getString("producerId");
                 JSONArray score = data.getJSONArray("score");
-                mStore.setProducerScore(peerId,producerId, score);
+                try {
+                    JSONObject jsonObject = score.getJSONObject(0);
+                    int scoreNum = jsonObject.optInt("score");
+                    mStore.setWrapperScore(producerId,scoreNum,null);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
                 break;
             }
             case "consumerScore": {
                 String peerId = data.getString("peerId");
                 String consumerId = data.getString("consumerId");
                 JSONObject score = data.optJSONObject("score");
-                ConsumerHolder holder = mConsumers.get(consumerId);
-                if (holder == null) {
-                    break;
+                try {
+                    int producerScore = score.optInt("producerScore");
+                    int consumerScore = score.optInt("score");
+                    mStore.setWrapperScore(consumerId,producerScore,consumerScore);
+                }catch (Exception e){
+                    e.printStackTrace();
                 }
-                mStore.setConsumerScore(peerId,consumerId, score);
                 break;
             }
             case "activeSpeaker": {
                 JSONArray jsonArray = data.optJSONArray("volumes");
-                mStore.setSpeakerVolume(jsonArray);
+                if (jsonArray ==null){
+                    mStore.setSpeakerSilent();
+                }else {
+                    for (int i = 0, j = jsonArray.length(); i < j; i++) {
+                        try {
+                            JSONObject jsonObject = jsonArray.getJSONObject(i);
+                            String peerId = jsonObject.optString("peerId");
+                            int volume = jsonObject.optInt("volume");
+                            mStore.setSpeakerVolume(peerId,volume);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
                 break;
             }
             default: {

@@ -123,7 +123,7 @@ public class Buddy {
      * 属性变化
      * ids volume connectionState conversationState
      */
-    private final SupplierMutableLiveData<Buddy> buddyMutableLiveData;
+//    private final SupplierMutableLiveData<Buddy> buddyMutableLiveData;
 
     public Buddy(boolean isProducer, String id, String name, String avatar, DeviceInfo deviceInfo) {
         this.isProducer = isProducer;
@@ -131,7 +131,7 @@ public class Buddy {
         setAvatar(avatar);
         setDevice(deviceInfo);
         setId(id);
-        buddyMutableLiveData = new SupplierMutableLiveData<>(() -> Buddy.this);
+//        buddyMutableLiveData = new SupplierMutableLiveData<>(() -> Buddy.this);
     }
 
     public Buddy(boolean isProducer, @NonNull JSONObject info) {
@@ -151,7 +151,7 @@ public class Buddy {
         avatar = info.optString("avatar");
         connectionState = ConnectionState.get(info.optString("connectionState"));
         conversationState = ConversationState.get(info.optString("conversationState"));
-        buddyMutableLiveData = new SupplierMutableLiveData<>(this);
+//        buddyMutableLiveData = new SupplierMutableLiveData<>(this);
     }
 
     public ConnectionState getConnectionState() {
@@ -172,9 +172,9 @@ public class Buddy {
         return this;
     }
 
-    public SupplierMutableLiveData<Buddy> getBuddyLiveData() {
-        return buddyMutableLiveData;
-    }
+//    public SupplierMutableLiveData<Buddy> getBuddyLiveData() {
+//        return buddyMutableLiveData;
+//    }
 
     public Buddy setProducer(boolean producer) {
         isProducer = producer;
