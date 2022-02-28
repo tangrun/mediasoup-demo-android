@@ -1,6 +1,6 @@
 package com.tangrun.mschat.model;
 
-import org.mediasoup.droid.lib.WrapperCommon;
+import org.mediasoup.droid.lib.model.WrapperCommon;
 import org.mediasoup.droid.lib.enums.ConnectionState;
 import org.mediasoup.droid.lib.enums.ConversationState;
 import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;

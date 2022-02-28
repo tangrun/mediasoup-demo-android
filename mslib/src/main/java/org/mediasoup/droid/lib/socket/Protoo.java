@@ -1,4 +1,4 @@
-package org.mediasoup.droid.lib;
+package org.mediasoup.droid.lib.socket;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
@@ -15,7 +15,7 @@ public class Protoo extends org.protoojs.droid.Peer {
 
   private static final String TAG = "MS_Protoo";
 
-  interface RequestGenerator {
+  public interface RequestGenerator {
     void request(JSONObject req);
   }
 

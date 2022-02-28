@@ -1,4 +1,4 @@
-package org.mediasoup.droid.lib;
+package org.mediasoup.droid.lib.model;
 
 import org.mediasoup.droid.Producer;
 import org.webrtc.MediaStreamTrack;

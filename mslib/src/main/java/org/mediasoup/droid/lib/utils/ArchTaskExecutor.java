@@ -1,4 +1,4 @@
-package org.mediasoup.droid.lib;
+package org.mediasoup.droid.lib.utils;
 
 import android.os.Build;
 import android.os.Handler;

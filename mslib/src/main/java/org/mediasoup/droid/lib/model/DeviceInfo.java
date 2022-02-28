@@ -5,7 +5,7 @@ import android.os.Build;
 import org.json.JSONObject;
 import org.mediasoup.droid.BuildConfig;
 
-import static org.mediasoup.droid.lib.JsonUtils.jsonPut;
+import static org.mediasoup.droid.lib.utils.JsonUtils.jsonPut;
 
 @SuppressWarnings("WeakerAccess")
 public class DeviceInfo {

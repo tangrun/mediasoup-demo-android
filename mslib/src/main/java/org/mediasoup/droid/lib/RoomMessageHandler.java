@@ -9,11 +9,7 @@ import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Logger;
 import org.mediasoup.droid.lib.enums.Originator;
-import org.mediasoup.droid.lib.lv.RoomStore;
 import org.protoojs.droid.Message;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 class RoomMessageHandler {
 

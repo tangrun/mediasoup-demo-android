@@ -8,7 +8,7 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 import org.jetbrains.annotations.NotNull;
-import org.mediasoup.droid.lib.PeerConnectionUtils;
+import org.mediasoup.droid.lib.utils.PeerConnectionUtils;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 
@@ -39,12 +39,13 @@ public class InitSurfaceViewRender extends SurfaceViewRenderer implements Lifecy
 
     public void bind(LifecycleOwner lifecycleOwner,VideoTrack videoTrack){
         this.videoTrack = videoTrack;
-        if (lifecycleOwner.getLifecycle().getCurrentState() == Lifecycle.State.RESUMED){
+        if (lifecycleOwner.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)){
             bind();
         }
     }
 
     private void bind(){
+        if (!register)return;
         if (videoTrack!=null){
             if (!init){
                 init(PeerConnectionUtils.getEglContext(), null);

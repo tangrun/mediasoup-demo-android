@@ -12,7 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:scaleType="centerInside"
-        tools:src="@mipmap/ic_call_video_answer" />
+        tools:src="@mipmap/ms_ic_call_answer_video" />
 
     <TextView
         android:id="@+id/tv_content"

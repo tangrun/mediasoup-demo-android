@@ -13,7 +13,7 @@
         </shape>
     </item>
     <item
-        android:drawable="@drawable/ic_baseline_voice_on_20"
+        android:drawable="@drawable/ms_ic_voice_on_20"
         android:gravity="center" />
 
 </layer-list>

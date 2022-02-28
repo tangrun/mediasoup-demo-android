@@ -1,4 +1,4 @@
-package org.mediasoup.droid.lib.lv;
+package org.mediasoup.droid.lib;
 
 import android.util.Log;
 
@@ -6,10 +6,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Producer;
-import org.mediasoup.droid.lib.WrapperCommon;
+import org.mediasoup.droid.lib.lv.ClientObserver;
+import org.mediasoup.droid.lib.lv.DispatcherObservable;
+import org.mediasoup.droid.lib.lv.SupplierMutableLiveData;
+import org.mediasoup.droid.lib.model.*;
 import org.mediasoup.droid.lib.enums.*;
-import org.mediasoup.droid.lib.model.Buddy;
-import org.mediasoup.droid.lib.model.DeviceInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,7 @@ public class RoomStore {
 
     private static final String TAG = "RoomStore";
 
-    private final ClientObservable clientObservable = new ClientObservable();
+    private final DispatcherObservable<ClientObserver> clientObservable = new DispatcherObservable<>(ClientObserver.class);
 
     private LocalConnectState localConnectionState = LocalConnectState.NEW.NEW;
     private CameraState cameraState = CameraState.disabled;
@@ -44,7 +45,7 @@ public class RoomStore {
         Log.d(TAG, "addNotify: " + tag + " : " + msg);
     }
 
-    public ClientObservable getClientObservable() {
+    public DispatcherObservable<ClientObserver> getClientObservable() {
         return clientObservable;
     }
 
@@ -77,22 +78,22 @@ public class RoomStore {
 
     public void setLocalConnectionState(LocalConnectState localConnectionState) {
         this.localConnectionState = localConnectionState;
-        clientObservable.dispatcher().onLocalConnectStateChanged(localConnectionState);
+        clientObservable.getDispatcher().onLocalConnectStateChanged(localConnectionState);
     }
 
     public void setCameraState(CameraState cameraState) {
         this.cameraState = cameraState;
-        clientObservable.dispatcher().onCameraStateChanged(cameraState);
+        clientObservable.getDispatcher().onCameraStateChanged(cameraState);
     }
 
     public void setMicrophoneState(MicrophoneState microphoneState) {
         this.microphoneState = microphoneState;
-        clientObservable.dispatcher().onMicrophoneStateChanged(microphoneState);
+        clientObservable.getDispatcher().onMicrophoneStateChanged(microphoneState);
     }
 
     public void setCameraFacingState(CameraFacingState cameraFacingState) {
         this.cameraFacingState = cameraFacingState;
-        clientObservable.dispatcher().onCameraFacingChanged(cameraFacingState);
+        clientObservable.getDispatcher().onCameraFacingChanged(cameraFacingState);
     }
 
     // endregion
@@ -103,7 +104,7 @@ public class RoomStore {
         getWrapperPost(id, value -> {
             value.setProducerScore(producerScore);
             value.setConsumerScore(consumerScore);
-            getBuddyPost(value.getBuddyId(), value1 -> clientObservable.dispatcher()
+            getBuddyPost(value.getBuddyId(), value1 -> clientObservable.getDispatcher()
                     .onProducerScoreChanged(value.getBuddyId(), value1, id, value));
         });
     }
@@ -115,7 +116,7 @@ public class RoomStore {
             } else {
                 value.setRemotelyPaused(false);
             }
-            getBuddyPost(value.getBuddyId(), value1 -> clientObservable.dispatcher()
+            getBuddyPost(value.getBuddyId(), value1 -> clientObservable.getDispatcher()
                     .onProducerResumed(value.getBuddyId(), value1, id, value));
         });
     }
@@ -127,7 +128,7 @@ public class RoomStore {
             } else {
                 value.setRemotelyPaused(true);
             }
-            getBuddyPost(value.getBuddyId(), value1 -> clientObservable.dispatcher()
+            getBuddyPost(value.getBuddyId(), value1 -> clientObservable.getDispatcher()
                     .onProducerPaused(value.getBuddyId(), value1, id, value));
         });
     }
@@ -141,7 +142,7 @@ public class RoomStore {
         }
         wrappers.put(wrapperCommon.getId(), wrapperCommon);
 
-        getBuddyPost(buddyId, value -> clientObservable.dispatcher()
+        getBuddyPost(buddyId, value -> clientObservable.getDispatcher()
                 .onProducerAdd(value.getId(), value, id, wrapperCommon));
     }
 
@@ -149,7 +150,7 @@ public class RoomStore {
         WrapperCommon<?> wrapperCommon = wrappers.remove(producerId);
         if (wrapperCommon != null) {
             wrapperCommon.close();
-            getBuddyPost(wrapperCommon.getBuddyId(), value -> clientObservable.dispatcher()
+            getBuddyPost(wrapperCommon.getBuddyId(), value -> clientObservable.getDispatcher()
                     .onProducerRemove(value.getId(), value, producerId));
         }
     }
@@ -166,20 +167,20 @@ public class RoomStore {
         if (buddy == null) {
             return;
         }
-        clientObservable.dispatcher().onBuddyRemove(peerId);
+        clientObservable.getDispatcher().onBuddyRemove(peerId);
     }
 
     public void addBuddy(Buddy buddy) {
         Buddy oldBuddy = buddys.get(buddy.getId());
         if (oldBuddy == null) {
             buddys.put(buddy.getId(), buddy);
-            clientObservable.dispatcher().onBuddyAdd(buddy.getId(), buddy);
+            clientObservable.getDispatcher().onBuddyAdd(buddy.getId(), buddy);
             oldBuddy = buddy;
         }else {
             oldBuddy.setConnectionState(buddy.getConnectionState());
             oldBuddy.setConversationState(buddy.getConversationState());
         }
-        clientObservable.dispatcher().onBuddyStateChanged(oldBuddy.getId(), oldBuddy);
+        clientObservable.getDispatcher().onBuddyStateChanged(oldBuddy.getId(), oldBuddy);
     }
 
     public void addBuddyForPeers(JSONArray jsonArray) {
@@ -213,7 +214,7 @@ public class RoomStore {
             Buddy buddy = new Buddy(false, jsonObject);
             value.setConnectionState(buddy.getConnectionState());
             value.setConversationState(buddy.getConversationState());
-            clientObservable.dispatcher().onBuddyStateChanged(buddyId, value);
+            clientObservable.getDispatcher().onBuddyStateChanged(buddyId, value);
         });
     }
 
@@ -223,7 +224,7 @@ public class RoomStore {
         for (Buddy buddy : buddys.values()) {
             if (buddy.getVolume() != null && buddy.getVolume() != 0) {
                 buddy.setVolume(0);
-                clientObservable.dispatcher().onBuddyVolumeChanged(buddy.getId(), buddy);
+                clientObservable.getDispatcher().onBuddyVolumeChanged(buddy.getId(), buddy);
             }
         }
     }
@@ -231,7 +232,7 @@ public class RoomStore {
     public void setSpeakerVolume(String buddyId, int volume) {
         getBuddyPost(buddyId, value -> {
             value.setVolume(volume);
-            clientObservable.dispatcher().onBuddyVolumeChanged(value.getId(), value);
+            clientObservable.getDispatcher().onBuddyVolumeChanged(value.getId(), value);
         });
     }
 

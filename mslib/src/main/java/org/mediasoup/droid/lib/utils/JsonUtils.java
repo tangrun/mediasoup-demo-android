@@ -1,4 +1,4 @@
-package org.mediasoup.droid.lib;
+package org.mediasoup.droid.lib.utils;
 
 import androidx.annotation.NonNull;
 

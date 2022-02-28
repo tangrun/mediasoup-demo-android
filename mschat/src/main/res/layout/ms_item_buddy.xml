@@ -24,7 +24,7 @@
                 android:layout_height="match_parent"
                 android:adjustViewBounds="true"
                 android:scaleType="centerCrop"
-                tools:src="@drawable/buddy"/>
+                tools:src="@drawable/ms_default_avatar"/>
 
         <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/tv_debug"
@@ -71,7 +71,8 @@
                     android:layout_width="@dimen/ms_peer_state_icon_size"
                     android:layout_height="@dimen/ms_peer_state_icon_size"
                     android:layout_marginRight="8dp"
-                    android:src="@drawable/ic_mic_off"
+                    android:src="@drawable/ms_ic_microphone_disabled_round_24"
+                    android:visibility="gone"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintRight_toLeftOf="@id/iv_cam_disable"
                     app:layout_constraintRight_toRightOf="parent"
@@ -80,9 +81,9 @@
             <androidx.appcompat.widget.AppCompatImageView
                     android:id="@+id/iv_cam_disable"
                     android:layout_width="@dimen/ms_peer_state_icon_size"
-                    android:layout_height="@dimen/ms_peer_state_icon_size"
+                    android:layout_height="@dimen/ms_peer_state_icon_size" android:visibility="gone"
                     android:layout_marginRight="8dp"
-                    android:src="@drawable/ic_cam_off"
+                    android:src="@drawable/ms_ic_camera_disabled_round_24"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintRight_toLeftOf="@id/iv_voice_on"
                     app:layout_constraintRight_toRightOf="parent"
@@ -94,7 +95,8 @@
                     android:layout_width="@dimen/ms_peer_state_icon_size"
                     android:layout_marginRight="8dp"
                     android:layout_height="@dimen/ms_peer_state_icon_size"
-                    android:src="@drawable/ic_voice_on"
+                    android:visibility="gone"
+                    android:src="@drawable/ms_ic_voice_on_round_24"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintRight_toRightOf="parent"
                     tools:visibility="visible"/>

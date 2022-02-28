@@ -1,9 +1,7 @@
 package org.mediasoup.droid.lib;
 
 import android.content.Context;
-import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -24,8 +22,11 @@ import org.mediasoup.droid.Transport;
 import org.mediasoup.droid.lib.enums.*;
 import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.DeviceInfo;
+import org.mediasoup.droid.lib.socket.Protoo;
 import org.mediasoup.droid.lib.socket.WebSocketTransport;
-import org.mediasoup.droid.lib.lv.RoomStore;
+import org.mediasoup.droid.lib.utils.ArchTaskExecutor;
+import org.mediasoup.droid.lib.utils.JsonUtils;
+import org.mediasoup.droid.lib.utils.PeerConnectionUtils;
 import org.protoojs.droid.Message;
 import org.protoojs.droid.ProtooException;
 import org.webrtc.AudioTrack;
@@ -36,11 +37,10 @@ import org.webrtc.VideoTrack;
 import io.reactivex.disposables.CompositeDisposable;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.mediasoup.droid.lib.JsonUtils.jsonPut;
-import static org.mediasoup.droid.lib.JsonUtils.toJsonObject;
+import static org.mediasoup.droid.lib.utils.JsonUtils.jsonPut;
+import static org.mediasoup.droid.lib.utils.JsonUtils.toJsonObject;
 
 public class RoomClient extends RoomMessageHandler {
 
@@ -103,8 +103,8 @@ public class RoomClient extends RoomMessageHandler {
         mMainHandler = ArchTaskExecutor.getMainThreadExecutor();
         mWorkHandler.execute(() -> mPeerConnectionUtils = new PeerConnectionUtils());
     }
-
-    @Async
+    
+    
     public void connect() {
         String url = mOptions.getProtooUrl();
         Logger.d(TAG, "connect() " + url);
@@ -116,7 +116,7 @@ public class RoomClient extends RoomMessageHandler {
                 });
     }
 
-    @Async
+    
     public void getPeers() {
         mWorkHandler.execute(() -> {
             try {
@@ -129,7 +129,7 @@ public class RoomClient extends RoomMessageHandler {
         });
     }
 
-    @Async
+    
     public void hangup() {
         mWorkHandler.execute(() -> {
             try {
@@ -141,7 +141,7 @@ public class RoomClient extends RoomMessageHandler {
         });
     }
 
-    @Async
+    
     public void addPeers(JSONArray jsonArray) {
         mWorkHandler.execute(() -> {
             try {
@@ -157,7 +157,7 @@ public class RoomClient extends RoomMessageHandler {
         });
     }
 
-    @Async
+    
     public void join() {
         Logger.d(TAG, "join() ");
         mWorkHandler.execute(
@@ -166,7 +166,7 @@ public class RoomClient extends RoomMessageHandler {
                 });
     }
 
-    @Async
+    
     public void enableMic() {
         if (!mOptions.mProduce || !mOptions.mProduceAudio)
             return;
@@ -178,7 +178,7 @@ public class RoomClient extends RoomMessageHandler {
         });
     }
 
-    @Async
+    
     public void disableMic() {
         if (!mOptions.mProduce || !mOptions.mProduceAudio)
             return;
@@ -190,19 +190,19 @@ public class RoomClient extends RoomMessageHandler {
         });
     }
 
-    @Async
+    
     public void muteMic() {
         Logger.d(TAG, "muteMic()");
         mWorkHandler.execute(this::muteMicImpl);
     }
 
-    @Async
+    
     public void unmuteMic() {
         Logger.d(TAG, "unmuteMic()");
         mWorkHandler.execute(this::unmuteMicImpl);
     }
 
-    @Async
+    
     public void enableCam() {
         if (!mOptions.mProduce || !mOptions.mProduceVideo)
             return;
@@ -214,7 +214,7 @@ public class RoomClient extends RoomMessageHandler {
         });
     }
 
-    @Async
+    
     public void disableCam() {
         if (!mOptions.mProduce || !mOptions.mProduceVideo)
             return;
@@ -227,7 +227,7 @@ public class RoomClient extends RoomMessageHandler {
 
     }
 
-    @Async
+    
     public void changeCam() {
         if (!mOptions.mProduce || !mOptions.mProduceVideo)
             return;
@@ -255,19 +255,19 @@ public class RoomClient extends RoomMessageHandler {
                                 }));
     }
 
-    @Async
+    
     public void disableShare() {
         Logger.d(TAG, "disableShare()");
         // TODO(feature): share
     }
 
-    @Async
+    
     public void enableShare() {
         Logger.d(TAG, "enableShare()");
         // TODO(feature): share
     }
 
-    @Async
+    
     public void restartIceForRecvTransport() {
         mWorkHandler.execute(
                 () -> {
@@ -286,7 +286,7 @@ public class RoomClient extends RoomMessageHandler {
                 });
     }
 
-    @Async
+    
     public void restartIceForSendTransport() {
         mWorkHandler.execute(
                 () -> {
@@ -305,7 +305,7 @@ public class RoomClient extends RoomMessageHandler {
                 });
     }
 
-    @Async
+    
     public void restartIce() {
         Logger.d(TAG, "restartIce()");
         mWorkHandler.execute(
@@ -331,26 +331,26 @@ public class RoomClient extends RoomMessageHandler {
                 });
     }
 
-    @Async
+    
     public void setMaxSendingSpatialLayer() {
         Logger.d(TAG, "setMaxSendingSpatialLayer()");
         // TODO(feature): layer
     }
 
-    @Async
+    
     public void setConsumerPreferredLayers(String spatialLayer) {
         Logger.d(TAG, "setConsumerPreferredLayers()");
         // TODO(feature): layer
     }
 
-    @Async
+    
     public void setConsumerPreferredLayers(
             String consumerId, String spatialLayer, String temporalLayer) {
         Logger.d(TAG, "setConsumerPreferredLayers()");
         // TODO: layer
     }
 
-    @Async
+    
     public void requestConsumerKeyFrame(String consumerId) {
         Logger.d(TAG, "requestConsumerKeyFrame()");
         mWorkHandler.execute(
@@ -367,127 +367,127 @@ public class RoomClient extends RoomMessageHandler {
                 });
     }
 
-    @Async
+    
     public void enableChatDataProducer() {
         Logger.d(TAG, "enableChatDataProducer()");
         // TODO(feature): data channel
     }
 
-    @Async
+    
     public void enableBotDataProducer() {
         Logger.d(TAG, "enableBotDataProducer()");
         // TODO(feature): data channel
     }
 
-    @Async
+    
     public void sendChatMessage(String txt) {
         Logger.d(TAG, "sendChatMessage()");
         // TODO(feature): data channel
     }
 
-    @Async
+    
     public void sendBotMessage(String txt) {
         Logger.d(TAG, "sendBotMessage()");
         // TODO(feature): data channel
     }
 
-    @Async
+    
     @Deprecated
     public void changeDisplayName(String displayName) {
 
     }
 
-    @Async
+    
     public void getSendTransportRemoteStats() {
         Logger.d(TAG, "getSendTransportRemoteStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getRecvTransportRemoteStats() {
         Logger.d(TAG, "getRecvTransportRemoteStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getAudioRemoteStats() {
         Logger.d(TAG, "getAudioRemoteStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getVideoRemoteStats() {
         Logger.d(TAG, "getVideoRemoteStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getConsumerRemoteStats(String consumerId) {
         Logger.d(TAG, "getConsumerRemoteStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getChatDataProducerRemoteStats(String consumerId) {
         Logger.d(TAG, "getChatDataProducerRemoteStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getBotDataProducerRemoteStats() {
         Logger.d(TAG, "getBotDataProducerRemoteStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getDataConsumerRemoteStats(String dataConsumerId) {
         Logger.d(TAG, "getDataConsumerRemoteStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getSendTransportLocalStats() {
         Logger.d(TAG, "getSendTransportLocalStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getRecvTransportLocalStats() {
         Logger.d(TAG, "getRecvTransportLocalStats()");
         /// TODO(feature): stats
     }
 
-    @Async
+    
     public void getAudioLocalStats() {
         Logger.d(TAG, "getAudioLocalStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getVideoLocalStats() {
         Logger.d(TAG, "getVideoLocalStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void getConsumerLocalStats(String consumerId) {
         Logger.d(TAG, "getConsumerLocalStats()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void applyNetworkThrottle(String uplink, String downlink, String rtt, String secret) {
         Logger.d(TAG, "applyNetworkThrottle()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void resetNetworkThrottle(boolean silent, String secret) {
         Logger.d(TAG, "applyNetworkThrottle()");
         // TODO(feature): stats
     }
 
-    @Async
+    
     public void close() {
         if (this.mClosed) {
             return;

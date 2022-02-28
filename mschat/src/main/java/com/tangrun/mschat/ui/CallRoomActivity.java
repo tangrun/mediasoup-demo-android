@@ -27,7 +27,6 @@ public class CallRoomActivity extends AppCompatActivity {
             if (aBoolean == Boolean.TRUE)
                 finish();
         });
-        uiRoomStore.showActivity.applySet(true);
         uiRoomStore.showActivity.observe(this,aBoolean -> {
             if (aBoolean == Boolean.FALSE)
                 onBack();

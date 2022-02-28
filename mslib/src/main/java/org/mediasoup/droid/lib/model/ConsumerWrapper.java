@@ -1,14 +1,13 @@
-package org.mediasoup.droid.lib.lv;
+package org.mediasoup.droid.lib.model;
 
 import org.mediasoup.droid.Consumer;
-import org.mediasoup.droid.Producer;
-import org.mediasoup.droid.lib.WrapperCommon;
+import org.mediasoup.droid.lib.model.WrapperCommon;
 import org.webrtc.MediaStreamTrack;
 
-public class ProducerWrapper extends WrapperCommon<Producer> {
+public class ConsumerWrapper extends WrapperCommon<Consumer> {
 
 
-    public ProducerWrapper(String buddyId, String id, String kind, Producer data) {
+    public ConsumerWrapper(String buddyId, String id, String kind, Consumer data) {
         super(buddyId, id, kind, data);
     }
 

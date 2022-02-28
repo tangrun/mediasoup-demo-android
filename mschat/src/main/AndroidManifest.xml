@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application>
-        <activity android:name="com.tangrun.mschat.ui.UserSelector"></activity>
+        <activity android:name="com.tangrun.mschat.ui.UserSelector"/>
         <activity
             android:name="com.tangrun.mschat.ui.CallRoomActivity"
             android:launchMode="singleTask"

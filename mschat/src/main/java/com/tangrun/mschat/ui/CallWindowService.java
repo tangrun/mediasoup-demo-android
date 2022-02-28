@@ -12,11 +12,15 @@ import androidx.core.widget.ImageViewCompat;
 import androidx.lifecycle.*;
 import com.example.mschat.R;
 import com.example.mschat.databinding.MsCallWindowBinding;
+import com.google.android.flexbox.FlexDirection;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.UIRoomStore;
 import org.jetbrains.annotations.NotNull;
+import org.mediasoup.droid.lib.enums.ConversationState;
+import org.mediasoup.droid.lib.enums.LocalConnectState;
+import org.webrtc.VideoTrack;
 
 public class CallWindowService extends LifecycleService {
 
@@ -42,7 +46,7 @@ public class CallWindowService extends LifecycleService {
         @Override
         public void onChanged(BuddyModel buddyModel) {
             buddyModel.videoTrack.observe(CallWindowService.this, videoTrack -> {
-                binding.msVRender.bind(CallWindowService.this, videoTrack);
+                resetCallInfoOrVideo();
             });
         }
     };
@@ -58,13 +62,17 @@ public class CallWindowService extends LifecycleService {
             return;
         }
         binding = MsCallWindowBinding.inflate(LayoutInflater.from(this));
-        uiRoomStore.showActivity.observe(this, new Observer<Boolean>() {
+        uiRoomStore.showWindow.observe(this, new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
-                if (aBoolean == Boolean.TRUE) {
+                if (aBoolean == Boolean.FALSE) {
                     stopSelf();
                 }
             }
+        });
+        uiRoomStore.finished.observe(this, aBoolean -> {
+            if (aBoolean == Boolean.TRUE)
+                stopSelf();
         });
 
         // 左边麦克 摄像头状态只有在多人音视频才有
@@ -78,56 +86,26 @@ public class CallWindowService extends LifecycleService {
         ViewGroup.LayoutParams layoutParams = binding.msVRender.getLayoutParams();
         layoutParams.width = dp2px(uiRoomStore.audioOnly ? 60 : 80);
         layoutParams.height = dp2px(uiRoomStore.audioOnly ? 60 : 120);
-        if (uiRoomStore.audioOnly) {
+        // 显示
+        if (!uiRoomStore.audioOnly) {
             binding.msVRender.init(CallWindowService.this);
-            uiRoomStore.mine.observe(this, mineVideoTrackObserver);
         }
-        // 通话
+        uiRoomStore.mine.observe(this, mineVideoTrackObserver);
         uiRoomStore.localConversationState.observe(this, conversationState -> {
-            uiRoomStore.callTime.removeObservers(this);
-            String text = null;
-            int tintId = 0;
-            int imgId = 0;
-            switch (conversationState) {
-                case New: {
-                    tintId = R.color.ms_chat_green;
-                    imgId = R.drawable.ic_baseline_call_end_24;
-                    text = "";
-                    break;
-                }
-                case Invited: {
-                    tintId = R.color.ms_chat_green;
-                    imgId = R.drawable.ic_baseline_call_end_24;
-                    text = "待接听";
-                    break;
-                }
-                case Joined: {
-                    tintId = R.color.ms_chat_white;
-                    imgId = R.drawable.ic_baseline_call_24;
-                    text = "通话中";
-                    uiRoomStore.callTime.observe(this, s -> {
-                        binding.msTvCallTip.setText(s);
-                    });
-                    break;
-                }
-                case Left:
-                case InviteBusy:
-                case InviteTimeout:
-                case InviteReject: {
-                    tintId = R.color.ms_chat_red;
-                    imgId = R.drawable.ic_baseline_call_end_24;
-                    text = "通话已结束";
-                    break;
-                }
-            }
-            setCallInfoTintColor(tintId);
-            binding.msIvCallType.setImageResource(imgId);
-            binding.msTvCallTip.setText(text);
+            resetCallInfoOrVideo();
+        });
+        uiRoomStore.localConnectionState.observe(this, conversationState -> {
+            resetCallInfoOrVideo();
         });
 
         windowViewDragManager = new WindowViewDragManager(this, binding.getRoot()) {
             @Override
             public void onWindowScrolling(int viewX, int viewY, int width, int height, int screenWidth, int screenHeight) {
+                boolean left = viewX + width / 2 < screenWidth / 2;
+                int target = left ? FlexDirection.ROW : FlexDirection.ROW_REVERSE;
+                if (binding.msFlexLayout.getFlexDirection() != target) {
+                    binding.msFlexLayout.setFlexDirection(target);
+                }
                 binding.getRoot().setBackgroundResource(R.drawable.ms_bg_window_all_corner);
             }
 
@@ -136,6 +114,7 @@ public class CallWindowService extends LifecycleService {
                 boolean left = viewX + width / 2 < screenWidth / 2;
                 setWindowPositionToClosestBord(left);
                 binding.getRoot().setBackgroundResource(left ? R.drawable.ms_bg_window_right_corner : R.drawable.ms_bg_window_left_corner);
+                binding.msFlexLayout.setFlexDirection(left ? FlexDirection.ROW : FlexDirection.ROW_REVERSE);
             }
 
             @Override
@@ -153,6 +132,64 @@ public class CallWindowService extends LifecycleService {
                 }
             }
         });
+
+    }
+
+    void resetCallInfoOrVideo() {
+        BuddyModel buddyModel = uiRoomStore.mine.getValue();
+        VideoTrack videoTrack = buddyModel == null ? null : buddyModel.videoTrack.getValue();
+        ConversationState conversationState = uiRoomStore.localConversationState.getValue();
+        LocalConnectState connectionState = uiRoomStore.localConnectionState.getValue();
+
+        binding.msVRender.bind(CallWindowService.this, videoTrack);
+        binding.msVRender.setVisibility(videoTrack == null ? View.INVISIBLE : View.VISIBLE);
+        binding.msLlCallInfo.setVisibility(videoTrack == null ? View.VISIBLE : View.GONE);
+
+        uiRoomStore.callTime.removeObservers(this);
+        if (videoTrack == null && conversationState != null && connectionState != null) {
+            String text = null;
+            int tintId = 0;
+            int imgId = 0;
+            switch (conversationState){
+                case New:{
+                    if (uiRoomStore.owner){
+                        tintId = R.color.ms_chat_green;
+                        imgId = R.drawable.ms_ic_call_end_24;
+                        text = "进入房间中...";
+                    }else {
+                        tintId = R.color.ms_chat_green;
+                        imgId = R.drawable.ms_ic_call_end_24;
+                        text = "连接中...";
+                    }
+                    break;
+                }
+                case Joined:{
+                    tintId = R.color.ms_chat_green;
+                    imgId = R.drawable.ms_ic_calling_24;
+                    text = "通话中";
+                    uiRoomStore.callTime.observe(this, s -> {
+                        binding.msTvCallTip.setText(s);
+                    });
+                    break;
+                }
+                case Invited: {
+                    tintId = R.color.ms_chat_green;
+                    imgId = R.drawable.ms_ic_call_end_24;
+                    text = "待接听";
+                    break;
+                }
+                default:{
+                    tintId = R.color.ms_chat_red;
+                    imgId = R.drawable.ms_ic_call_end_24;
+                    text = "通话已结束";
+                    break;
+                }
+            }
+
+            setCallInfoTintColor(tintId);
+            binding.msIvCallType.setImageResource(imgId);
+            binding.msTvCallTip.setText(text);
+        }
 
     }
 
@@ -265,6 +302,7 @@ public class CallWindowService extends LifecycleService {
             showView = true;
             view.setOnTouchListener(this);
             windowManager.addView(view, layoutParams);
+            performWindowScrollEnd();
         }
 
         public void removeView() {

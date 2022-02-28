@@ -11,7 +11,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.mediasoup.droid.Logger;
 import org.mediasoup.droid.MediasoupClient;
-import org.mediasoup.droid.lib.JsonUtils;
+import org.mediasoup.droid.lib.utils.JsonUtils;
 import org.mediasoup.droid.lib.RoomOptions;
 
 import java.io.IOException;

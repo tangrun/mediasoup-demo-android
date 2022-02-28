@@ -13,7 +13,7 @@
         </shape>
     </item>
     <item
-        android:drawable="@drawable/ic_baseline_mic_off_20_red"
+        android:drawable="@drawable/ms_ic_camera_disabled_20"
         android:gravity="center" />
 
 </layer-list>

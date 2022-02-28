@@ -1,6 +1,6 @@
 package org.mediasoup.droid.lib.lv;
 
-import org.mediasoup.droid.lib.WrapperCommon;
+import org.mediasoup.droid.lib.model.WrapperCommon;
 import org.mediasoup.droid.lib.model.Buddy;
 
 public interface IProducerListener {

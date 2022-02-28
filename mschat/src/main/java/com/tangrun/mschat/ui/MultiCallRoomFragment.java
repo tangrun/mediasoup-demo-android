@@ -11,7 +11,6 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
@@ -32,7 +31,6 @@ import org.mediasoup.droid.lib.RoomClient;
 import org.mediasoup.droid.lib.enums.ConnectionState;
 import org.mediasoup.droid.lib.enums.ConversationState;
 import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;
-import org.mediasoup.droid.lib.lv.MultiMutableLiveData;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,14 +126,14 @@ public class MultiCallRoomFragment extends Fragment {
             hideAllAction();
             if (conversationState == ConversationState.Invited) {
                 // 接听/挂断
-                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomLeft);
-                uiRoomStore.Action_JoinAction.bindView(binding.llActionBottomRight);
+                uiRoomStore.Action_HangupAction.bindView(binding.llActionTopLeft);
+                uiRoomStore.Action_JoinAction.bindView(binding.llActionTopRight);
             } else if (conversationState == ConversationState.Joined) {
                 if (uiRoomStore.audioOnly) {
                     // 麦克风/挂断/扬声器
-                    uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomLeft);
-                    uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomRight);
+                    uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionTopLeft);
+                    uiRoomStore.Action_HangupAction.bindView(binding.llActionTopCenter);
+                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionTopRight);
                 } else {
                     // 麦克风/摄像头/切换摄像头 挂断
                     uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionTopLeft);
@@ -144,7 +142,7 @@ public class MultiCallRoomFragment extends Fragment {
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
                 }
             } else {
-                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+                uiRoomStore.Action_HangupAction.bindView(binding.llActionTopCenter);
             }
         });
         uiRoomStore.localConnectionState.observe(this, localConnectState -> {
@@ -218,8 +216,8 @@ public class MultiCallRoomFragment extends Fragment {
             binding.tvDisplayName.setText(model.buddy.getDisplayName());
             Glide.with(binding.ivCover).load(model.buddy.getAvatar())
                     .apply(new RequestOptions()
-                            .error(R.drawable.buddy)
-                            .placeholder(R.drawable.buddy))
+                            .error(R.drawable.ms_default_avatar)
+                            .placeholder(R.drawable.ms_default_avatar))
                     .into(binding.ivCover);
 
             model.videoTrack.removeObservers(lifecycleOwner);

@@ -1,4 +1,4 @@
-package org.mediasoup.droid.lib;
+package org.mediasoup.droid.lib.utils;
 
 import android.content.Context;
 import android.text.TextUtils;
