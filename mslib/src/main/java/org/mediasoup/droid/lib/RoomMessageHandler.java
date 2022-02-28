@@ -8,6 +8,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Logger;
+import org.mediasoup.droid.lib.enums.Originator;
 import org.mediasoup.droid.lib.lv.RoomStore;
 import org.protoojs.droid.Message;
 
@@ -71,12 +72,12 @@ class RoomMessageHandler {
             }
             case "consumerPaused": {
                 String consumerId = data.getString("consumerId");
-                mStore.setWrapperPaused(consumerId, Constant.Originator.remote);
+                mStore.setWrapperPaused(consumerId, Originator.remote);
                 break;
             }
             case "consumerResumed": {
                 String consumerId = data.getString("consumerId");
-                mStore.setWrapperResumed(consumerId, Constant.Originator.remote);
+                mStore.setWrapperResumed(consumerId, Originator.remote);
                 break;
             }
             case "consumerLayersChanged": {

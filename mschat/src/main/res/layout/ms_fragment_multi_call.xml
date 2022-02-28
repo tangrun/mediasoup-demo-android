@@ -57,7 +57,7 @@
         app:layout_constraintBottom_toTopOf="@id/ms_ll_top"
         app:layout_constraintTop_toBottomOf="@id/ms_ll_title"
         app:spanCount="3"
-        tools:listitem="@layout/item_peer" />
+        tools:listitem="@layout/ms_item_buddy" />
 
 
     <LinearLayout
@@ -71,7 +71,7 @@
 
         <include
             android:id="@+id/ll_action_top_left"
-            layout="@layout/item_action"
+            layout="@layout/ms_layout_action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -80,7 +80,7 @@
 
         <include
             android:id="@+id/ll_action_top_center"
-            layout="@layout/item_action"
+            layout="@layout/ms_layout_action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -89,7 +89,7 @@
 
         <include
             android:id="@+id/ll_action_top_right"
-            layout="@layout/item_action"
+            layout="@layout/ms_layout_action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -109,7 +109,7 @@
 
         <include
             android:id="@+id/ll_action_bottom_left"
-            layout="@layout/item_action"
+            layout="@layout/ms_layout_action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -118,7 +118,7 @@
 
         <include
             android:id="@+id/ll_action_bottom_center"
-            layout="@layout/item_action"
+            layout="@layout/ms_layout_action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -127,7 +127,7 @@
 
         <include
             android:id="@+id/ll_action_bottom_right"
-            layout="@layout/item_action"
+            layout="@layout/ms_layout_action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"

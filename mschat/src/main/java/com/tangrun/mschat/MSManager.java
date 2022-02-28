@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import com.tangrun.mschat.enums.RoomType;
+import com.tangrun.mschat.model.UIRoomStore;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.mediasoup.droid.Logger;
@@ -107,7 +109,7 @@ public class MSManager {
         }
     }
 
-    static UICallback uiCallback;
+   private static UICallback uiCallback;
 
     public interface UICallback {
         Intent onAddUser(Context context, List<User> users);
@@ -117,6 +119,10 @@ public class MSManager {
 
     public static void setUiCallback(UICallback uiCallback) {
         MSManager.uiCallback = uiCallback;
+    }
+
+    public static UICallback getUiCallback() {
+        return uiCallback;
     }
 
     public static void openCallActivity() {
@@ -390,7 +396,8 @@ public class MSManager {
 
         uiRoomStore = new UIRoomStore(context, roomOptions);
 
-        uiRoomStore.roomType = multi ? 1 : 0;
+        uiRoomStore.roomType = multi ? RoomType.MultiCall : RoomType.SingleCall;
+        uiRoomStore.owner = owner;
         uiRoomStore.firstConnectedAutoJoin = owner;
         uiRoomStore.firstJoinedAutoProduceAudio = true;
         uiRoomStore.firstJoinedAutoProduceVideo = !audioOnly && !multi;
@@ -399,6 +406,7 @@ public class MSManager {
         uiRoomStore.addUser(inviteUser);
 
         uiRoomStore.connect();
+        uiRoomStore.openCallActivity();
     }
 
 }

@@ -2,9 +2,13 @@
 <resources>
     <color name="ms_chat_red">#ff0000</color>
     <color name="ms_chat_green">#32CD21</color>
+    <color name="ms_chat_gray">#D8D8D8</color>
     <color name="ms_chat_white">#ffffff</color>
+    <color name="ms_chat_black">#000000</color>
 
     <color name="ms_room_bg">#4A4A4A</color>
     <dimen name="ms_peer_state_icon_size">20dp</dimen>
+
+    <dimen name="ms_conner_radius">10dp</dimen>
 
 </resources>

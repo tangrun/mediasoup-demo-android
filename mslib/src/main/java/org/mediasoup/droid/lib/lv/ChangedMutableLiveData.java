@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 import androidx.core.util.Supplier;
 import androidx.lifecycle.MutableLiveData;
 
-@SuppressWarnings("WeakerAccess")
 public class ChangedMutableLiveData<T> extends MutableLiveData<T> {
 
     public ChangedMutableLiveData(T value) {

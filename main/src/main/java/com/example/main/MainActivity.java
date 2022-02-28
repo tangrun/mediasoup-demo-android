@@ -20,7 +20,6 @@ import androidx.appcompat.widget.AppCompatTextView;
 import androidx.core.app.NotificationCompat;
 import com.blankj.utilcode.util.*;
 import com.tangrun.mschat.MSManager;
-import io.reactivex.internal.util.ArrayListSupplier;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -137,7 +136,6 @@ public class MainActivity extends AppCompatActivity {
         btOpen.setOnClickListener(v -> {
             MSManager.openCallActivity();
         });
-        ArrayListSupplier
     }
 
     void saveInfo() {

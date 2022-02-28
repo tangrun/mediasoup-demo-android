@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tool="http://schemas.android.com/tools"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/ms_bg_window_left_corner"
+        android:layout_gravity="center">
+
+    <com.google.android.flexbox.FlexboxLayout
+            android:id="@+id/ms_flex_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:alignItems="center"
+            app:flexDirection="row"
+            app:dividerDrawable="@drawable/ms_divider_8"
+            app:showDivider="middle|beginning|end">
+
+        <LinearLayout
+                android:id="@+id/ms_ll_hardware_state"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:divider="@drawable/ms_divider_8"
+                android:orientation="vertical"
+                android:showDividers="middle|beginning|end"
+                android:visibility="gone"
+                tool:visibility="visible">
+
+            <androidx.appcompat.widget.AppCompatImageView
+                    android:id="@+id/ms_iv_microphone_state"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    app:srcCompat="@drawable/ic_baseline_mic_24"/>
+
+            <androidx.appcompat.widget.AppCompatImageView
+                    android:id="@+id/ms_iv_camera_state"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    app:srcCompat="@drawable/ic_baseline_videocam_24"/>
+
+        </LinearLayout>
+
+        <androidx.cardview.widget.CardView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:animateLayoutChanges="true"
+                app:cardBackgroundColor="@color/ms_chat_white"
+                app:cardCornerRadius="5dp">
+
+            <com.tangrun.mschat.view.InitSurfaceViewRender
+                    android:id="@+id/ms_v_render"
+                    android:visibility="visible"
+                    tool:visibility="invisible"
+                    android:layout_width="80dp"
+                    android:layout_height="120dp"/>
+
+            <LinearLayout
+                    android:id="@+id/ms_ll_call_info"
+                    android:gravity="center"
+                    android:visibility="visible"
+                    tool:visibility="visible"
+                    android:showDividers="middle"
+                    android:divider="@drawable/ms_divider_8"
+                    android:layout_gravity="center"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                <androidx.appcompat.widget.AppCompatImageView
+                        android:id="@+id/ms_iv_call_type"
+                        app:srcCompat="@drawable/ic_baseline_mic_24"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+
+                <androidx.appcompat.widget.AppCompatTextView
+                        android:textSize="12sp"
+                        android:textColor="@color/ms_chat_red"
+                        tool:text="12:55"
+                        android:singleLine="true"
+                        android:id="@+id/ms_tv_call_tip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </com.google.android.flexbox.FlexboxLayout>
+
+
+</androidx.cardview.widget.CardView>

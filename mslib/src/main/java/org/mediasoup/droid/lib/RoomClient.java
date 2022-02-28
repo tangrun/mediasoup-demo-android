@@ -21,6 +21,7 @@ import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.RecvTransport;
 import org.mediasoup.droid.SendTransport;
 import org.mediasoup.droid.Transport;
+import org.mediasoup.droid.lib.enums.*;
 import org.mediasoup.droid.lib.model.Buddy;
 import org.mediasoup.droid.lib.model.DeviceInfo;
 import org.mediasoup.droid.lib.socket.WebSocketTransport;
@@ -33,6 +34,10 @@ import org.webrtc.MediaStreamTrack;
 import org.webrtc.VideoTrack;
 
 import io.reactivex.disposables.CompositeDisposable;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.mediasoup.droid.lib.JsonUtils.jsonPut;
 import static org.mediasoup.droid.lib.JsonUtils.toJsonObject;
@@ -73,9 +78,9 @@ public class RoomClient extends RoomMessageHandler {
     // TODO(Haiyangwu): Local bot DataProducer.
     private Producer mBotDataProducer;
     // jobs worker handler.
-    private Handler mWorkHandler;
+    private Executor mWorkHandler;
     // main looper handler.
-    private Handler mMainHandler;
+    private Executor mMainHandler;
     // Disposable Composite. used to cancel running
     private CompositeDisposable mCompositeDisposable = new CompositeDisposable();
     private boolean canSendMic;
@@ -90,21 +95,21 @@ public class RoomClient extends RoomMessageHandler {
         this.mOptions = options;
         this.mClosed = false;
         this.mStore.addBuddy(new Buddy(true, options.mineId, options.mineDisplayName, options.mineAvatar, DeviceInfo.androidDevice()));
-        PeerConnectionUtils.setPreferCameraFace(options.defaultFrontCam ? Constant.FrontFacing.front : Constant.FrontFacing.rear);
+        PeerConnectionUtils.setPreferCameraFace(options.defaultFrontCam ? FrontFacing.front.value : FrontFacing.rear.value);
         // init worker handler.
         HandlerThread handlerThread = new HandlerThread("worker");
         handlerThread.start();
-        mWorkHandler = new Handler(handlerThread.getLooper());
-        mMainHandler = new Handler(Looper.getMainLooper());
-        mWorkHandler.post(() -> mPeerConnectionUtils = new PeerConnectionUtils());
+        mWorkHandler = Executors.newSingleThreadExecutor();
+        mMainHandler = ArchTaskExecutor.getMainThreadExecutor();
+        mWorkHandler.execute(() -> mPeerConnectionUtils = new PeerConnectionUtils());
     }
 
     @Async
     public void connect() {
         String url = mOptions.getProtooUrl();
         Logger.d(TAG, "connect() " + url);
-        mStore.setConnectionState(Constant.ConnectionState.CONNECTING);
-        mWorkHandler.post(
+        mStore.setLocalConnectionState(LocalConnectState.CONNECTING);
+        mWorkHandler.execute(
                 () -> {
                     WebSocketTransport transport = new WebSocketTransport(url);
                     mProtoo = new Protoo(transport, peerListener);
@@ -113,7 +118,7 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void getPeers() {
-        mWorkHandler.post(() -> {
+        mWorkHandler.execute(() -> {
             try {
                 String request = mProtoo.syncRequest("getPeers");
                 JSONArray jsonArray = JsonUtils.toJsonArray(request);
@@ -126,7 +131,7 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void hangup() {
-        mWorkHandler.post(() -> {
+        mWorkHandler.execute(() -> {
             try {
                 mProtoo.syncRequest("hangup");
                 close();
@@ -138,7 +143,7 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void addPeers(JSONArray jsonArray) {
-        mWorkHandler.post(() -> {
+        mWorkHandler.execute(() -> {
             try {
                 mProtoo.syncRequest("addPeers", new Protoo.RequestGenerator() {
                     @Override
@@ -155,7 +160,7 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void join() {
         Logger.d(TAG, "join() ");
-        mWorkHandler.post(
+        mWorkHandler.execute(
                 () -> {
                     joinImpl();
                 });
@@ -166,10 +171,10 @@ public class RoomClient extends RoomMessageHandler {
         if (!mOptions.mProduce || !mOptions.mProduceAudio)
             return;
         Logger.d(TAG, "enableMic()");
-        mStore.setMicrophoneState(Constant.MicrophoneState.inProgress);
-        mWorkHandler.post(() -> {
+        mStore.setMicrophoneState(MicrophoneState.inProgress);
+        mWorkHandler.execute(() -> {
             enableMicImpl();
-            mStore.setMicrophoneState(mMicProducer == null ? Constant.MicrophoneState.disabled : Constant.MicrophoneState.enabled);
+            mStore.setMicrophoneState(mMicProducer == null ? MicrophoneState.disabled : MicrophoneState.enabled);
         });
     }
 
@@ -178,23 +183,23 @@ public class RoomClient extends RoomMessageHandler {
         if (!mOptions.mProduce || !mOptions.mProduceAudio)
             return;
         Logger.d(TAG, "disableMic()");
-        mStore.setMicrophoneState(Constant.MicrophoneState.inProgress);
-        mWorkHandler.post(() -> {
+        mStore.setMicrophoneState(MicrophoneState.inProgress);
+        mWorkHandler.execute(() -> {
             disableMicImpl();
-            mStore.setMicrophoneState(mMicProducer == null ? Constant.MicrophoneState.disabled : Constant.MicrophoneState.enabled);
+            mStore.setMicrophoneState(mMicProducer == null ? MicrophoneState.disabled : MicrophoneState.enabled);
         });
     }
 
     @Async
     public void muteMic() {
         Logger.d(TAG, "muteMic()");
-        mWorkHandler.post(this::muteMicImpl);
+        mWorkHandler.execute(this::muteMicImpl);
     }
 
     @Async
     public void unmuteMic() {
         Logger.d(TAG, "unmuteMic()");
-        mWorkHandler.post(this::unmuteMicImpl);
+        mWorkHandler.execute(this::unmuteMicImpl);
     }
 
     @Async
@@ -202,10 +207,10 @@ public class RoomClient extends RoomMessageHandler {
         if (!mOptions.mProduce || !mOptions.mProduceVideo)
             return;
         Logger.d(TAG, "enableCam()");
-        mStore.setCameraState(Constant.CameraState.inProgress);
-        mWorkHandler.post(() -> {
+        mStore.setCameraState(CameraState.inProgress);
+        mWorkHandler.execute(() -> {
             enableCamImpl();
-            mStore.setCameraState(mCamProducer == null ? Constant.CameraState.disabled : Constant.CameraState.enabled);
+            mStore.setCameraState(mCamProducer == null ? CameraState.disabled : CameraState.enabled);
         });
     }
 
@@ -214,10 +219,10 @@ public class RoomClient extends RoomMessageHandler {
         if (!mOptions.mProduce || !mOptions.mProduceVideo)
             return;
         Logger.d(TAG, "disableCam()");
-        mStore.setCameraState(Constant.CameraState.inProgress);
-        mWorkHandler.post(() -> {
+        mStore.setCameraState(CameraState.inProgress);
+        mWorkHandler.execute(() -> {
             disableCamImpl();
-            mStore.setCameraState(mCamProducer == null ? Constant.CameraState.disabled : Constant.CameraState.enabled);
+            mStore.setCameraState(mCamProducer == null ? CameraState.disabled : CameraState.enabled);
         });
 
     }
@@ -230,15 +235,15 @@ public class RoomClient extends RoomMessageHandler {
             return;
         }
         Logger.d(TAG, "changeCam()");
-        Constant.CameraFacingState oldCameraFacingState = mStore.getCameraFacingState();
-        mStore.setCameraFacingState(Constant.CameraFacingState.inProgress);
-        mWorkHandler.post(
+        CameraFacingState oldCameraFacingState = mStore.getCameraFacingState();
+        mStore.setCameraFacingState(CameraFacingState.inProgress);
+        mWorkHandler.execute(
                 () ->
                         mPeerConnectionUtils.switchCam(
                                 new CameraVideoCapturer.CameraSwitchHandler() {
                                     @Override
                                     public void onCameraSwitchDone(boolean b) {
-                                        mStore.setCameraFacingState(b ? Constant.CameraFacingState.front : Constant.CameraFacingState.rear);
+                                        mStore.setCameraFacingState(b ? CameraFacingState.front : CameraFacingState.rear);
                                     }
 
                                     @Override
@@ -264,7 +269,7 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void restartIceForRecvTransport() {
-        mWorkHandler.post(
+        mWorkHandler.execute(
                 () -> {
                     try {
                         if (mRecvTransport != null) {
@@ -283,7 +288,7 @@ public class RoomClient extends RoomMessageHandler {
 
     @Async
     public void restartIceForSendTransport() {
-        mWorkHandler.post(
+        mWorkHandler.execute(
                 () -> {
                     try {
                         if (mSendTransport != null) {
@@ -303,7 +308,7 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void restartIce() {
         Logger.d(TAG, "restartIce()");
-        mWorkHandler.post(
+        mWorkHandler.execute(
                 () -> {
                     try {
                         if (mSendTransport != null) {
@@ -348,7 +353,7 @@ public class RoomClient extends RoomMessageHandler {
     @Async
     public void requestConsumerKeyFrame(String consumerId) {
         Logger.d(TAG, "requestConsumerKeyFrame()");
-        mWorkHandler.post(
+        mWorkHandler.execute(
                 () -> {
                     try {
                         mProtoo.syncRequest(
@@ -490,7 +495,7 @@ public class RoomClient extends RoomMessageHandler {
         this.mClosed = true;
         Logger.d(TAG, "close()");
 
-        mWorkHandler.post(
+        mWorkHandler.execute(
                 () -> {
                     // Close mProtoo Protoo
                     if (mProtoo != null) {
@@ -511,14 +516,14 @@ public class RoomClient extends RoomMessageHandler {
                     mPeerConnectionUtils.dispose();
 
                     // quit worker handler thread.
-                    mWorkHandler.getLooper().quit();
+//                    mWorkHandler.getLooper().quit();
                 });
 
         // dispose request.
         mCompositeDisposable.dispose();
 
         // Set room state.
-        mStore.setConnectionState(Constant.ConnectionState.CLOSED);
+        mStore.setLocalConnectionState(LocalConnectState.CLOSED);
     }
 
     @WorkerThread
@@ -569,18 +574,18 @@ public class RoomClient extends RoomMessageHandler {
                 @Override
                 public void onOpen() {
                     Log.d(TAG, "Protoo.Listener onOpen: ");
-                    mWorkHandler.post(() -> {
-                        mStore.setConnectionState(Constant.ConnectionState.CONNECTED);
+                    mWorkHandler.execute(() -> {
+                        mStore.setLocalConnectionState(LocalConnectState.CONNECTED);
                     });
                 }
 
                 @Override
                 public void onFail() {
                     Log.d(TAG, "Protoo.Listener onFail: ");
-                    mWorkHandler.post(
+                    mWorkHandler.execute(
                             () -> {
                                 mStore.addNotify("error", "WebSocket connection failed");
-                                mStore.setConnectionState(Constant.ConnectionState.RECONNECTING);
+                                mStore.setLocalConnectionState(LocalConnectState.RECONNECTING);
 
                                 disposeTransportDevice();
                             });
@@ -590,7 +595,7 @@ public class RoomClient extends RoomMessageHandler {
                 public void onRequest(
                         @NonNull Message.Request request, @NonNull Protoo.ServerRequestHandler handler) {
                     Logger.d(TAG, "Protoo.Listener onRequest() " + request.getMethod() + request.getData().toString());
-                    mWorkHandler.post(
+                    mWorkHandler.execute(
                             () -> {
                                 try {
                                     switch (request.getMethod()) {
@@ -621,7 +626,7 @@ public class RoomClient extends RoomMessageHandler {
                                     + notification.getMethod()
                                     + ", "
                                     + notification.getData().toString());
-                    mWorkHandler.post(
+                    mWorkHandler.execute(
                             () -> {
                                 try {
                                     handleNotification(notification);
@@ -634,10 +639,10 @@ public class RoomClient extends RoomMessageHandler {
                 @Override
                 public void onDisconnected() {
                     Log.d(TAG, "Protoo.Listener onDisconnected: ");
-                    mWorkHandler.post(
+                    mWorkHandler.execute(
                             () -> {
                                 mStore.addNotify("error", "WebSocket disconnected");
-                                mStore.setConnectionState(Constant.ConnectionState.RECONNECTING);
+                                mStore.setLocalConnectionState(LocalConnectState.RECONNECTING);
 
                                 // Close All Transports created by device.
                                 // All will reCreated After ReJoin.
@@ -648,7 +653,7 @@ public class RoomClient extends RoomMessageHandler {
                 @Override
                 public void onClose() {
                     Log.d(TAG, "Protoo.Listener onClose: " + mClosed);
-                    mWorkHandler.post(
+                    mWorkHandler.execute(
                             () -> {
                                 close();
                             });
@@ -675,8 +680,8 @@ public class RoomClient extends RoomMessageHandler {
                 createRecvTransport();
             }
 
-            canSendMic = mMediasoupDevice.canProduce(Constant.Kind.audio);
-            canSendCam = mMediasoupDevice.canProduce(Constant.Kind.video);
+            canSendMic = mMediasoupDevice.canProduce(Kind.audio.value);
+            canSendCam = mMediasoupDevice.canProduce(Kind.video.value);
             canChangeCam = mPeerConnectionUtils.canChangeCam(mContext);
 
             String rtpCapabilities = mMediasoupDevice.getRtpCapabilities();
@@ -694,7 +699,7 @@ public class RoomClient extends RoomMessageHandler {
                                 jsonPut(req, "sctpCapabilities", "");
                             });
 
-            mStore.setConnectionState(Constant.ConnectionState.JOINED);
+            mStore.setLocalConnectionState(LocalConnectState.JOINED);
 
             JSONObject resObj = JsonUtils.toJsonObject(joinResponse);
             JSONArray peers = resObj.optJSONArray("peers");
@@ -709,7 +714,7 @@ public class RoomClient extends RoomMessageHandler {
             } else {
                 mStore.addNotify("error", "Could not join the room: " + e.getMessage());
             }
-            mMainHandler.post(this::close);
+            mMainHandler.execute(this::close);
         }
     }
 
@@ -1030,10 +1035,7 @@ public class RoomClient extends RoomMessageHandler {
             String appData = data.optString("appData");
             boolean producerPaused = data.optBoolean("producerPaused");
 
-            // todo 使用device 的判断 option的由应用层判断使用
-            if ((Constant.Kind.audio.equals(kind) && !mOptions.mConsumeAudio)
-                    || Constant.Kind.video.equals(kind) && !mOptions.mConsumeVideo
-            ) {
+            if ((Kind.audio.value.equals(kind) && !canSendMic) || (Kind.video.value.equals(kind) && !canSendCam)) {
                 handler.reject(403, "I do not want to consume");
                 return;
             }
@@ -1052,7 +1054,7 @@ public class RoomClient extends RoomMessageHandler {
 
             mStore.addWrapper(false, peerId, consumer.getId(), kind, consumer);
             if (producerPaused)
-                mStore.setWrapperPaused(consumer.getId(), Constant.Originator.remote);
+                mStore.setWrapperPaused(consumer.getId(), Originator.remote);
 
             // We are ready. Answer the protoo request so the server will
             // resume this Consumer (which was paused for now if video).

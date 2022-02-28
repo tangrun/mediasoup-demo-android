@@ -1,4 +1,4 @@
-package com.tangrun.mschat;
+package com.tangrun.mschat.view;
 
 import android.content.Context;
 import android.util.AttributeSet;

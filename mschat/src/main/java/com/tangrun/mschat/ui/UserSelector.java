@@ -1,4 +1,4 @@
-package com.tangrun.mschat;
+package com.tangrun.mschat.ui;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -6,16 +6,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import com.tangrun.mschat.MSManager;
 
 import java.util.List;
 
-public class AddUserHandler extends AppCompatActivity {
+public class UserSelector extends AppCompatActivity {
 
     public static void start(Context context, List<MSManager.User> users) {
-        if (MSManager.uiCallback == null) return;
-        Intent intent = MSManager.uiCallback.onAddUser(context,users);
+        if (MSManager.getUiCallback() == null) return;
+        Intent intent = MSManager.getUiCallback().onAddUser(context,users);
         if (intent == null) return;
-        context.startActivity(new Intent(context, AddUserHandler.class).putExtra("intent", intent));
+        context.startActivity(new Intent(context, UserSelector.class).putExtra("intent", intent));
     }
 
     @Override
@@ -33,8 +34,8 @@ public class AddUserHandler extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1) {
-            if (MSManager.uiCallback != null) {
-                MSManager.uiCallback.onAddUserResult(resultCode, data);
+            if (MSManager.getUiCallback() != null) {
+                MSManager.getUiCallback().onAddUserResult(resultCode, data);
             }
             finish();
         }
