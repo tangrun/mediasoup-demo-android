@@ -1,7 +1,5 @@
 package com.example.main;
 
-import android.app.Notification;
-import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -9,7 +7,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
@@ -17,15 +14,13 @@ import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.appcompat.widget.AppCompatTextView;
 
-import androidx.core.app.NotificationCompat;
-import com.blankj.utilcode.util.*;
+import com.tangrun.mschat.ApiCallback;
 import com.tangrun.mschat.MSManager;
+import com.tangrun.mschat.model.User;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
     };
     private AppCompatCheckBox cbAudioOnly;
     private AppCompatEditText tvRoom;
-    List<MSManager.User> userList = new ArrayList<>();
+    List<User> userList = new ArrayList<>();
     private AppCompatTextView tvUser;
     private AppCompatButton btSelect;
     private AppCompatCheckBox cbMulti;
@@ -68,12 +63,12 @@ public class MainActivity extends AppCompatActivity {
         cbMulti.setChecked(aaa.getBoolean("cbMulti", false));
         btStart.setOnClickListener(v -> {
             saveInfo();
-            MSManager.User user = new MSManager.User();
+            SelectUserActivity.User user = new SelectUserActivity.User();
             user.setId(tvId.getText().toString());
             user.setDisplayName(tvName.getText().toString());
             user.setAvatar(icons[new Random().nextInt(icons.length)]);
             ProgressDialog dialog = ProgressDialog.show(this, "创建会话中...", null, true, false);
-            MSManager.createRoom(tvRoom.getText().toString(), new MSManager.Callback<String>() {
+            MSManager.createRoom(tvRoom.getText().toString(), new ApiCallback<String>() {
                 @Override
                 public void onFail(Throwable e) {
                     dialog.dismiss();
@@ -91,12 +86,12 @@ public class MainActivity extends AppCompatActivity {
         });
         btJoin.setOnClickListener(v -> {
             saveInfo();
-            MSManager.User user = new MSManager.User();
+            SelectUserActivity.User user = new SelectUserActivity.User();
             user.setId(tvId.getText().toString());
             user.setDisplayName(tvName.getText().toString());
             user.setAvatar(icons[new Random().nextInt(icons.length)]);
             ProgressDialog dialog = ProgressDialog.show(this, "连接会话中...", null, true, false);
-            MSManager.roomExists(tvRoom.getText().toString(), new MSManager.Callback<Boolean>() {
+            MSManager.roomExists(tvRoom.getText().toString(), new ApiCallback<Boolean>() {
                 @Override
                 public void onFail(Throwable e) {
                     dialog.dismiss();
@@ -118,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
         });
         btBusy.setOnClickListener(v -> {
             ProgressDialog dialog = ProgressDialog.show(this, "请稍等...", null, true, false);
-            MSManager.busy(tvRoom.getText().toString(), tvId.getText().toString(), new MSManager.Callback<Object>() {
+            MSManager.busy(tvRoom.getText().toString(), tvId.getText().toString(), new ApiCallback<Object>() {
                 @Override
                 public void onFail(Throwable e) {
                     dialog.dismiss();
@@ -167,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
 
     void setUserText() {
         StringBuilder stringBuilder = new StringBuilder();
-        for (MSManager.User user : userList) {
+        for (User user : userList) {
             stringBuilder.append(user.getId())
                     .append("-")
                     .append(user.getDisplayName())

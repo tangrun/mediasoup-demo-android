@@ -25,7 +25,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.Permission;
 import com.hjq.permissions.XXPermissions;
-import com.tangrun.mschat.MSManager;
+import com.tangrun.mschat.UICallback;
+import com.tangrun.mschat.enums.CallEnd;
 import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.ui.UserSelector;
 import com.tangrun.mschat.ui.CallWindowService;
@@ -59,6 +60,12 @@ public class UIRoomStore {
 
     private static final String TAG = "MS_UIRoomStore";
 
+    private static UIRoomStore uiRoomStore;
+
+    public static UIRoomStore getCurrent() {
+        return uiRoomStore;
+    }
+
     private String notificationChannelId = null;
     private final int notificationId = 1;
     private final String notificationTag = "UIRoomStore";
@@ -75,6 +82,7 @@ public class UIRoomStore {
     private final RoomClient roomClient;
     private final RoomOptions roomOptions;
 
+    private UICallback uiCallback;
     /**
      * action
      */
@@ -163,9 +171,9 @@ public class UIRoomStore {
      */
     public boolean audioOnly = true;
     /**
-     * 通话已结束标记 0没挂断 1挂断 2超时 3客户端断开
+     * 通话已结束标记 0没挂断 1挂断 2超时 3客户端断开 4对方忙线
      */
-    private int callEndType = 0;
+    private int callEndFlag = 0;
 
 
     /**
@@ -227,7 +235,7 @@ public class UIRoomStore {
 
             joinedCount++;
         } else if (connectionState1 == LocalConnectState.CLOSED) {
-            if (callEndType == 1) {
+            if (callEndFlag == 1) {
                 if (owner)
                     localConversationState.applyPost(ConversationState.Left);
                 else {
@@ -237,11 +245,11 @@ public class UIRoomStore {
                         localConversationState.applyPost(ConversationState.InviteReject);
                     }
                 }
-            } else if (callEndType == 2) {
+            } else if (callEndFlag == 2) {
                 localConversationState.applyPost(ConversationState.InviteTimeout);
-            } else if (callEndType == 0) {
+            } else if (callEndFlag == 0) {
                 // 网络中断
-                callEndType = 3;
+                callEndFlag = 3;
                 localConversationState.applyPost(ConversationState.OfflineTimeout);
                 hangup();
             }
@@ -374,15 +382,29 @@ public class UIRoomStore {
                         calling.applyPost(true);
                     }
 
-                    if (!buddy.isProducer() && !isActiveBuddy(buddy)){
+                    // 自己在接听界面但是长时间没接
+                    if (buddy.isProducer() && buddy.getConversationState() == ConversationState.InviteTimeout) {
+                        callEndFlag = 2;
+                        hangup();
+                    }
+
+                    // 除了自己最后一个人变成不活跃状态时 挂断
+                    if (!buddy.isProducer() && !isActiveBuddy(buddy)) {
                         boolean hasActiveBuddy = false;
                         for (BuddyModel model : buddyModels) {
-                            if (!model.buddy.isProducer() && isActiveBuddy(model.buddy)){
+                            if (!model.buddy.isProducer() && isActiveBuddy(model.buddy)) {
                                 hasActiveBuddy = true;
                                 break;
                             }
                         }
-                        if (!hasActiveBuddy){
+                        if (!hasActiveBuddy) {
+                            if (roomType == RoomType.SingleCall) {
+                                if (buddyModel.conversationState.getValue() == ConversationState.InviteBusy) {
+                                    callEndFlag = 4;
+                                } else if (buddyModel.conversationState.getValue() == ConversationState.InviteTimeout) {
+                                    callEndFlag = 2;
+                                }
+                            }
                             hangup();
                         }
                     }
@@ -523,7 +545,7 @@ public class UIRoomStore {
     };
 
 
-    public UIRoomStore(Context context, RoomOptions roomOptions, RoomType roomType, boolean owner, boolean audioOnly) {
+    public UIRoomStore(Context context, RoomOptions roomOptions, RoomType roomType, boolean owner, boolean audioOnly, UICallback uiCallback) {
         this.context = context;
         this.roomClient = new RoomClient(context, roomOptions);
         this.roomStore = roomClient.getStore();
@@ -531,6 +553,7 @@ public class UIRoomStore {
         this.roomType = roomType;
         this.owner = owner;
         this.audioOnly = audioOnly;
+        this.uiCallback = uiCallback;
         audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
         vibrator = (Vibrator) this.context.getSystemService(Context.VIBRATOR_SERVICE);
         notificationManagerCompat = NotificationManagerCompat.from(context);
@@ -630,16 +653,40 @@ public class UIRoomStore {
             } else {
                 stopCallTime();
                 release();
-
+                setCallEnd();
                 ArchTaskExecutor.getInstance().postToMainThread(() -> {
                     showActivity.applyPost(false);
                     showWindow.applyPost(false);
-                    MSManager.stopCall();
                 }, 1500);
             }
         });
 
         getRoomStore().getClientObservable().registerObserver(clientObserver);
+    }
+
+    private void setCallEnd() {
+        if (uiCallback == null) return;
+        CallEnd callEnd = CallEnd.End;
+        if (roomType == RoomType.SingleCall) {
+            if (callEndFlag == 1) {
+                if (callStartTime == null) {
+                    if (owner)
+                        callEnd = CallEnd.Cancel;
+                    else
+                        callEnd = CallEnd.Reject;
+                } else {
+                    callEnd = CallEnd.End;
+                }
+            } else if (callEndFlag == 2) {
+                callEnd = CallEnd.NoAnswer;
+            } else if (callEndFlag == 3) {
+                callEnd = CallEnd.End;
+            } else if (callEndFlag == 4) {
+                callEnd = CallEnd.Busy;
+            }
+        }
+
+        uiCallback.onCallEnd(getRoomOptions().roomId, roomType, audioOnly, callEnd, callStartTime, callEndTime);
     }
 
     private void updateNotification() {
@@ -674,8 +721,8 @@ public class UIRoomStore {
         stopPlayer();
     }
 
-    private boolean isActiveBuddy(Buddy buddy){
-        if (buddy == null)return false;
+    private boolean isActiveBuddy(Buddy buddy) {
+        if (buddy == null) return false;
         if (buddy.getConversationState() == ConversationState.InviteBusy
                 || buddy.getConversationState() == ConversationState.InviteReject
                 || buddy.getConversationState() == ConversationState.OfflineTimeout
@@ -738,7 +785,7 @@ public class UIRoomStore {
     }
 
     private void stopCallTime() {
-        if (callEndTime != null) return;
+        if (callStartTime == null || callEndTime != null) return;
         if (callTimeObserver != null)
             callTimeObserver.dispose();
         callTimeObserver = null;
@@ -763,8 +810,8 @@ public class UIRoomStore {
 
     public void hangup() {
         stopCallTime();
-        if (callEndType == 0)
-            callEndType = 1;
+        if (callEndFlag == 0)
+            callEndFlag = 1;
         if (localConnectionState.getValue() == LocalConnectState.JOINED
                 || localConnectionState.getValue() == LocalConnectState.CONNECTED)
             getRoomClient().hangup();
@@ -903,18 +950,26 @@ public class UIRoomStore {
     }
 
     public void onAddUserClick(Context context) {
-        List<MSManager.User> list = new ArrayList<>();
+        if (uiCallback == null) return;
+        List<User> list = new ArrayList<>();
         for (Buddy buddy : getRoomStore().getBuddys().values()) {
-            MSManager.User user = new MSManager.User();
+            User user = new User();
             user.setId(buddy.getId());
             user.setAvatar(buddy.getAvatar());
             user.setDisplayName(buddy.getDisplayName());
             list.add(user);
         }
-        UserSelector.start(context, list);
+        Intent intent = uiCallback.getAddUserIntent(context, list);
+        if (intent == null) return;
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        UserSelector.start(context, intent);
     }
 
-    public void addUser(List<MSManager.User> list) {
+    public void onAddUserResult(int resultCode, Intent data) {
+        if (uiCallback != null) uiCallback.onAddUserResult(resultCode, data);
+    }
+
+    public void addUser(List<User> list) {
         if (list == null || list.isEmpty()) return;
         localConnectionState.observeForever(new Observer<LocalConnectState>() {
             @Override
@@ -925,7 +980,7 @@ public class UIRoomStore {
                 ) {
                     localConnectionState.removeObserver(this);
                     JSONArray jsonArray = new JSONArray();
-                    for (MSManager.User user : list) {
+                    for (User user : list) {
                         jsonArray.put(user.toJsonObj());
                     }
                     getRoomClient().addPeers(jsonArray);

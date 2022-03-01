@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.PixelFormat;
 import android.os.Build;
+import android.util.Pair;
 import android.view.*;
 import android.widget.ImageView;
 import androidx.annotation.NonNull;
@@ -87,10 +88,7 @@ public class CallWindowService extends LifecycleService {
             binding.msVRender.init(CallWindowService.this);
         }
         uiRoomStore.mine.observe(this, mineVideoTrackObserver);
-        uiRoomStore.localConversationState.observe(this, conversationState -> {
-            resetCallInfoOrVideo();
-        });
-        uiRoomStore.localConnectionState.observe(this, conversationState -> {
+        uiRoomStore.localState.observe(this, localState -> {
             resetCallInfoOrVideo();
         });
 
@@ -134,51 +132,47 @@ public class CallWindowService extends LifecycleService {
     void resetCallInfoOrVideo() {
         BuddyModel buddyModel = uiRoomStore.mine.getValue();
         VideoTrack videoTrack = buddyModel == null ? null : buddyModel.videoTrack.getValue();
-        ConversationState conversationState = uiRoomStore.localConversationState.getValue();
-        LocalConnectState connectionState = uiRoomStore.localConnectionState.getValue();
+        Pair<LocalConnectState,ConversationState> localState = uiRoomStore.localState.getValue();
 
         binding.msVRender.bind(CallWindowService.this, videoTrack);
         binding.msVRender.setVisibility(videoTrack == null ? View.INVISIBLE : View.VISIBLE);
         binding.msLlCallInfo.setVisibility(videoTrack == null ? View.VISIBLE : View.GONE);
 
         uiRoomStore.callTime.removeObservers(this);
-        if (videoTrack == null && conversationState != null && connectionState != null) {
+        if (videoTrack == null) {
             String text = null;
             int tintId = 0;
             int imgId = 0;
-            switch (conversationState){
-                case New:{
-                    if (uiRoomStore.owner){
-                        tintId = R.color.ms_chat_green;
-                        imgId = R.drawable.ms_ic_call_end_24;
-                        text = "进入房间中...";
-                    }else {
-                        tintId = R.color.ms_chat_green;
-                        imgId = R.drawable.ms_ic_call_end_24;
-                        text = "连接中...";
-                    }
-                    break;
-                }
-                case Joined:{
-                    tintId = R.color.ms_chat_green;
-                    imgId = R.drawable.ms_ic_calling_24;
-                    text = "通话中";
-                    uiRoomStore.callTime.observe(this, s -> {
-                        binding.msTvCallTip.setText(s);
-                    });
-                    break;
-                }
-                case Invited: {
+
+            if (localState.first == LocalConnectState.NEW || localState.first == LocalConnectState.CONNECTING) {
+                tintId = R.color.ms_chat_green;
+                imgId = R.drawable.ms_ic_call_end_24;
+                text = "连接中...";
+            } else if (localState.first == LocalConnectState.DISCONNECTED || localState.first == LocalConnectState.RECONNECTING) {
+                tintId = R.color.ms_chat_green;
+                imgId = R.drawable.ms_ic_call_end_24;
+                text = "重连中...";
+            } else {
+                if (localState.second == ConversationState.New) {
                     tintId = R.color.ms_chat_green;
                     imgId = R.drawable.ms_ic_call_end_24;
-                    text = "待接听";
-                    break;
-                }
-                default:{
-                    tintId = R.color.ms_chat_red;
+                    text = "等待对方接听...";
+                } else if (localState.second == ConversationState.Invited) {
+                    tintId = R.color.ms_chat_green;
+                    imgId = R.drawable.ms_ic_call_end_24;
+                    text = "待接听...";
+                } else if (localState.second == ConversationState.Joined) {
+                    tintId = R.color.ms_chat_green;
+                    imgId = R.drawable.ms_ic_call_end_24;
+                    text = "通话中";
+                } else if (localState.second == ConversationState.InviteBusy
+                        || localState.second == ConversationState.Left
+                        || localState.second == ConversationState.InviteReject
+                        || localState.second == ConversationState.OfflineTimeout
+                        || localState.second == ConversationState.InviteTimeout) {
+                    tintId = R.color.ms_chat_green;
                     imgId = R.drawable.ms_ic_call_end_24;
                     text = "通话已结束";
-                    break;
                 }
             }
 

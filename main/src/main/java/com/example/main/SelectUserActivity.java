@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.tangrun.mschat.MSManager;
+import com.tangrun.mschat.model.User;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +26,7 @@ public class SelectUserActivity extends AppCompatActivity {
 
     private RecyclerView rvContent;
 
-    public static class User extends MSManager.User{
+    public static class User extends com.tangrun.mschat.model.User {
         boolean checked;
     }
 

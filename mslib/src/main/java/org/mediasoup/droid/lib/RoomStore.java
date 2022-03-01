@@ -149,7 +149,8 @@ public class RoomStore {
     public void removeWrapper(boolean needClose, String producerId) {
         WrapperCommon<?> wrapperCommon = wrappers.remove(producerId);
         if (wrapperCommon != null) {
-            wrapperCommon.close();
+            if (needClose)
+                wrapperCommon.close();
             getBuddyPost(wrapperCommon.getBuddyId(), value -> clientObservable.getDispatcher()
                     .onProducerRemove(value.getId(), value, producerId));
         }
@@ -176,7 +177,7 @@ public class RoomStore {
             buddys.put(buddy.getId(), buddy);
             clientObservable.getDispatcher().onBuddyAdd(buddy.getId(), buddy);
             oldBuddy = buddy;
-        }else {
+        } else {
             oldBuddy.setConnectionState(buddy.getConnectionState());
             oldBuddy.setConversationState(buddy.getConversationState());
         }

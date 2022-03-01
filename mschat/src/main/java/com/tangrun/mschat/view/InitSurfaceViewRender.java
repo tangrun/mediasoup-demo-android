@@ -17,7 +17,7 @@ import org.webrtc.VideoTrack;
  * @description:
  * @date :2022/2/16 16:26
  */
-public class InitSurfaceViewRender extends SurfaceViewRenderer implements LifecycleEventObserver{
+public class InitSurfaceViewRender extends SurfaceViewRenderer implements LifecycleEventObserver {
     public InitSurfaceViewRender(Context context) {
         super(context);
     }
@@ -37,42 +37,45 @@ public class InitSurfaceViewRender extends SurfaceViewRenderer implements Lifecy
         lifecycleOwner.getLifecycle().addObserver(this);
     }
 
-    public void bind(LifecycleOwner lifecycleOwner,VideoTrack videoTrack){
+    public void bind(LifecycleOwner lifecycleOwner, VideoTrack videoTrack) {
+        if (this.videoTrack != null && this.videoTrack != videoTrack) this.videoTrack.removeSink(this);
         this.videoTrack = videoTrack;
-        if (lifecycleOwner.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)){
+        if (lifecycleOwner.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
             bind();
         }
     }
 
-    private void bind(){
-        if (!register)return;
-        if (videoTrack!=null){
-            if (!init){
+    private void bind() {
+        if (!register) return;
+        if (videoTrack != null) {
+            if (!init) {
                 init(PeerConnectionUtils.getEglContext(), null);
-                init =true;
+                init = true;
             }
             videoTrack.addSink(this);
-        }else unbind();
+        } else unbind();
     }
 
-    private void unbind(){
-        if (init){
+    private void unbind() {
+        if (init) {
             init = false;
             release();
         }
-        if (videoTrack!=null){
+        if (videoTrack != null) {
             videoTrack.removeSink(this);
         }
     }
 
     @Override
     public void onStateChanged(@NonNull @NotNull LifecycleOwner source, @NonNull @NotNull Lifecycle.Event event) {
-        if (event == Lifecycle.Event.ON_DESTROY){
+        if (event == Lifecycle.Event.ON_DESTROY) {
             source.getLifecycle().removeObserver(this);
             register = false;
-        }else if (event == Lifecycle.Event.ON_RESUME){
+            unbind();
+            videoTrack = null;
+        } else if (event == Lifecycle.Event.ON_RESUME) {
             bind();
-        }else if (event == Lifecycle.Event.ON_STOP){
+        } else if (event == Lifecycle.Event.ON_STOP) {
             unbind();
         }
     }
