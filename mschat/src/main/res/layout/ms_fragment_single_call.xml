@@ -1,6 +1,185 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/ms_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/ms_room_bg"
+        tools:context="com.tangrun.mschat.ui.CallRoomActivity">
+
+    <com.tangrun.mschat.view.InitSurfaceViewRender
+            android:id="@+id/ms_v_renderer_full"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            tools:visibility="visible"/>
+
+    <com.tangrun.mschat.view.InitSurfaceViewRender
+            android:id="@+id/ms_v_renderer_window"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintDimensionRatio="w,16:9"
+            app:layout_constraintHorizontal_bias="0.9"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.05"
+            app:layout_constraintWidth_percent="0.25"
+            tools:visibility="visible"/>
+
+    <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/ms_iv_minimize"
+            android:layout_marginTop="32dp"
+            android:layout_marginLeft="16dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            app:srcCompat="@drawable/ms_ic_close_fullscreen_24"
+            app:tint="#ffffff"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"/>
+
+    <LinearLayout
+            android:id="@+id/ms_ll_user"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.2">
+
+        <ImageView
+                android:id="@+id/ms_iv_user_avatar"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:adjustViewBounds="true"
+                android:scaleType="centerCrop"
+                tools:src="@drawable/ms_default_avatar"/>
+
+        <TextView
+                android:id="@+id/ms_tv_user_name"
+                style="@style/TextAppearance.MaterialComponents.Headline6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="#ffffff"
+                tools:text="sssssssssssss"/>
+    </LinearLayout>
+
+    <TextView
+            android:id="@+id/ms_tv_tip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:background="@drawable/ms_bg_tip"
+            android:textColor="#ffffff"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.5"
+            tools:text="sssss"
+            tools:visibility="visible"/>
+
+    <TextView
+            android:id="@+id/ms_tv_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="32dp"
+            style="@style/TextAppearance.MaterialComponents.Subtitle1"
+            android:textColor="#ffffff"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="8dp"
+            android:background="@drawable/ms_bg_tip"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/ms_ll_top"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            tools:text="sssss"
+            tools:visibility="visible"/>
+
+    <LinearLayout
+            android:id="@+id/ms_ll_top"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="32dp"
+            android:paddingBottom="32dp"
+            app:layout_constraintBottom_toTopOf="@id/ms_ll_bottom">
+
+        <include
+                android:id="@+id/ll_action_top_left"
+                layout="@layout/ms_layout_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+
+        <include
+                android:id="@+id/ll_action_top_center"
+                layout="@layout/ms_layout_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+
+        <include
+                android:id="@+id/ll_action_top_right"
+                layout="@layout/ms_layout_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+            android:id="@+id/ms_ll_bottom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="32dp"
+            android:paddingBottom="32dp"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+        <include
+                android:id="@+id/ll_action_bottom_left"
+                layout="@layout/ms_layout_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+
+        <include
+                android:id="@+id/ll_action_bottom_center"
+                layout="@layout/ms_layout_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+
+        <include
+                android:id="@+id/ll_action_bottom_right"
+                layout="@layout/ms_layout_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

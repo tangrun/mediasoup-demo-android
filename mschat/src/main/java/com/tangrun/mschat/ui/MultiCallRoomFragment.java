@@ -1,6 +1,7 @@
 package com.tangrun.mschat.ui;
 
 import android.os.Bundle;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,8 +29,10 @@ import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.model.UIRoomStore;
 import org.jetbrains.annotations.NotNull;
 import org.mediasoup.droid.lib.RoomClient;
+import org.mediasoup.droid.lib.enums.CameraFacingState;
 import org.mediasoup.droid.lib.enums.ConnectionState;
 import org.mediasoup.droid.lib.enums.ConversationState;
+import org.mediasoup.droid.lib.enums.LocalConnectState;
 import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;
 
 import java.util.ArrayList;
@@ -56,28 +59,25 @@ public class MultiCallRoomFragment extends Fragment {
 
 
     MsFragmentMultiCallBinding binding;
-
+    UIRoomStore uiRoomStore;
 
     @Nullable
     @Override
-
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         binding = MsFragmentMultiCallBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
     @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-
+    public void onViewCreated(@NonNull @NotNull View view, @Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
         // 初始化
-        UIRoomStore uiRoomStore = MSManager.getCurrent();
+        uiRoomStore = MSManager.getCurrent();
 
         // 列表
-        MultiAdapter adapter = new MultiAdapter(uiRoomStore.getRoomClient(), this);
+        MultiAdapter adapter = new MultiAdapter(uiRoomStore, this);
         GridLayoutManager layoutManager = new GridLayoutManager(getContext(), 2);
-        binding.rvBuddys.setLayoutManager(layoutManager);
-        binding.rvBuddys.setAdapter(adapter);
+        binding.msRvBuddys.setLayoutManager(layoutManager);
+        binding.msRvBuddys.setAdapter(adapter);
         // 数量变化设置列数
         {
             ChangedMutableLiveData<Integer> itemCount = new ChangedMutableLiveData<>(0);
@@ -116,24 +116,33 @@ public class MultiCallRoomFragment extends Fragment {
 
         });
         adapter.setList(uiRoomStore.buddyModels);
-
+        // 镜像设置
+        uiRoomStore.cameraFacingState.observe(this, cameraFacingState -> {
+            if (cameraFacingState == CameraFacingState.inProgress) return;
+            int index = adapter.list.indexOf(uiRoomStore.mine.getValue());
+            if (index < 0) return;
+            adapter.notifyItemChanged(index);
+        });
 
         uiRoomStore.callTime.observe(this, s -> {
-            binding.tvTitle.setVisibility(s == null ? View.GONE : View.VISIBLE);
-            binding.tvTitle.setText(s);
+            binding.msTvTitle.setVisibility(s == null ? View.GONE : View.VISIBLE);
+            binding.msTvTitle.setText(s);
         });
-        uiRoomStore.localConversationState.observe(this, conversationState -> {
+        uiRoomStore.localState.observe(this, localState -> {
+            setTipText();
+
             hideAllAction();
-            if (conversationState == ConversationState.Invited) {
+            if (localState.second == ConversationState.Invited) {
                 // 接听/挂断
-                uiRoomStore.Action_HangupAction.bindView(binding.llActionTopLeft);
-                uiRoomStore.Action_JoinAction.bindView(binding.llActionTopRight);
-            } else if (conversationState == ConversationState.Joined) {
+                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomLeft);
+                uiRoomStore.Action_JoinAction.bindView(binding.llActionBottomRight);
+            } else if (localState.second == ConversationState.Joined
+                    || (localState.second == ConversationState.New && localState.first == LocalConnectState.JOINED)) {
                 if (uiRoomStore.audioOnly) {
                     // 麦克风/挂断/扬声器
-                    uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionTopLeft);
-                    uiRoomStore.Action_HangupAction.bindView(binding.llActionTopCenter);
-                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionTopRight);
+                    uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomLeft);
+                    uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomRight);
                 } else {
                     // 麦克风/摄像头/切换摄像头 挂断
                     uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionTopLeft);
@@ -142,41 +151,60 @@ public class MultiCallRoomFragment extends Fragment {
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
                 }
             } else {
-                uiRoomStore.Action_HangupAction.bindView(binding.llActionTopCenter);
+                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
             }
-        });
-        uiRoomStore.localConnectionState.observe(this, localConnectState -> {
-            String text = null;
-            switch (localConnectState) {
-                case CLOSED: {
-                    text = "通话已结束";
-                    break;
-                }
-                case NEW:
-                case CONNECTING: {
-                    text = "连接中...";
-                    break;
-                }
-                case RECONNECTING:
-                case DISCONNECTED: {
-                    text = "连接中，请稍等...";
-                    break;
-                }
-            }
-            binding.tvTip.setVisibility(text == null ? View.GONE : View.VISIBLE);
-            if (text != null)
-                binding.tvTip.setText(text);
         });
         // 点击事件
-        binding.ivAdd.setOnClickListener(v -> {
+        binding.msIvAdd.setOnClickListener(v -> {
             uiRoomStore.onAddUserClick(getContext());
         });
-        binding.ivMin.setOnClickListener(v -> {
+        binding.msIvMinimize.setOnClickListener(v -> {
             uiRoomStore.onMinimize(getActivity());
         });
 
     }
 
+    Runnable tipDismiss = () -> {
+        binding.msTvTip.setVisibility(View.GONE);
+    };
+
+    private void setTipText() {
+        String tip = null;
+        int delayDismissTime = 0;
+        binding.msTvTip.removeCallbacks(tipDismiss);
+
+        Pair<LocalConnectState, ConversationState> localState = uiRoomStore.localState.getValue();
+
+        if (localState != null) {
+            if (localState.first == LocalConnectState.NEW || localState.first == LocalConnectState.CONNECTING) {
+                tip = "连接中...";
+            } else if (localState.first == LocalConnectState.DISCONNECTED || localState.first == LocalConnectState.RECONNECTING) {
+                tip = "重连中...";
+            } else {
+                if (localState.second == ConversationState.New) {
+                    tip = "等待对方接听...";
+                } else if (localState.second == ConversationState.Invited) {
+                    tip = "待接听";
+                } else if (localState.second == ConversationState.Joined) {
+                    tip = "通话中...";
+                    delayDismissTime = 2000;
+                } else if (localState.second == ConversationState.InviteBusy
+                        || localState.second == ConversationState.Left
+                        || localState.second == ConversationState.InviteReject
+                        || localState.second == ConversationState.OfflineTimeout
+                        || localState.second == ConversationState.InviteTimeout) {
+                    tip = "通话已结束";
+                }
+            }
+        }
+
+        if (tip != null) {
+            binding.msTvTip.setText(tip);
+            binding.msTvTip.setVisibility(View.VISIBLE);
+        }
+        if (delayDismissTime > 0)
+            binding.msTvTip.postDelayed(tipDismiss, delayDismissTime);
+    }
 
     public void hideAllAction() {
         for (MsLayoutActionBinding itemActionBinding : Arrays.asList(
@@ -193,11 +221,11 @@ public class MultiCallRoomFragment extends Fragment {
     public static class MultiAdapter extends RecyclerView.Adapter<MultiAdapter.ViewHolder<MsItemBuddyBinding>> {
 
         List<BuddyModel> list = new ArrayList<>();
-        RoomClient roomClient;
+        UIRoomStore uiRoomStore;
         LifecycleOwner lifecycleOwner;
 
-        public MultiAdapter(RoomClient roomClient, LifecycleOwner lifecycleOwner) {
-            this.roomClient = roomClient;
+        public MultiAdapter(UIRoomStore uiRoomStore, LifecycleOwner lifecycleOwner) {
+            this.uiRoomStore = uiRoomStore;
             this.lifecycleOwner = lifecycleOwner;
         }
 
@@ -226,6 +254,7 @@ public class MultiCallRoomFragment extends Fragment {
                 binding.ivCover.setVisibility(videoTrack != null ? View.GONE : View.VISIBLE);
                 binding.vRenderer.init(lifecycleOwner);
                 binding.vRenderer.bind(lifecycleOwner, videoTrack);
+                binding.vRenderer.setMirror(model.buddy.isProducer() && videoTrack != null && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
             });
 
             model.disabledMic.removeObservers(lifecycleOwner);
@@ -277,9 +306,9 @@ public class MultiCallRoomFragment extends Fragment {
                         }
                     }
 
-                    binding.tvTip.setVisibility(text == null ? View.GONE : View.VISIBLE);
+                    binding.msTvTip.setVisibility(text == null ? View.GONE : View.VISIBLE);
                     if (text != null)
-                        binding.tvTip.setText(text);
+                        binding.msTvTip.setText(text);
                 });
             }
 

@@ -6,6 +6,8 @@ import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mschat.R;
+import com.gyf.immersionbar.BarHide;
+import com.gyf.immersionbar.ImmersionBar;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.model.UIRoomStore;
@@ -22,14 +24,16 @@ public class CallRoomActivity extends AppCompatActivity {
             finish();
             return;
         }
+        ImmersionBar.with(this)
+                .hideBar(BarHide.FLAG_HIDE_BAR)
+                .fullScreen(true)
+                .statusBarDarkFont(false)
+                .init();
+
         uiRoomStore.bindLifeOwner(this);
-        uiRoomStore.finished.observe(this,aBoolean -> {
-            if (aBoolean == Boolean.TRUE)
-                finish();
-        });
-        uiRoomStore.showActivity.observe(this,aBoolean -> {
+        uiRoomStore.showActivity.observe(this, aBoolean -> {
             if (aBoolean == Boolean.FALSE)
-                onBack();
+                finish();
         });
 
         switch (uiRoomStore.roomType) {
@@ -58,7 +62,6 @@ public class CallRoomActivity extends AppCompatActivity {
     }
 
     public void onBack() {
-        Log.d(TAG, "onBack: ");
         super.onBackPressed();
     }
 

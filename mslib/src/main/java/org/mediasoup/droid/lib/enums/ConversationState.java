@@ -27,6 +27,11 @@ public enum ConversationState {
     InviteBusy("InviteBusy"),
 
     /**
+     * 断线超时
+     */
+    OfflineTimeout("OfflineTimeout"),
+
+    /**
      * 开始通话
      */
     Joined("Joined"),

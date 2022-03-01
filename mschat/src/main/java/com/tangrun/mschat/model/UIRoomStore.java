@@ -7,11 +7,12 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Vibrator;
 import android.util.Log;
 
+import android.util.Pair;
 import android.view.View;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -20,6 +21,7 @@ import androidx.lifecycle.*;
 import androidx.lifecycle.Observer;
 import com.example.mschat.R;
 import com.example.mschat.databinding.MsLayoutActionBinding;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.Permission;
 import com.hjq.permissions.XXPermissions;
@@ -63,14 +65,19 @@ public class UIRoomStore {
     private static final String NOTIFICATION_CHANNEL_ID = "MSCall";
     private static final String NOTIFICATION_CHANNEL_NAME = "音视频通话";
 
-    private final Context context;
+    private Context context;
     private final AudioManager audioManager;
-    private NotificationManagerCompat notificationManagerCompat;
+    private Vibrator vibrator;
+    private final NotificationManagerCompat notificationManagerCompat;
     private AppCompatActivity activity;
+
     private final RoomStore roomStore;
     private final RoomClient roomClient;
     private final RoomOptions roomOptions;
 
+    /**
+     * action
+     */
     public DefaultButtonAction Action_MicrophoneDisabled;
     public DefaultButtonAction Action_CameraDisabled;
     public DefaultButtonAction Action_CameraNotFacing;
@@ -79,27 +86,42 @@ public class UIRoomStore {
     public DefaultButtonAction Action_JoinAction;
 
     /**
-     * 自己的状态由自己本地维护
+     * 本地连接状态 会话状态
      */
     public ChangedMutableLiveData<ConversationState> localConversationState = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<LocalConnectState> localConnectionState = new ChangedMutableLiveData<>();
+    public MutableLiveData<Pair<LocalConnectState, ConversationState>> localState = new MutableLiveData<>();
+    /**
+     * 麦克风 摄像头状态
+     */
     public ChangedMutableLiveData<MicrophoneState> microphoneState = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<CameraState> cameraState = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<SpeakerState> speakerState = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<CameraFacingState> cameraFacingState = new ChangedMutableLiveData<>();
+    /**
+     * 通话时间 显示 hh:mm
+     */
     public ChangedMutableLiveData<String> callTime = new ChangedMutableLiveData<>();
     /**
-     * activity监听这个进行finish
+     * 开始通话 结束通话
      */
-    public ChangedMutableLiveData<Boolean> finished = new ChangedMutableLiveData<>(false);
+    public ChangedMutableLiveData<Boolean> calling = new ChangedMutableLiveData<>();
+    private Date callStartTime, callEndTime;
+    /**
+     *
+     */
     public ChangedMutableLiveData<Boolean> showActivity = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<Boolean> showWindow = new ChangedMutableLiveData<>();
+    /**
+     * 把client的人 转化成model 并监听client发来的变化再设置到model里
+     */
     public List<BuddyModel> buddyModels = new ArrayList<>();
     public ChangedMutableLiveData<BuddyModel> mine = new ChangedMutableLiveData<>();
     private Map<String, BuddyModel> buddyModelMap = new ConcurrentHashMap<>();
+    /**
+     * 人进入退出监听
+     */
     public DispatcherObservable<IBuddyModelObserver> buddyObservable = new DispatcherObservable<>(IBuddyModelObserver.class);
-
-    private Date callStartTime, callEndTime;
 
     private int connectedCount;
     private int joinedCount;
@@ -141,7 +163,7 @@ public class UIRoomStore {
      */
     public boolean audioOnly = true;
     /**
-     * 通话已结束标记 0没挂断 1挂断 2超时
+     * 通话已结束标记 0没挂断 1挂断 2超时 3客户端断开
      */
     private int callEndType = 0;
 
@@ -149,8 +171,12 @@ public class UIRoomStore {
     /**
      * 连接状态改变监听
      */
-    Observer<LocalConnectState> setLocalConversationStateForConnectStateLogic = connectionState1 -> {
+    Observer<LocalConnectState> localConnectStateObserver = connectionState1 -> {
         Log.d(TAG, "ConnectionState changed: " + connectionState1);
+
+        localState.postValue(new Pair<>(localConnectionState.getValue(), localConversationState.getValue()));
+
+        // 设置本地会话状态逻辑
         if (connectionState1 == LocalConnectState.CONNECTED) {
             boolean needJoin = false;
 
@@ -173,10 +199,6 @@ public class UIRoomStore {
                 getRoomClient().join();
             }
 
-            // 不是邀请者 且还没join过
-            if (!owner && joinedCount == 0) {
-                localConversationState.setValue(ConversationState.Invited);
-            }
             connectedCount++;
         } else if (connectionState1 == LocalConnectState.JOINED) {
             // 网络中断重连时 join后 重连transport
@@ -199,35 +221,62 @@ public class UIRoomStore {
                     switchMicEnable(activity);
             }
 
-            localConversationState.setValue(ConversationState.Joined);
+            if (joinedCount == 0 && !owner) {
+                localConversationState.applyPost(ConversationState.Joined);
+            }
 
             joinedCount++;
         } else if (connectionState1 == LocalConnectState.CLOSED) {
             if (callEndType == 1) {
                 if (owner)
-                    localConversationState.setValue(ConversationState.Left);
+                    localConversationState.applyPost(ConversationState.Left);
                 else {
                     if (joinedCount > 0) {
-                        localConversationState.setValue(ConversationState.Left);
+                        localConversationState.applyPost(ConversationState.Left);
                     } else {
-                        localConversationState.setValue(ConversationState.InviteReject);
+                        localConversationState.applyPost(ConversationState.InviteReject);
                     }
                 }
             } else if (callEndType == 2) {
-                localConversationState.setValue(ConversationState.InviteTimeout);
+                localConversationState.applyPost(ConversationState.InviteTimeout);
+            } else if (callEndType == 0) {
+                // 网络中断
+                callEndType = 3;
+                localConversationState.applyPost(ConversationState.OfflineTimeout);
+                hangup();
             }
-            if (callEndType != 0)
-                release();
         }
     };
 
-    Observer<ConversationState> localConversationStateChangedLogic = conversationState -> {
+    Observer<ConversationState> localConversationObserver = conversationState -> {
+        localState.postValue(new Pair<>(localConnectionState.getValue(), localConversationState.getValue()));
 
+        // 铃声
+        if (conversationState == ConversationState.New) {
+            startPlayer(context, R.raw.ms_ring, true);
+        } else if (conversationState == ConversationState.Invited) {
+            startPlayer(context, R.raw.ms_inviting, true);
+        } else if (conversationState == ConversationState.Joined) {
+            // 开始通话光靠会话状态不行 还要开始通话标记判断 在开始通话计时时调用一次
+            // 最新修改 房主改为开始通话才触发状态到joined
+            stopPlayer();
+            vibrator.vibrate(50);
+        } else if (conversationState == ConversationState.InviteBusy) {
+            startPlayer(context, R.raw.ms_busy, false);
+        } else {
+            startPlayer(context, R.raw.ms_tone, false);
+        }
     };
 
+    /**
+     * 声音变化设置 因为服务器只会返回正在说话的人列表 所以采用延时设置不说话的方式实现监听每一个人是否在说话
+     */
     Observable<Long> volumeDelaySilentObservable = Observable.timer(1200, TimeUnit.MILLISECONDS);
     Map<String, DisposableObserver<Long>> volumeDelaySilentObserverMap = new ConcurrentHashMap<>();
 
+    /**
+     * client监听 其他设置都是设置model的属性 livedata用post buddy监听是接口分发要用主线程
+     */
     ClientObserver clientObserver = new ClientObserver() {
         @Override
         public void onBuddyAdd(String id, Buddy buddy) {
@@ -237,9 +286,6 @@ public class UIRoomStore {
                     BuddyModel buddyModel = new BuddyModel(buddy);
                     buddyModel.connectionState.applyPost(buddy.getConnectionState());
                     buddyModel.conversationState.applyPost(buddy.getConversationState());
-//                    buddyModel.volume.applyPost(null);
-//                    buddyModel.disabledCam.applyPost(!audioOnly);
-//                    buddyModel.disabledMic.applyPost(true);
 
                     buddyModels.add(buddyModel);
                     int pos = buddyModels.indexOf(buddyModel);
@@ -247,6 +293,7 @@ public class UIRoomStore {
 
                     buddyObservable.getDispatcher().onBuddyAdd(pos, buddyModel);
 
+                    // 把自己存起来
                     if (mine.getValue() == null && buddy.isProducer()) {
                         mine.applyPost(buddyModel);
                     }
@@ -268,9 +315,10 @@ public class UIRoomStore {
                     buddyObservable.getDispatcher().onBuddyRemove(pos, buddyModel);
 
                     // 去掉了开始通话时间为空判断 因为有可能没有开始通话 即无人接听的情况
-                    if (getRoomStore().getBuddys().size() == 1) {
-                        hangup();
-                    }
+                    // 由于现在服务器是先发送状态改变 再发送离开 所以会有延时 用状态改变判断最佳
+//                    if (getRoomStore().getBuddys().size() == 1) {
+//                        hangup();
+//                    }
                 }
             });
         }
@@ -284,6 +332,7 @@ public class UIRoomStore {
                     if (buddyModel == null) return;
                     buddyModel.volume.applyPost(buddy.getVolume());
 
+                    // 延迟设置音量为0
                     DisposableObserver<Long> disposableObserver = volumeDelaySilentObserverMap.get(id);
                     if (disposableObserver != null) disposableObserver.dispose();
                     disposableObserver = new DisposableObserver<Long>() {
@@ -322,7 +371,20 @@ public class UIRoomStore {
                     // 第一个人进来就算开始通话
                     if (owner && !buddy.isProducer() && callStartTime == null && joinedCount > 0
                             && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
-                        startCallTime();
+                        calling.applyPost(true);
+                    }
+
+                    if (!buddy.isProducer() && !isActiveBuddy(buddy)){
+                        boolean hasActiveBuddy = false;
+                        for (BuddyModel model : buddyModels) {
+                            if (!model.buddy.isProducer() && isActiveBuddy(model.buddy)){
+                                hasActiveBuddy = true;
+                                break;
+                            }
+                        }
+                        if (!hasActiveBuddy){
+                            hangup();
+                        }
                     }
                 }
             });
@@ -359,7 +421,6 @@ public class UIRoomStore {
                 buddyModel.videoWrapper.applyPost(null);
                 buddyModel.videoTrack.applyPost(null);
                 buddyModel.disabledCam.applyPost(true);
-                return;
             }
         }
 
@@ -401,15 +462,21 @@ public class UIRoomStore {
         @Override
         public void onLocalConnectStateChanged(LocalConnectState state) {
             localConnectionState.applyPost(state);
-            // 自己接听就算开始通话
+
+            // 被邀请时 自己接听就算开始通话
             if (callStartTime == null && !owner && state == LocalConnectState.JOINED && joinedCount == 0) {
-                startCallTime();
+                calling.applyPost(true);
             }
         }
 
         @Override
         public void onCameraStateChanged(CameraState state) {
             cameraState.applyPost(state);
+
+            // 关闭后再打开还是默认前摄 所以重置一下
+            if (state == CameraState.disabled) {
+                cameraFacingState.applyPost(CameraFacingState.front);
+            }
         }
 
         @Override
@@ -425,14 +492,17 @@ public class UIRoomStore {
 
     };
 
+    /**
+     * 前后台监听 主要用户窗口的打开关闭
+     */
     LifecycleEventObserver appProcessObserver = new LifecycleEventObserver() {
         @Override
         public void onStateChanged(@androidx.annotation.NonNull @NotNull LifecycleOwner source, @androidx.annotation.NonNull @NotNull Lifecycle.Event event) {
             if (event == Lifecycle.Event.ON_DESTROY) {
                 source.getLifecycle().removeObserver(this);
             } else if (event == Lifecycle.Event.ON_RESUME) {
+                // 前台时刷新一下通知 防止进入时清空消息通知把通话通知也清掉了
                 updateNotification();
-                showWindow.applyPost(false);
             } else if (event == Lifecycle.Event.ON_STOP) {
                 showWindow.applyPost(true);
                 openWindowService();
@@ -443,23 +513,26 @@ public class UIRoomStore {
     LifecycleEventObserver activityObserver = new LifecycleEventObserver() {
         @Override
         public void onStateChanged(@androidx.annotation.NonNull @NotNull LifecycleOwner source, @androidx.annotation.NonNull @NotNull Lifecycle.Event event) {
-            if (event == Lifecycle.Event.ON_RESUME) {
-                showActivity.applySet(true);
-            } else if (event == Lifecycle.Event.ON_DESTROY) {
-                showActivity.applySet(false);
+            if (event == Lifecycle.Event.ON_DESTROY) {
                 source.getLifecycle().removeObserver(this);
                 activity = null;
+            } else if (event == Lifecycle.Event.ON_RESUME) {
+                showWindow.applyPost(false);
             }
         }
     };
 
 
-    public UIRoomStore(Context context, RoomOptions roomOptions) {
+    public UIRoomStore(Context context, RoomOptions roomOptions, RoomType roomType, boolean owner, boolean audioOnly) {
         this.context = context;
         this.roomClient = new RoomClient(context, roomOptions);
         this.roomStore = roomClient.getStore();
         this.roomOptions = roomClient.getOptions();
+        this.roomType = roomType;
+        this.owner = owner;
+        this.audioOnly = audioOnly;
         audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
+        vibrator = (Vibrator) this.context.getSystemService(Context.VIBRATOR_SERVICE);
         notificationManagerCompat = NotificationManagerCompat.from(context);
         init();
     }
@@ -469,6 +542,7 @@ public class UIRoomStore {
         activity = owner;
         showActivity.applySet(true);
         activity.getLifecycle().addObserver(activityObserver);
+        // 因为action涉及到
         cameraState.observe(activity, state -> Action_CameraDisabled.setChecked(state == CameraState.disabled));
         microphoneState.observe(activity, state -> Action_MicrophoneDisabled.setChecked(state == MicrophoneState.disabled));
         cameraFacingState.observe(activity, state -> Action_CameraNotFacing.setChecked(state == CameraFacingState.rear));
@@ -477,7 +551,7 @@ public class UIRoomStore {
 
     private void init() {
         {
-            localConversationState.applyPost(ConversationState.New);
+            localConversationState.applyPost(owner ? ConversationState.New : ConversationState.Invited);
             localConnectionState.applyPost(getRoomStore().getLocalConnectionState());
             microphoneState.applyPost(getRoomStore().getMicrophoneState());
             cameraFacingState.applyPost(getRoomStore().getCameraFacingState());
@@ -499,10 +573,7 @@ public class UIRoomStore {
                 @Override
                 public void onClick(View v) {
                     hangup();
-                    v.postDelayed(() -> {
-                        finished.applySet(true);
-                        MSManager.stopCall();
-                    }, 1000);
+                    calling.applySet(false);
                 }
             };
             Action_MicrophoneDisabled = new DefaultButtonAction("麦克风", R.drawable.ms_selctor_microphone_disabled) {
@@ -541,43 +612,34 @@ public class UIRoomStore {
             notificationChannelId = NOTIFICATION_CHANNEL_ID;
             NotificationManagerCompat.from(context).createNotificationChannel(channel);
         }
-        localConversationState.observeForever(conversationState1 -> {
-            updateNotification();
-            playRing();
-        });
-        localConnectionState.observeForever(localConnectState -> {
+        localState.observeForever(localConnectStateConversationStatePair -> {
             updateNotification();
         });
         // 设置本地会话状态 本地连接状态由client维护
-        localConnectionState.observeForever(setLocalConversationStateForConnectStateLogic);
+        localConnectionState.observeForever(localConnectStateObserver);
+        localConversationState.observeForever(localConversationObserver);
+        // 前后台切换监听
         ProcessLifecycleOwner.get().getLifecycle().addObserver(appProcessObserver);
         // 结束通话
-        finished.observeForever(aBoolean -> {
+        calling.observeForever(aBoolean -> {
             if (aBoolean) {
+                startCallTime();
+                if (owner) {
+                    localConversationState.applyPost(ConversationState.Joined);
+                }
+            } else {
+                stopCallTime();
                 release();
-                MSManager.stopCall();
+
+                ArchTaskExecutor.getInstance().postToMainThread(() -> {
+                    showActivity.applyPost(false);
+                    showWindow.applyPost(false);
+                    MSManager.stopCall();
+                }, 1500);
             }
         });
 
         getRoomStore().getClientObservable().registerObserver(clientObserver);
-    }
-
-    private void playRing() {
-        ConversationState conversationState = localConversationState.getValue();
-        LocalConnectState connectState = localConnectionState.getValue();
-
-        if (conversationState == ConversationState.New) {
-            startPlayer(context, owner ? R.raw.ms_inviting : R.raw.ms_ring, true);
-        } else if (conversationState == ConversationState.Joined) {
-            // 开始通话光靠会话状态不行 还要开始通话标记判断 在开始通话计时时调用一次
-            if (callStartTime != null) {
-                stopPlayer();
-            }
-        } else if (conversationState == ConversationState.InviteBusy) {
-            startPlayer(context, R.raw.ms_busy, false);
-        } else {
-            startPlayer(context, R.raw.ms_tone, false);
-        }
     }
 
     private void updateNotification() {
@@ -604,12 +666,26 @@ public class UIRoomStore {
 
     private void release() {
         cancelNotification();
-        localConnectionState.removeObserver(setLocalConversationStateForConnectStateLogic);
+        localConnectionState.removeObserver(localConnectStateObserver);
+        localConversationState.removeObserver(localConversationObserver);
         ProcessLifecycleOwner.get().getLifecycle().removeObserver(appProcessObserver);
         getRoomStore().getClientObservable().unregisterAll();
         stopCallTime();
+        stopPlayer();
     }
 
+    private boolean isActiveBuddy(Buddy buddy){
+        if (buddy == null)return false;
+        if (buddy.getConversationState() == ConversationState.InviteBusy
+                || buddy.getConversationState() == ConversationState.InviteReject
+                || buddy.getConversationState() == ConversationState.OfflineTimeout
+                || buddy.getConversationState() == ConversationState.InviteTimeout
+                || buddy.getConversationState() == ConversationState.Left
+        ) {
+            return false;
+        }
+        return true;
+    }
 
     //region 通话组件启动
 
@@ -637,7 +713,6 @@ public class UIRoomStore {
 
     private void startCallTime() {
         if (callStartTime != null) return;
-        playRing();
         callStartTime = new Date();
         callTimeObserver = new DisposableObserver<Long>() {
             @Override
@@ -672,7 +747,7 @@ public class UIRoomStore {
 
     //endregion
 
-    // region 功能操作暴露方法
+    // region action功能操作
 
     public void connect() {
         getRoomClient().connect();
@@ -688,7 +763,8 @@ public class UIRoomStore {
 
     public void hangup() {
         stopCallTime();
-        callEndType = 1;
+        if (callEndType == 0)
+            callEndType = 1;
         if (localConnectionState.getValue() == LocalConnectState.JOINED
                 || localConnectionState.getValue() == LocalConnectState.CONNECTED)
             getRoomClient().hangup();
@@ -698,14 +774,14 @@ public class UIRoomStore {
         ArchTaskExecutor.getInstance().postToMainThread(new Runnable() {
             @Override
             public void run() {
-                finished.applySet(true);
+                calling.applySet(false);
             }
         }, 1500);
     }
 
     public void switchMicEnable(Context context) {
         if (!XXPermissions.isGranted(context, Permission.RECORD_AUDIO)) {
-            showDialog(context, "权限请求", "通话中语音需要录音权限，请授予",
+            showDialog(context, "权限请求", "语音通话需要录音权限，请授予",
                     "取消", null,
                     "好的", new Runnable() {
                         @Override
@@ -739,7 +815,7 @@ public class UIRoomStore {
 
     public void switchCamEnable(Context context) {
         if (!XXPermissions.isGranted(context, Permission.CAMERA)) {
-            showDialog(context, "权限请求", "通话中视频需要摄像头权限，请授予", "取消", null, "好的", new Runnable() {
+            showDialog(context, "权限请求", "视频通话需要摄像头权限，请授予", "取消", null, "好的", new Runnable() {
                 @Override
                 public void run() {
                     XXPermissions.with(context).permission(Permission.CAMERA).request((PermissionCallback) (all, never) -> {
@@ -861,12 +937,11 @@ public class UIRoomStore {
 
     // endregion
 
-    //region 封装方法
+    //region 内部使用封装方法 音乐播放 通知栏什么的
 
     private MediaPlayer player;
 
-
-    public void stopPlayer() {
+    private void stopPlayer() {
         Log.d(TAG, "stopRing() called");
         if (player != null) {
             try {
@@ -882,7 +957,7 @@ public class UIRoomStore {
         }
     }
 
-    public void startPlayer(Context context, int id, boolean loop) {
+    private void startPlayer(Context context, int id, boolean loop) {
         Log.d(TAG, "startRingForType() called with: id = [" + id + "], loop = [" + loop + "]");
         Uri uri = Uri.parse("android.resource://" + context.getPackageName() + "/" + id);
         if (player == null) {
@@ -938,7 +1013,7 @@ public class UIRoomStore {
                             String negativeText, Runnable negative,
                             String positiveText, Runnable positive,
                             String neutralText, Runnable neutral) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context).setTitle(title).setMessage(msg);
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context).setTitle(title).setMessage(msg);
         if (negativeText != null) builder.setNegativeButton(negativeText, (dialog, which) -> {
             dialog.dismiss();
             if (negative != null) negative.run();

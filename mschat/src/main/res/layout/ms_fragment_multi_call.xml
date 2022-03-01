@@ -19,14 +19,14 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/iv_min"
+            android:id="@+id/ms_iv_minimize"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:srcCompat="@drawable/ms_ic_close_fullscreen_24"
             app:tint="@color/ms_chat_white" />
 
         <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/tv_title"
+            android:id="@+id/ms_tv_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
@@ -40,7 +40,7 @@
             tools:text="00:55" />
 
         <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/iv_add"
+            android:id="@+id/ms_iv_add"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:srcCompat="@drawable/ms_ic_add_24"
@@ -50,9 +50,10 @@
 
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_buddys"
+        android:id="@+id/ms_rv_buddys"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:overScrollMode="never"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         app:layout_constraintBottom_toTopOf="@id/ms_ll_top"
         app:layout_constraintTop_toBottomOf="@id/ms_ll_title"
@@ -66,7 +67,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:paddingHorizontal="32dp"
-        android:paddingBottom="16dp"
+        android:paddingBottom="32dp"
         app:layout_constraintBottom_toTopOf="@id/ms_ll_bottom">
 
         <include
@@ -104,7 +105,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:paddingHorizontal="32dp"
-        android:paddingBottom="16dp"
+        android:paddingBottom="32dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <include
@@ -136,7 +137,7 @@
     </LinearLayout>
 
     <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tv_tip"
+        android:id="@+id/ms_tv_tip"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="@color/ms_chat_white"

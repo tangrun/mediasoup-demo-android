@@ -11,4 +11,28 @@
 
     <dimen name="ms_conner_radius">10dp</dimen>
 
+    <style name="CallActivity" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#5E5E5E</item>
+        <item name="colorPrimaryVariant">#5E5E5E</item>
+        <item name="colorOnPrimary">#ffffff</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">#5E5E5E</item>
+        <item name="colorSecondaryVariant">#5E5E5E</item>
+        <item name="colorOnSecondary">#000000</item>
+
+        <!-- Customize your theme here. -->
+        <item name="shapeAppearanceSmallComponent">@style/SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/LargeComponent</item>
+    </style>
+
+    <style name="SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerSize">5dp</item>
+    </style>
+    <style name="MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerSize">10dp</item>
+    </style>
+    <style name="LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerSize">15dp</item>
+    </style>
 </resources>

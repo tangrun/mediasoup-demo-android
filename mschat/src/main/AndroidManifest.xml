@@ -13,7 +13,7 @@
             android:name="com.tangrun.mschat.ui.CallRoomActivity"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
+            android:theme="@style/CallActivity" />
         <service android:name="com.tangrun.mschat.ui.CallWindowService" android:exported="false" />
     </application>
 

@@ -394,14 +394,11 @@ public class MSManager {
         roomOptions.mProduceVideo = !audioOnly;
         roomOptions.mConsumeVideo = !audioOnly;
 
-        uiRoomStore = new UIRoomStore(context, roomOptions);
+        uiRoomStore = new UIRoomStore(context, roomOptions,multi?RoomType.MultiCall:RoomType.SingleCall,owner,audioOnly);
 
-        uiRoomStore.roomType = multi ? RoomType.MultiCall : RoomType.SingleCall;
-        uiRoomStore.owner = owner;
         uiRoomStore.firstConnectedAutoJoin = owner;
         uiRoomStore.firstJoinedAutoProduceAudio = true;
         uiRoomStore.firstJoinedAutoProduceVideo = !audioOnly && !multi;
-        uiRoomStore.audioOnly = audioOnly;
 
         uiRoomStore.addUser(inviteUser);
 

@@ -70,10 +70,6 @@ public class CallWindowService extends LifecycleService {
                 }
             }
         });
-        uiRoomStore.finished.observe(this, aBoolean -> {
-            if (aBoolean == Boolean.TRUE)
-                stopSelf();
-        });
 
         // 左边麦克 摄像头状态只有在多人音视频才有
         if (uiRoomStore.roomType == RoomType.MultiCall && !uiRoomStore.audioOnly) {

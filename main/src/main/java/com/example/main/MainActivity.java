@@ -132,7 +132,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         });
-        AtomicBoolean i = new AtomicBoolean(true);
         btOpen.setOnClickListener(v -> {
             MSManager.openCallActivity();
         });
