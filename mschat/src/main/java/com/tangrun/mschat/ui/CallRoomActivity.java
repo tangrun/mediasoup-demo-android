@@ -1,15 +1,11 @@
 package com.tangrun.mschat.ui;
 
 import android.os.Bundle;
-
-import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.example.mschat.R;
 import com.gyf.immersionbar.BarHide;
 import com.gyf.immersionbar.ImmersionBar;
 import com.tangrun.mschat.MSManager;
-import com.tangrun.mschat.enums.RoomType;
+import com.tangrun.mschat.R;
 import com.tangrun.mschat.model.UIRoomStore;
 
 public class CallRoomActivity extends AppCompatActivity {

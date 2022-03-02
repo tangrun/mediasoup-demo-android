@@ -1,16 +1,11 @@
 package com.tangrun.mschat.ui;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import com.tangrun.mschat.MSManager;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import com.tangrun.mschat.model.UIRoomStore;
-import com.tangrun.mschat.model.User;
-
-import java.util.List;
 
 public class UserSelector extends AppCompatActivity {
 

@@ -5,7 +5,6 @@ import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -15,25 +14,22 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
-
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
-import com.example.mschat.R;
-
-import com.example.mschat.databinding.MsFragmentMultiCallBinding;
-import com.example.mschat.databinding.MsItemBuddyBinding;
-import com.example.mschat.databinding.MsLayoutActionBinding;
+import com.tangrun.mschat.MSManager;
+import com.tangrun.mschat.R;
+import com.tangrun.mschat.databinding.MsFragmentMultiCallBinding;
+import com.tangrun.mschat.databinding.MsItemBuddyBinding;
+import com.tangrun.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.IBuddyModelObserver;
-import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.model.UIRoomStore;
+import com.tangrun.mslib.enums.CameraFacingState;
+import com.tangrun.mslib.enums.ConnectionState;
+import com.tangrun.mslib.enums.ConversationState;
+import com.tangrun.mslib.enums.LocalConnectState;
+import com.tangrun.mslib.lv.ChangedMutableLiveData;
 import org.jetbrains.annotations.NotNull;
-import org.mediasoup.droid.lib.RoomClient;
-import org.mediasoup.droid.lib.enums.CameraFacingState;
-import org.mediasoup.droid.lib.enums.ConnectionState;
-import org.mediasoup.droid.lib.enums.ConversationState;
-import org.mediasoup.droid.lib.enums.LocalConnectState;
-import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;
 
 import java.util.ArrayList;
 import java.util.Arrays;

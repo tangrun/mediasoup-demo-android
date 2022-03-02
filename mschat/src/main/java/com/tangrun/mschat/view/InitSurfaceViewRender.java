@@ -2,13 +2,12 @@ package com.tangrun.mschat.view;
 
 import android.content.Context;
 import android.util.AttributeSet;
-
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
+import com.tangrun.mslib.utils.PeerConnectionUtils;
 import org.jetbrains.annotations.NotNull;
-import org.mediasoup.droid.lib.utils.PeerConnectionUtils;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 

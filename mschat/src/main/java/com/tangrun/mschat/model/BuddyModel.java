@@ -1,11 +1,11 @@
 package com.tangrun.mschat.model;
 
-import org.mediasoup.droid.lib.model.WrapperCommon;
-import org.mediasoup.droid.lib.enums.ConnectionState;
-import org.mediasoup.droid.lib.enums.ConversationState;
-import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;
-import org.mediasoup.droid.lib.lv.MultiMutableLiveData;
-import org.mediasoup.droid.lib.model.Buddy;
+import com.tangrun.mslib.enums.ConnectionState;
+import com.tangrun.mslib.enums.ConversationState;
+import com.tangrun.mslib.lv.ChangedMutableLiveData;
+import com.tangrun.mslib.lv.MultiMutableLiveData;
+import com.tangrun.mslib.model.Buddy;
+import com.tangrun.mslib.model.WrapperCommon;
 import org.webrtc.AudioTrack;
 import org.webrtc.VideoTrack;
 

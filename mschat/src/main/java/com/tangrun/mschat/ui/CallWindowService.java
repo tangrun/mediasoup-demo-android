@@ -11,16 +11,16 @@ import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.widget.ImageViewCompat;
 import androidx.lifecycle.*;
-import com.example.mschat.R;
-import com.example.mschat.databinding.MsCallWindowBinding;
 import com.google.android.flexbox.FlexDirection;
 import com.tangrun.mschat.MSManager;
+import com.tangrun.mschat.R;
+import com.tangrun.mschat.databinding.MsCallWindowBinding;
 import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.UIRoomStore;
+import com.tangrun.mslib.enums.ConversationState;
+import com.tangrun.mslib.enums.LocalConnectState;
 import org.jetbrains.annotations.NotNull;
-import org.mediasoup.droid.lib.enums.ConversationState;
-import org.mediasoup.droid.lib.enums.LocalConnectState;
 import org.webrtc.VideoTrack;
 
 public class CallWindowService extends LifecycleService {

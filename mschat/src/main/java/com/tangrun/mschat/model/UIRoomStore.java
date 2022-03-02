@@ -9,7 +9,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Vibrator;
 import android.util.Log;
-
 import android.util.Pair;
 import android.view.View;
 import android.widget.Toast;
@@ -17,39 +16,41 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.lifecycle.*;
-
-import androidx.lifecycle.Observer;
-import com.example.mschat.R;
-import com.example.mschat.databinding.MsLayoutActionBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.Permission;
 import com.hjq.permissions.XXPermissions;
+import com.tangrun.mschat.R;
 import com.tangrun.mschat.UICallback;
+import com.tangrun.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.enums.CallEnd;
 import com.tangrun.mschat.enums.RoomType;
-import com.tangrun.mschat.ui.UserSelector;
-import com.tangrun.mschat.ui.CallWindowService;
 import com.tangrun.mschat.ui.CallRoomActivity;
-import org.jetbrains.annotations.NotNull;
-import org.json.JSONArray;
-import org.mediasoup.droid.lib.RoomStore;
-import org.mediasoup.droid.lib.utils.ArchTaskExecutor;
-import org.mediasoup.droid.lib.RoomClient;
-import org.mediasoup.droid.lib.RoomOptions;
-import org.mediasoup.droid.lib.model.WrapperCommon;
-import org.mediasoup.droid.lib.enums.*;
-import org.mediasoup.droid.lib.lv.*;
-import org.mediasoup.droid.lib.model.Buddy;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
+import com.tangrun.mschat.ui.CallWindowService;
+import com.tangrun.mschat.ui.UserSelector;
+import com.tangrun.mslib.RoomClient;
+import com.tangrun.mslib.RoomOptions;
+import com.tangrun.mslib.RoomStore;
+import com.tangrun.mslib.enums.*;
+import com.tangrun.mslib.lv.ChangedMutableLiveData;
+import com.tangrun.mslib.lv.ClientObserver;
+import com.tangrun.mslib.lv.DispatcherObservable;
+import com.tangrun.mslib.model.Buddy;
+import com.tangrun.mslib.model.WrapperCommon;
+import com.tangrun.mslib.utils.ArchTaskExecutor;
 import io.reactivex.Observable;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.observers.DisposableObserver;
+import org.jetbrains.annotations.NotNull;
+import org.json.JSONArray;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author RainTang

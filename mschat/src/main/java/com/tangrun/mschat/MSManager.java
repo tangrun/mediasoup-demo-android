@@ -3,26 +3,12 @@ package com.tangrun.mschat;
 import android.app.Application;
 import android.content.Context;
 import android.util.Log;
-
 import androidx.lifecycle.Observer;
 import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.model.UIRoomStore;
 import com.tangrun.mschat.model.User;
-import org.json.JSONObject;
-import org.mediasoup.droid.Logger;
-import org.mediasoup.droid.MediasoupClient;
-import org.mediasoup.droid.lib.utils.JsonUtils;
-import org.mediasoup.droid.lib.RoomOptions;
-
-import java.io.IOException;
-import java.security.cert.CertificateException;
-import java.util.List;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
+import com.tangrun.mslib.RoomOptions;
+import com.tangrun.mslib.utils.JsonUtils;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
@@ -35,6 +21,17 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
+import org.json.JSONObject;
+import org.mediasoup.droid.Logger;
+import org.mediasoup.droid.MediasoupClient;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.io.IOException;
+import java.security.cert.CertificateException;
+import java.util.List;
 
 import static org.apache.http.conn.ssl.SSLSocketFactory.SSL;
 

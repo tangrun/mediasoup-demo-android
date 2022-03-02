@@ -1,7 +1,6 @@
 package com.tangrun.mschat.ui;
 
 import android.os.Bundle;
-
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,18 +10,18 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
-import com.example.mschat.R;
-import com.example.mschat.databinding.MsFragmentSingleCallBinding;
-import com.example.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.MSManager;
+import com.tangrun.mschat.R;
+import com.tangrun.mschat.databinding.MsFragmentSingleCallBinding;
+import com.tangrun.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.IBuddyModelObserver;
 import com.tangrun.mschat.model.UIRoomStore;
+import com.tangrun.mslib.enums.CameraFacingState;
+import com.tangrun.mslib.enums.ConversationState;
+import com.tangrun.mslib.enums.LocalConnectState;
+import com.tangrun.mslib.lv.ChangedMutableLiveData;
 import org.jetbrains.annotations.NotNull;
-import org.mediasoup.droid.lib.enums.CameraFacingState;
-import org.mediasoup.droid.lib.enums.ConversationState;
-import org.mediasoup.droid.lib.enums.LocalConnectState;
-import org.mediasoup.droid.lib.lv.ChangedMutableLiveData;
 import org.webrtc.VideoTrack;
 
 import java.util.Arrays;
