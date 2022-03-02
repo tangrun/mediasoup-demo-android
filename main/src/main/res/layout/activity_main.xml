@@ -1,69 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:paddingVertical="16dp"
-    android:paddingHorizontal="16dp"
-    tools:context=".MainActivity">
+<LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="vertical"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingVertical="16dp"
+        android:paddingHorizontal="16dp"
+        tools:context=".MainActivity">
 
     <androidx.appcompat.widget.AppCompatEditText
-        android:id="@+id/tv_room"
-        android:hint="room"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:id="@+id/tv_room"
+            android:hint="room"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
     <androidx.appcompat.widget.AppCompatEditText
-        android:id="@+id/tv_id"
-        android:hint="id"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:id="@+id/tv_id"
+            android:hint="id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
     <androidx.appcompat.widget.AppCompatEditText
-        android:id="@+id/tv_name"
-        android:hint="name"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:id="@+id/tv_name"
+            android:hint="name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
     <androidx.appcompat.widget.AppCompatCheckBox
-        android:hint="audioOnly"
-        android:id="@+id/cb_audioOnly"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:hint="audioOnly"
+            android:id="@+id/cb_audioOnly"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
     <androidx.appcompat.widget.AppCompatCheckBox
-        android:hint="multi"
-        android:id="@+id/cb_multi"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:hint="multi"
+            android:id="@+id/cb_multi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
     <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tv_user"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:id="@+id/tv_user"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/bt_select"
-        android:text="选人"
-        android:onClick="onPick"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:id="@+id/bt_select"
+            android:text="选人"
+            android:onClick="onPick"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/bt_start"
-        android:text="发起会话"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:id="@+id/bt_start"
+            android:text="发起会话"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/bt_join"
-        android:text="加入会话"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:id="@+id/bt_join"
+            android:text="加入会话"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/bt_busy"
-        android:text="发送忙线"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+            android:id="@+id/bt_busy"
+            android:text="发送忙线"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
     <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/bt_open"
             android:text="打开通话界面"
