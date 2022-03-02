@@ -1,8 +1,13 @@
 package com.tangrun.mschat.ui;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import com.tangrun.mschat.model.UIRoomStore;
@@ -22,17 +27,18 @@ public class UserSelector extends AppCompatActivity {
             finish();
             return;
         }
-        startActivityForResult(intent, 1);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1) {
-            if (UIRoomStore.getCurrent() != null) {
-                UIRoomStore.getCurrent().onAddUserResult(resultCode, data);
-            }
-            finish();
+        // 修复立即会返回cancel的问题
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            intent.removeFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         }
+        registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<ActivityResult>() {
+            @Override
+            public void onActivityResult(ActivityResult result) {
+                if (UIRoomStore.getCurrent() != null) {
+                    UIRoomStore.getCurrent().onAddUserResult(result.getResultCode(), result.getData());
+                }
+                finish();
+            }
+        }).launch(intent);
     }
 }

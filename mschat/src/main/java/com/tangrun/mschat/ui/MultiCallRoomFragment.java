@@ -1,6 +1,7 @@
 package com.tangrun.mschat.ui;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -246,10 +247,11 @@ public class MultiCallRoomFragment extends Fragment {
 
             model.videoTrack.removeObservers(lifecycleOwner);
             model.videoTrack.observe(lifecycleOwner, videoTrack -> {
+                Log.d(TAG, "onBindViewHolder: " + model.buddy.getDisplayName() + " videoTrack = " + videoTrack);
                 binding.vRenderer.setVisibility(videoTrack == null ? View.GONE : View.VISIBLE);
                 binding.ivCover.setVisibility(videoTrack != null ? View.GONE : View.VISIBLE);
                 binding.vRenderer.init(lifecycleOwner);
-                binding.vRenderer.bind(lifecycleOwner, videoTrack);
+                binding.vRenderer.bind(lifecycleOwner, uiRoomStore.callingActual.getValue() == Boolean.TRUE, videoTrack);
                 binding.vRenderer.setMirror(model.buddy.isProducer() && videoTrack != null && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
             });
 

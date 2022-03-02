@@ -1,7 +1,13 @@
 package com.tangrun.mschat.ui;
 
+import android.os.Build;
 import android.os.Bundle;
+import android.view.WindowManager;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.ActivityManagerCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.gyf.immersionbar.BarHide;
 import com.gyf.immersionbar.ImmersionBar;
 import com.tangrun.mschat.MSManager;
@@ -20,6 +26,14 @@ public class CallRoomActivity extends AppCompatActivity {
             finish();
             return;
         }
+        getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON //保持屏幕长亮
+        );
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setTurnScreenOn(true);
+            setShowWhenLocked(true);
+        }
+
         ImmersionBar.with(this)
                 .hideBar(BarHide.FLAG_HIDE_BAR)
                 .fullScreen(true)

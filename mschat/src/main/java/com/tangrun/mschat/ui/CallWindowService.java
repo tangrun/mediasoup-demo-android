@@ -134,7 +134,7 @@ public class CallWindowService extends LifecycleService {
         VideoTrack videoTrack = buddyModel == null ? null : buddyModel.videoTrack.getValue();
         Pair<LocalConnectState,ConversationState> localState = uiRoomStore.localState.getValue();
 
-        binding.msVRender.bind(CallWindowService.this, videoTrack);
+        binding.msVRender.bind(CallWindowService.this,uiRoomStore.callingActual.getValue() == Boolean.TRUE, videoTrack);
         binding.msVRender.setVisibility(videoTrack == null ? View.INVISIBLE : View.VISIBLE);
         binding.msLlCallInfo.setVisibility(videoTrack == null ? View.VISIBLE : View.GONE);
 
@@ -170,7 +170,7 @@ public class CallWindowService extends LifecycleService {
                         || localState.second == ConversationState.InviteReject
                         || localState.second == ConversationState.OfflineTimeout
                         || localState.second == ConversationState.InviteTimeout) {
-                    tintId = R.color.ms_chat_green;
+                    tintId = R.color.ms_chat_red;
                     imgId = R.drawable.ms_ic_call_end_24;
                     text = "通话已结束";
                 }

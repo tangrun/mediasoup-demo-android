@@ -105,7 +105,7 @@ public class SingleCallRoomFragment extends Fragment {
             uiRoomStore.onMinimize(getActivity());
         });
         binding.msRoot.setOnClickListener(v -> {
-            if (uiRoomStore.calling.getValue() != Boolean.TRUE) return;
+            if (uiRoomStore.calling.getValue() != Boolean.TRUE || uiRoomStore.audioOnly) return;
             showUI(!showUI);
         });
         // 通话时间
@@ -257,11 +257,11 @@ public class SingleCallRoomFragment extends Fragment {
             windowRenderTrack = null;
         }
 
-        binding.msVRendererWindow.bind(this, windowRenderTrack);
+        binding.msVRendererWindow.bind(this, uiRoomStore.callingActual.getValue() == Boolean.TRUE, windowRenderTrack);
         binding.msVRendererWindow.setVisibility(windowRenderTrack == null ? View.GONE : View.VISIBLE);
         binding.msVRendererWindow.setMirror(windowRenderTrack != null && windowRenderTrack == mimeVideoTrack && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
 
-        binding.msVRendererFull.bind(this, fullRenderTrack);
+        binding.msVRendererFull.bind(this, uiRoomStore.callingActual.getValue() == Boolean.TRUE, fullRenderTrack);
         binding.msVRendererFull.setVisibility(fullRenderTrack == null ? View.GONE : View.VISIBLE);
         binding.msVRendererFull.setMirror(fullRenderTrack != null && fullRenderTrack == mimeVideoTrack && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
     }

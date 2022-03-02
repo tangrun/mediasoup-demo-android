@@ -3,10 +3,15 @@ package com.tangrun.mschat.model;
 import android.app.*;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 import android.os.Vibrator;
 import android.util.Log;
 import android.util.Pair;
@@ -65,7 +70,7 @@ public class UIRoomStore {
     private static WeakReference<UIRoomStore> uiRoomStore = new WeakReference<>(null);
 
     public static UIRoomStore getCurrent() {
-        return uiRoomStore.get();
+        return uiRoomStore == null ? null : uiRoomStore.get();
     }
 
     private String notificationChannelId = null;
@@ -84,7 +89,7 @@ public class UIRoomStore {
     private final RoomClient roomClient;
     private final RoomOptions roomOptions;
 
-    private UICallback uiCallback;
+    private final UICallback uiCallback;
     /**
      * action
      */
@@ -113,9 +118,14 @@ public class UIRoomStore {
      */
     public ChangedMutableLiveData<String> callTime = new ChangedMutableLiveData<>();
     /**
-     * 开始通话 结束通话
+     * 开始通话 结束通话 结束有延迟 用于关闭页面等判断
      */
     public ChangedMutableLiveData<Boolean> calling = new ChangedMutableLiveData<>();
+    /**
+     * 实时的 如点击挂断之后就立马有效了
+     * 新增：因为挂断之后transport断开 会发送track为null 但是render里旧的对象还在 底层已经释放了 就会出问题 所以重新通过这个简单判断一下
+     */
+    public ChangedMutableLiveData<Boolean> callingActual = new ChangedMutableLiveData<>();
     private Date callStartTime, callEndTime;
     /**
      *
@@ -127,7 +137,7 @@ public class UIRoomStore {
      */
     public List<BuddyModel> buddyModels = new ArrayList<>();
     public ChangedMutableLiveData<BuddyModel> mine = new ChangedMutableLiveData<>();
-    private Map<String, BuddyModel> buddyModelMap = new ConcurrentHashMap<>();
+    private final Map<String, BuddyModel> buddyModelMap = new ConcurrentHashMap<>();
     /**
      * 人进入退出监听
      */
@@ -149,7 +159,7 @@ public class UIRoomStore {
     /**
      * 邀请通话者
      */
-    public boolean owner = false;
+    public boolean owner;
     /**
      * 最开始 自动join 一般是房主
      * 默认 false
@@ -171,7 +181,7 @@ public class UIRoomStore {
      *
      * @see RoomOptions
      */
-    public boolean audioOnly = true;
+    public boolean audioOnly;
     /**
      * 通话已结束标记 0没挂断 1挂断 2超时 3客户端断开 4对方忙线
      */
@@ -188,24 +198,15 @@ public class UIRoomStore {
 
         // 设置本地会话状态逻辑
         if (connectionState1 == LocalConnectState.CONNECTED) {
-            boolean needJoin = false;
-
-            // 首次连接上 自动join
-            if (firstConnectedAutoJoin && connectedCount == 0) {
-                needJoin = true;
-            }
-
             // 扬声器
             if (firstSpeakerOn && connectedCount == 0) {
                 switchSpeakerphoneEnable(true);
             }
 
-            // 重连时自动join
-            if (joinedCount > 0) {
-                needJoin = true;
-            }
-
-            if (needJoin) {
+            //自动join
+            if ((firstConnectedAutoJoin && connectedCount == 0) // 首次连接上
+                    || (joinedCount > 0) // 重连时自动join
+            ) {
                 getRoomClient().join();
             }
 
@@ -290,125 +291,115 @@ public class UIRoomStore {
     ClientObserver clientObserver = new ClientObserver() {
         @Override
         public void onBuddyAdd(String id, Buddy buddy) {
-            ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    BuddyModel buddyModel = new BuddyModel(buddy);
-                    buddyModel.connectionState.applyPost(buddy.getConnectionState());
-                    buddyModel.conversationState.applyPost(buddy.getConversationState());
+            ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
+                BuddyModel buddyModel = new BuddyModel(buddy);
+                buddyModel.connectionState.applyPost(buddy.getConnectionState());
+                buddyModel.conversationState.applyPost(buddy.getConversationState());
 
-                    buddyModels.add(buddyModel);
-                    int pos = buddyModels.indexOf(buddyModel);
-                    buddyModelMap.put(id, buddyModel);
+                buddyModels.add(buddyModel);
+                int pos = buddyModels.indexOf(buddyModel);
+                buddyModelMap.put(id, buddyModel);
 
-                    buddyObservable.getDispatcher().onBuddyAdd(pos, buddyModel);
+                buddyObservable.getDispatcher().onBuddyAdd(pos, buddyModel);
 
-                    // 把自己存起来
-                    if (mine.getValue() == null && buddy.isProducer()) {
-                        mine.applyPost(buddyModel);
-                    }
+                // 把自己存起来
+                if (mine.getValue() == null && buddy.isProducer()) {
+                    mine.applyPost(buddyModel);
                 }
             });
         }
 
         @Override
         public void onBuddyRemove(String id) {
-            ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    BuddyModel buddyModel = buddyModelMap.get(id);
-                    if (buddyModel == null) return;
-                    int pos = buddyModels.indexOf(buddyModel);
-                    buddyModels.remove(buddyModel);
-                    buddyModelMap.remove(id);
+            ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
+                BuddyModel buddyModel = buddyModelMap.get(id);
+                if (buddyModel == null) return;
+                int pos = buddyModels.indexOf(buddyModel);
+                buddyModels.remove(buddyModel);
+                buddyModelMap.remove(id);
 
-                    buddyObservable.getDispatcher().onBuddyRemove(pos, buddyModel);
+                buddyObservable.getDispatcher().onBuddyRemove(pos, buddyModel);
 
-                    // 去掉了开始通话时间为空判断 因为有可能没有开始通话 即无人接听的情况
-                    // 由于现在服务器是先发送状态改变 再发送离开 所以会有延时 用状态改变判断最佳
+                // 去掉了开始通话时间为空判断 因为有可能没有开始通话 即无人接听的情况
+                // 由于现在服务器是先发送状态改变 再发送离开 所以会有延时 用状态改变判断最佳
 //                    if (getRoomStore().getBuddys().size() == 1) {
 //                        hangup();
 //                    }
-                }
             });
         }
 
         @Override
         public void onBuddyVolumeChanged(String id, Buddy buddy) {
-            ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    BuddyModel buddyModel = buddyModelMap.get(id);
-                    if (buddyModel == null) return;
-                    buddyModel.volume.applyPost(buddy.getVolume());
+            ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
+                BuddyModel buddyModel = buddyModelMap.get(id);
+                if (buddyModel == null) return;
+                buddyModel.volume.applyPost(buddy.getVolume());
 
-                    // 延迟设置音量为0
-                    DisposableObserver<Long> disposableObserver = volumeDelaySilentObserverMap.get(id);
-                    if (disposableObserver != null) disposableObserver.dispose();
-                    disposableObserver = new DisposableObserver<Long>() {
-                        @Override
-                        public void onNext(@NotNull Long aLong) {
-                            buddyModel.volume.applyPost(0);
-                        }
+                // 延迟设置音量为0
+                DisposableObserver<Long> disposableObserver = volumeDelaySilentObserverMap.get(id);
+                if (disposableObserver != null) disposableObserver.dispose();
+                disposableObserver = new DisposableObserver<Long>() {
+                    @Override
+                    public void onNext(@NotNull Long aLong) {
+                        buddyModel.volume.applyPost(0);
+                    }
 
-                        @Override
-                        public void onError(@NotNull Throwable e) {
+                    @Override
+                    public void onError(@NotNull Throwable e) {
 
-                        }
+                    }
 
-                        @Override
-                        public void onComplete() {
-                            dispose();
-                            volumeDelaySilentObserverMap.remove(id);
-                        }
-                    };
-                    volumeDelaySilentObserverMap.put(id, disposableObserver);
-                    volumeDelaySilentObservable.subscribe(disposableObserver);
-                }
+                    @Override
+                    public void onComplete() {
+                        dispose();
+                        volumeDelaySilentObserverMap.remove(id);
+                    }
+                };
+                volumeDelaySilentObserverMap.put(id, disposableObserver);
+                volumeDelaySilentObservable.subscribe(disposableObserver);
             });
         }
 
         @Override
         public void onBuddyStateChanged(String id, Buddy buddy) {
-            ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    BuddyModel buddyModel = buddyModelMap.get(id);
-                    if (buddyModel == null) return;
-                    buddyModel.connectionState.applyPost(buddy.getConnectionState());
-                    buddyModel.conversationState.applyPost(buddy.getConversationState());
+            ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
+                BuddyModel buddyModel = buddyModelMap.get(id);
+                if (buddyModel == null) return;
+                buddyModel.connectionState.applyPost(buddy.getConnectionState());
+                buddyModel.conversationState.applyPost(buddy.getConversationState());
 
-                    // 第一个人进来就算开始通话
-                    if (owner && !buddy.isProducer() && callStartTime == null && joinedCount > 0
-                            && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
-                        calling.applyPost(true);
+                // 第一个人进来就算开始通话
+                if (owner && !buddy.isProducer() && callStartTime == null && joinedCount > 0
+                        && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
+                    Log.d(TAG, "calling.applySet false by 人接听");
+                    callingActual.applyPost(true);
+                    calling.applyPost(true);
+                }
+
+                // 自己在接听界面但是长时间没接
+                if (buddy.isProducer() && buddy.getConversationState() == ConversationState.InviteTimeout) {
+                    callEndFlag = 2;
+                    hangup();
+                }
+
+                // 除了自己最后一个人变成不活跃状态时 挂断
+                if (!buddy.isProducer() && !isActiveBuddy(buddy)) {
+                    boolean hasActiveBuddy = false;
+                    for (BuddyModel model : buddyModels) {
+                        if (!model.buddy.isProducer() && isActiveBuddy(model.buddy)) {
+                            hasActiveBuddy = true;
+                            break;
+                        }
                     }
-
-                    // 自己在接听界面但是长时间没接
-                    if (buddy.isProducer() && buddy.getConversationState() == ConversationState.InviteTimeout) {
-                        callEndFlag = 2;
+                    if (!hasActiveBuddy) {
+                        if (roomType == RoomType.SingleCall) {
+                            if (buddyModel.conversationState.getValue() == ConversationState.InviteBusy) {
+                                callEndFlag = 4;
+                            } else if (buddyModel.conversationState.getValue() == ConversationState.InviteTimeout) {
+                                callEndFlag = 2;
+                            }
+                        }
                         hangup();
-                    }
-
-                    // 除了自己最后一个人变成不活跃状态时 挂断
-                    if (!buddy.isProducer() && !isActiveBuddy(buddy)) {
-                        boolean hasActiveBuddy = false;
-                        for (BuddyModel model : buddyModels) {
-                            if (!model.buddy.isProducer() && isActiveBuddy(model.buddy)) {
-                                hasActiveBuddy = true;
-                                break;
-                            }
-                        }
-                        if (!hasActiveBuddy) {
-                            if (roomType == RoomType.SingleCall) {
-                                if (buddyModel.conversationState.getValue() == ConversationState.InviteBusy) {
-                                    callEndFlag = 4;
-                                } else if (buddyModel.conversationState.getValue() == ConversationState.InviteTimeout) {
-                                    callEndFlag = 2;
-                                }
-                            }
-                            hangup();
-                        }
                     }
                 }
             });
@@ -489,6 +480,8 @@ public class UIRoomStore {
 
             // 被邀请时 自己接听就算开始通话
             if (callStartTime == null && !owner && state == LocalConnectState.JOINED && joinedCount == 0) {
+                Log.d(TAG, "calling.applySet true by 房主");
+                callingActual.applyPost(true);
                 calling.applyPost(true);
             }
         }
@@ -573,6 +566,10 @@ public class UIRoomStore {
         microphoneState.observe(activity, state -> Action_MicrophoneDisabled.setChecked(state == MicrophoneState.disabled));
         cameraFacingState.observe(activity, state -> Action_CameraNotFacing.setChecked(state == CameraFacingState.rear));
         speakerState.observe(activity, state -> Action_SpeakerOn.setChecked(state == SpeakerState.on));
+        // 距离感应器
+        if (audioOnly) {
+            setDistanceSensor(owner);
+        }
     }
 
     private void init() {
@@ -599,7 +596,6 @@ public class UIRoomStore {
                 @Override
                 public void onClick(View v) {
                     hangup();
-                    calling.applySet(false);
                 }
             };
             Action_MicrophoneDisabled = new DefaultButtonAction("麦克风", R.drawable.ms_selctor_microphone_disabled) {
@@ -650,6 +646,7 @@ public class UIRoomStore {
         calling.observeForever(aBoolean -> {
             if (aBoolean) {
                 startCallTime();
+                // 本地会话状态 房主一直是new 直到有人进入开始通话才更改为joined 实际上连接socket状态可能已经joined
                 if (owner) {
                     localConversationState.applyPost(ConversationState.Joined);
                 }
@@ -814,6 +811,7 @@ public class UIRoomStore {
 
     public void hangup() {
         stopCallTime();
+        callingActual.applyPost(false);
         if (callEndFlag == 0)
             callEndFlag = 1;
         if (localConnectionState.getValue() == LocalConnectState.JOINED
@@ -825,6 +823,7 @@ public class UIRoomStore {
         ArchTaskExecutor.getInstance().postToMainThread(new Runnable() {
             @Override
             public void run() {
+                Log.d(TAG, "calling.applySet false");
                 calling.applySet(false);
             }
         }, 1500);
@@ -997,6 +996,54 @@ public class UIRoomStore {
     // endregion
 
     //region 内部使用封装方法 音乐播放 通知栏什么的
+
+    public void setDistanceSensor(AppCompatActivity activity) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.LOLLIPOP)
+            return;
+        SensorManager sensorManager = (SensorManager) activity.getSystemService(Context.SENSOR_SERVICE);
+        Sensor sensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        if (sensor == null) return;
+        PowerManager powerManager = (PowerManager) activity.getSystemService(Context.POWER_SERVICE);
+        PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "MSChat:uiRoomStore");
+        SensorEventListener sensorEventListener = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                float[] values = event.values;
+                if (values != null && event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
+                    if (values[0] == 0) {
+                        //贴近手机
+                        //关闭屏幕
+                        if (!wakeLock.isHeld())
+                            wakeLock.acquire();
+                    } else {
+                        //唤醒设备
+                        if (wakeLock.isHeld())
+                            wakeLock.release();
+                    }
+                }
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+        };
+        activity.getLifecycle().addObserver(new LifecycleEventObserver() {
+            @Override
+            public void onStateChanged(@androidx.annotation.NonNull LifecycleOwner source, @androidx.annotation.NonNull Lifecycle.Event event) {
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    sensorManager.registerListener(sensorEventListener, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+                } else if (event == Lifecycle.Event.ON_STOP) {
+                    sensorManager.unregisterListener(sensorEventListener);
+                } else if (event == Lifecycle.Event.ON_DESTROY) {
+                    source.getLifecycle().removeObserver(this);
+                    sensorManager.unregisterListener(sensorEventListener);
+                    if (wakeLock.isHeld())
+                        wakeLock.release();
+                }
+            }
+        });
+    }
 
     private MediaPlayer player;
 

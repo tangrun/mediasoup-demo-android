@@ -31,15 +31,13 @@ android {
 dependencies {
     implementation "androidx.multidex:multidex:2.0.1"
 
-//    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
 //    implementation 'com.google.android.material:material:1.2.1'
 //    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
 //    implementation 'com.github.bumptech.glide:glide:4.11.0'
 
-//    implementation project(':mschat')
-    implementation('com.github.tangrun:mschat:0.0.1') {
-        transitive = true
-    }
+    implementation project(':mschat')
+//    implementation('com.github.tangrun.mschat:mschat:49d20b25c2')
 
     implementation 'com.blankj:utilcodex:1.30.1'
 }

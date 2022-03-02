@@ -118,8 +118,6 @@ public class RoomClient extends RoomMessageHandler {
 
 
     public void hangup() {
-        if (mCamProducer != null) mStore.removeWrapper(true, mCamProducer.getId());
-        if (mMicProducer != null) mStore.removeWrapper(true, mMicProducer.getId());
         mWorkHandler.execute(() -> {
             try {
                 mProtoo.syncRequest("hangup");
@@ -986,6 +984,7 @@ public class RoomClient extends RoomMessageHandler {
                 @Override
                 public void onConnectionStateChange(Transport transport, String connectionState) {
                     Logger.d(listenerTAG, "onConnectionStateChange: " + connectionState);
+                    // disconnected closed failed
                     if ("failed".equals(connectionState)) {
                         restartIceForRecvTransport();
                     }
@@ -1033,7 +1032,7 @@ public class RoomClient extends RoomMessageHandler {
                     mRecvTransport.consume(
                             c -> {
                                 mStore.removeWrapper(false, c.getId());
-                                Logger.w(TAG, "onTransportClose for consume");
+                                Logger.e(TAG, "onTransportClose for consume");
                             },
                             id,
                             producerId,
