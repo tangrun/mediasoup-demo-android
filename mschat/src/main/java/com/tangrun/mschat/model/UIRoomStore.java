@@ -45,6 +45,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -61,10 +62,10 @@ public class UIRoomStore {
 
     private static final String TAG = "MS_UIRoomStore";
 
-    private static UIRoomStore uiRoomStore;
+    private static WeakReference<UIRoomStore> uiRoomStore = new WeakReference<>(null);
 
     public static UIRoomStore getCurrent() {
-        return uiRoomStore;
+        return uiRoomStore.get();
     }
 
     private String notificationChannelId = null;
@@ -558,6 +559,7 @@ public class UIRoomStore {
         audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
         vibrator = (Vibrator) this.context.getSystemService(Context.VIBRATOR_SERVICE);
         notificationManagerCompat = NotificationManagerCompat.from(context);
+        uiRoomStore = new WeakReference<>(this);
         init();
     }
 
@@ -658,6 +660,7 @@ public class UIRoomStore {
                 ArchTaskExecutor.getInstance().postToMainThread(() -> {
                     showActivity.applyPost(false);
                     showWindow.applyPost(false);
+                    uiRoomStore = null;
                 }, 1500);
             }
         });

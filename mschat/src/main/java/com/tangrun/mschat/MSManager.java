@@ -46,11 +46,10 @@ public class MSManager {
     private static String HOST;
     private static String PORT;
     private static UICallback uiCallback;
-    private static UIRoomStore uiRoomStore;
 
     private static boolean init = false;
 
-    public static void init(Application application, String host, String port, boolean debug,UICallback uiCallback) {
+    public static void init(Application application, String host, String port, boolean debug, UICallback uiCallback) {
         if (init) return;
         init = true;
         HOST = host;
@@ -64,17 +63,17 @@ public class MSManager {
     }
 
     public static UIRoomStore getCurrent() {
-        return uiRoomStore;
+        return UIRoomStore.getCurrent();
     }
 
 
     public static void openCallActivity() {
-        if (uiRoomStore != null) uiRoomStore.openCallActivity();
+        if (getCurrent() != null) getCurrent().openCallActivity();
     }
 
     public static void addUser(List<User> list) {
-        if (uiRoomStore != null && list != null && !list.isEmpty())
-            uiRoomStore.addUser(list);
+        if (getCurrent() != null && list != null && !list.isEmpty())
+            getCurrent().addUser(list);
     }
 
     public static void startCall(Context context, String roomId, User me,
@@ -97,7 +96,7 @@ public class MSManager {
         roomOptions.mProduceVideo = !audioOnly;
         roomOptions.mConsumeVideo = !audioOnly;
 
-        uiRoomStore = new UIRoomStore(context, roomOptions, multi ? RoomType.MultiCall : RoomType.SingleCall, owner, audioOnly,uiCallback);
+        final UIRoomStore uiRoomStore = new UIRoomStore(context, roomOptions, multi ? RoomType.MultiCall : RoomType.SingleCall, owner, audioOnly, uiCallback);
 
         uiRoomStore.firstConnectedAutoJoin = owner;
         uiRoomStore.firstJoinedAutoProduceAudio = true;
@@ -107,15 +106,6 @@ public class MSManager {
 
         uiRoomStore.connect();
         uiRoomStore.openCallActivity();
-        uiRoomStore.calling.observeForever(new Observer<Boolean>() {
-            @Override
-            public void onChanged(Boolean aBoolean) {
-                if (aBoolean == Boolean.FALSE){
-                    uiRoomStore.calling.removeObserver(this);
-                    uiRoomStore = null;
-                }
-            }
-        });
     }
 
 
