@@ -250,7 +250,7 @@ public class MSManager {
                         JSONObject jsonObject = JsonUtils.toJsonObject(request);
                         int code = jsonObject.optInt("code");
                         if (code == 0) {
-                            emitter.onNext(jsonObject.optString("roomId"));
+                            emitter.onNext(jsonObject.optJSONObject("data").optString("roomId"));
                         } else {
                             emitter.onError(new Exception(jsonObject.optString("message")));
                         }
