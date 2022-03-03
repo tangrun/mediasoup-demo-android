@@ -1,9 +1,63 @@
 plugins {
     id 'com.android.library'
-    id 'com.github.dcendents.android-maven'
 }
+apply from:  "../mvn.gradle"
 
-group = 'com.github.tangrun'
+//afterEvaluate {
+//    publishing {
+//        publications {
+//            // Creates a Maven publication called "release".
+//            release(MavenPublication) {
+//                // Applies the component for the release build variant.
+//                from components.release
+//
+//                // You can then customize attributes of the publication as shown below.
+//                groupId = 'com.github.tangrun'
+//                artifactId = 'mschat'
+//                version = '1.0'
+//            }
+//            // Creates a Maven publication called “debug”.
+//            debug(MavenPublication) {
+//                // Applies the component for the debug build variant.
+//                from components.debug
+//
+//                groupId = 'com.github.tangrun'
+//                artifactId = 'mschat'
+//                version = 'debug'
+//            }
+//        }
+//    }
+//}
+
+
+//apply plugin: "com.github.dcendents.android-maven"
+
+//group = "com.github.tangrun"
+//version = "debug"
+
+//apply plugin: "maven"
+//
+//uploadArchives {
+//    repositories {
+//        mavenDeployer {
+//            repository(url: uri('E:/repository/'))
+//            pom.version = "debug"
+//            pom.artifactId = "mschat"
+//            pom.groupId = "com.github.tangrun"
+//            pom.name = "mschat"
+//            pom.packaging = 'aar'
+//            pom.whenConfigured { pom ->
+//                pom.dependencies.forEach { dep ->
+//                    if (dep.getVersion() == "unspecified") {
+//                        dep.setGroupId(group)
+//                        dep.setVersion(version)
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+
 
 android {
     compileSdkVersion 31
@@ -12,7 +66,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 31
         versionCode 1
-        versionName "0.0.1"
+        versionName '1.0.0'
 
         consumerProguardFiles "consumer-rules.pro"
         vectorDrawables.useSupportLibrary = true

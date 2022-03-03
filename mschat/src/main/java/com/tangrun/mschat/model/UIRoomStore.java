@@ -988,6 +988,7 @@ public class UIRoomStore {
                     localConnectionState.removeObserver(this);
                     JSONArray jsonArray = new JSONArray();
                     for (User user : list) {
+                        if (buddyModelMap.get(user.getId()) == null)
                         jsonArray.put(user.toJsonObj());
                     }
                     getRoomClient().addPeers(jsonArray);

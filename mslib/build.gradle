@@ -1,9 +1,33 @@
 plugins {
     id 'com.android.library'
-    id 'com.github.dcendents.android-maven'
 }
+apply from:  "../mvn.gradle"
 
-group = 'com.github.tangrun'
+//afterEvaluate {
+//    publishing {
+//        publications {
+//            // Creates a Maven publication called "release".
+//            release(MavenPublication) {
+//                // Applies the component for the release build variant.
+//                from components.release
+//
+//                // You can then customize attributes of the publication as shown below.
+//                groupId = 'com.github.tangrun'
+//                artifactId = 'mslib'
+//                version = '1.0'
+//            }
+//            // Creates a Maven publication called “debug”.
+//            debug(MavenPublication) {
+//                // Applies the component for the debug build variant.
+//                from components.debug
+//
+//                groupId = 'com.github.tangrun'
+//                artifactId = 'mslib'
+//                version = 'debug'
+//            }
+//        }
+//    }
+//}
 
 android {
     compileSdkVersion 31
@@ -12,7 +36,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 31
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"

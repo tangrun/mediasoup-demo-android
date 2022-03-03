@@ -1,0 +1,22 @@
+apply plugin: "maven-publish"
+
+
+publishing.publications() {
+    android.libraryVariants.all { variant ->
+        "maven$project.archivesBaseName${variant.name.capitalize()}Aar"(MavenPublication) {
+            from components.findByName("android${variant.name.capitalize()}")
+            groupId 'com.github.tangrun'
+            println("aaaa ${variant.name.capitalize()}")
+            if ("Debug".equals(variant.name.capitalize())) {
+                artifactId project.archivesBaseName + "-debug"
+            } else {
+                artifactId project.archivesBaseName
+            }
+            version android.defaultConfig.versionName
+        }
+    }
+}
+
+publishing.repositories {
+    mavenLocal()
+}
