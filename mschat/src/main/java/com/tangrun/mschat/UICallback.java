@@ -10,9 +10,10 @@ import java.util.Date;
 import java.util.List;
 
 public interface UICallback {
-    Intent getAddUserIntent(Context context, List<User> users);
+    Intent getAddUserIntent(Context context,String roomId, RoomType roomType, boolean audioOnly, List<User> users);
 
     void onAddUserResult(int resultCode, Intent intent);
 
-    void onCallEnd(String id, RoomType roomType, boolean audioOnly, CallEnd callEnd, Date start, Date end);
+    void onCallEnd(String roomId, RoomType roomType, boolean audioOnly, CallEnd callEnd, Date start, Date end);
+
 }

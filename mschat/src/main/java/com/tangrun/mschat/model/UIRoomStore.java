@@ -962,7 +962,7 @@ public class UIRoomStore {
             user.setDisplayName(buddy.getDisplayName());
             list.add(user);
         }
-        Intent intent = uiCallback.getAddUserIntent(context, list);
+        Intent intent = uiCallback.getAddUserIntent(context, getRoomOptions().roomId, roomType, audioOnly, list);
         if (intent == null) return;
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         UserSelector.start(context, intent);

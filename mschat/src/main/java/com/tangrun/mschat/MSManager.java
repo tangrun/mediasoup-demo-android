@@ -4,6 +4,8 @@ import android.app.Application;
 import android.content.Context;
 import android.util.Log;
 import androidx.lifecycle.Observer;
+import com.bumptech.glide.annotation.GlideOption;
+import com.tangrun.mschat.enums.CallEnd;
 import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.model.UIRoomStore;
 import com.tangrun.mschat.model.User;
@@ -60,6 +62,12 @@ public class MSManager {
             Logger.setDefaultHandler();
         }
         MediasoupClient.initialize(application);
+    }
+
+    public static void setCallEnd(String id, RoomType roomType, boolean audioOnly, CallEnd callEnd){
+        if (uiCallback!=null) {
+            uiCallback.onCallEnd(id, roomType, audioOnly, callEnd, null, null);
+        }
     }
 
     public static UIRoomStore getCurrent() {

@@ -33,7 +33,7 @@ public class App extends Application {
         MSManager.init(this, "192.168.0.218", "4443", BuildConfig.DEBUG, new UICallback() {
 //        MSManager.init(this, "ms.trhd11.xyz", null, BuildConfig.DEBUG, new UICallback() {
             @Override
-            public Intent getAddUserIntent(Context context, List<User> users) {
+            public Intent getAddUserIntent(Context context,String roomId, RoomType roomType, boolean audioOnly, List<User> users) {
                 return new Intent(context, SelectUserActivity.class);
             }
 
