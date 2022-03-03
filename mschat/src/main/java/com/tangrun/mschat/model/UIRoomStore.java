@@ -445,8 +445,10 @@ public class UIRoomStore {
             if (buddyModel == null) return;
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPaused.applyPost(false);
+                buddyModel.disabledMic.applyPost(false);
             } else {
                 buddyModel.videoPaused.applyPost(false);
+                buddyModel.disabledCam.applyPost(false);
             }
         }
 
@@ -456,8 +458,10 @@ public class UIRoomStore {
             if (buddyModel == null) return;
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPaused.applyPost(true);
+                buddyModel.disabledMic.applyPost(true);
             } else {
                 buddyModel.videoPaused.applyPost(true);
+                buddyModel.disabledCam.applyPost(true);
             }
         }
 
@@ -908,7 +912,7 @@ public class UIRoomStore {
     public void switchSpeakerphoneEnable() {
         if (speakerState.getValue() == SpeakerState.on) {
             switchSpeakerphoneEnable(false);
-        } else if (speakerState.getValue() == SpeakerState.off) {
+        } else {
             switchSpeakerphoneEnable(true);
         }
     }

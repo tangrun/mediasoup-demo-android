@@ -57,17 +57,17 @@ public class SingleCallRoomFragment extends Fragment {
 
         uiRoomStore.mine.observe(this, buddyModel -> {
             binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
-            Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
-                    .apply(new RequestOptions()
-                            .error(R.drawable.ms_default_avatar)
-                            .placeholder(R.drawable.ms_default_avatar))
-                    .into(binding.msIvUserAvatar);
             buddyModel.videoTrack.observe(this, videoTrack -> {
                 resetRender();
             });
         });
         target.observe(this, buddyModel -> {
             if (buddyModel == null) return;
+            Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
+                    .apply(new RequestOptions()
+                            .error(R.drawable.ms_default_avatar)
+                            .placeholder(R.drawable.ms_default_avatar))
+                    .into(binding.msIvUserAvatar);
             buddyModel.videoTrack.observe(this, videoTrack -> {
                 resetRender();
             });
