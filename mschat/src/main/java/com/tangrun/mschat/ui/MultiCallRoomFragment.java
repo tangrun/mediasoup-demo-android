@@ -137,15 +137,14 @@ public class MultiCallRoomFragment extends Fragment {
                     || (localState.second == ConversationState.New && localState.first == LocalConnectState.JOINED)) {
                 if (uiRoomStore.audioOnly) {
                     // 麦克风/挂断/扬声器
-                    uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomLeft);
+                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomRight);
+                    uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomRight);
                 } else {
                     // 麦克风/摄像头/切换摄像头 挂断
-                    uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionTopLeft);
-                    uiRoomStore.Action_CameraDisabled.bindView(binding.llActionTopCenter);
-                    uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionTopRight);
+                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+                    uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionBottomRight);
                 }
             } else {
                 uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
