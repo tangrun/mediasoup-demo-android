@@ -590,13 +590,13 @@ public class UIRoomStore {
 
         // action 操作 初始化
         {
-            Action_JoinAction = new DefaultButtonAction("", audioOnly ? R.drawable.ms_selector_call_answer_audio : R.drawable.ms_selector_call_answer_video) {
+            Action_JoinAction = new DefaultButtonAction("接听", audioOnly ? R.drawable.ms_selector_call_answer_audio : R.drawable.ms_selector_call_answer_video) {
                 @Override
                 public void onClick(View v) {
                     join();
                 }
             };
-            Action_HangupAction = new DefaultButtonAction("", R.drawable.ms_selector_call_hangup) {
+            Action_HangupAction = new DefaultButtonAction("取消", R.drawable.ms_selector_call_hangup) {
                 @Override
                 public void onClick(View v) {
                     hangup();

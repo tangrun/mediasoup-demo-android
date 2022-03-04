@@ -78,15 +78,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            android:background="@drawable/ms_bg_tip"
+            android:textStyle="bold"
             android:textColor="#ffffff"
             android:paddingVertical="2dp"
             android:paddingHorizontal="8dp"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintLeft_toLeftOf="parent"
+            android:layout_marginTop="8dp"
             app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.5"
+            app:layout_constraintTop_toBottomOf="@id/ms_ll_user"
             tools:text="sssss"
             tools:visibility="visible"/>
 

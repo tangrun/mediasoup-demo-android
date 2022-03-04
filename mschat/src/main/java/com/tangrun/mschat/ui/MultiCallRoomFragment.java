@@ -89,29 +89,31 @@ public class MultiCallRoomFragment extends Fragment {
             itemCount.observe(this, integer -> {
                 layoutManager.setSpanCount(integer < 5 ? 2 : integer < 10 ? 3 : 4);
             });
-            adapter.registerAdapterDataObserver(adapterDataObserver);
-            getLifecycle().addObserver(new LifecycleEventObserver() {
+//            adapter.registerAdapterDataObserver(adapterDataObserver);
+//            getLifecycle().addObserver(new LifecycleEventObserver() {
+//                @Override
+//                public void onStateChanged(@NonNull @NotNull LifecycleOwner source, @NonNull @NotNull Lifecycle.Event event) {
+//                    if (event == Lifecycle.Event.ON_DESTROY) {
+//                        source.getLifecycle().removeObserver(this);
+//                        adapter.unregisterAdapterDataObserver(adapterDataObserver);
+//                    }
+//                }
+//            });
+            uiRoomStore.buddyObservable.registerObserver(new IBuddyModelObserver() {
                 @Override
-                public void onStateChanged(@NonNull @NotNull LifecycleOwner source, @NonNull @NotNull Lifecycle.Event event) {
-                    if (event == Lifecycle.Event.ON_DESTROY) {
-                        source.getLifecycle().removeObserver(this);
-                        adapter.unregisterAdapterDataObserver(adapterDataObserver);
-                    }
+                public void onBuddyAdd(int position, BuddyModel buddyModel) {
+                    adapter.notifyItemInserted(position);
+                    adapterDataObserver.onChanged();
                 }
+
+                @Override
+                public void onBuddyRemove(int position, BuddyModel buddyModel) {
+                    adapter.notifyItemRemoved(position);
+                    adapterDataObserver.onChanged();
+                }
+
             });
         }
-        uiRoomStore.buddyObservable.registerObserver(new IBuddyModelObserver() {
-            @Override
-            public void onBuddyAdd(int position, BuddyModel buddyModel) {
-                adapter.notifyItemInserted(position);
-            }
-
-            @Override
-            public void onBuddyRemove(int position, BuddyModel buddyModel) {
-                adapter.notifyItemRemoved(position);
-            }
-
-        });
         adapter.setList(uiRoomStore.buddyModels);
         // 镜像设置
         uiRoomStore.cameraFacingState.observe(this, cameraFacingState -> {

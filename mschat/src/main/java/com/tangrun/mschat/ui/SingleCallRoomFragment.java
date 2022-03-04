@@ -56,13 +56,14 @@ public class SingleCallRoomFragment extends Fragment {
         uiRoomStore = MSManager.getCurrent();
 
         uiRoomStore.mine.observe(this, buddyModel -> {
-            binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
+
             buddyModel.videoTrack.observe(this, videoTrack -> {
                 resetRender();
             });
         });
         target.observe(this, buddyModel -> {
             if (buddyModel == null) return;
+            binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
             Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
                     .apply(new RequestOptions()
                             .error(R.drawable.ms_default_avatar)
@@ -79,7 +80,13 @@ public class SingleCallRoomFragment extends Fragment {
             if (cameraFacingState == CameraFacingState.inProgress) return;
             resetRender();
         });
-
+        // 重新打开界面时 人已经进入过就不会重新回调client的接口回调 所以buddyObservable就失效了 需要从list里找
+        for (BuddyModel buddyModel : uiRoomStore.buddyModels) {
+            if (!buddyModel.buddy.isProducer() && target.getValue() == null) {
+                target.applySet(buddyModel);
+                break;
+            }
+        }
         uiRoomStore.buddyObservable.registerObserver(new IBuddyModelObserver() {
             @Override
             public void onBuddyAdd(int position, BuddyModel buddyModel) {
@@ -146,9 +153,10 @@ public class SingleCallRoomFragment extends Fragment {
                         uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomRight);
                     } else {
                         // 麦克风/摄像头/切换摄像头 挂断
-                        uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
+                        uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionTopLeft);
+                        uiRoomStore.Action_CameraDisabled.bindView(binding.llActionTopCenter);
+                        uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionTopRight);
                         uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-                        uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionBottomRight);
                     }
                 } else {
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
