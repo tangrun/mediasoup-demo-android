@@ -1,7 +1,13 @@
 plugins {
     id 'com.android.library'
 }
-apply from:  "../mvn.gradle"
+
+apply plugin: "com.github.dcendents.android-maven"
+
+group = "com.github.tangrun"
+version = "debug"
+
+//apply from:  "../mvn.gradle"
 
 //afterEvaluate {
 //    publishing {
