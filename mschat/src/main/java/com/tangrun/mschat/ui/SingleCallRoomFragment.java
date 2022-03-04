@@ -18,6 +18,7 @@ import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.IBuddyModelObserver;
 import com.tangrun.mschat.model.UIRoomStore;
 import com.tangrun.mslib.enums.CameraFacingState;
+import com.tangrun.mslib.enums.ConnectionState;
 import com.tangrun.mslib.enums.ConversationState;
 import com.tangrun.mslib.enums.LocalConnectState;
 import com.tangrun.mslib.lv.ChangedMutableLiveData;
@@ -72,6 +73,9 @@ public class SingleCallRoomFragment extends Fragment {
             buddyModel.videoTrack.observe(this, videoTrack -> {
                 resetRender();
             });
+            buddyModel.state.observe(this, unused -> {
+                setTipText();
+            });
         });
         mimeShowFullRender.observe(this, aBoolean -> {
             resetRender();
@@ -112,7 +116,7 @@ public class SingleCallRoomFragment extends Fragment {
             uiRoomStore.onMinimize(getActivity());
         });
         binding.msRoot.setOnClickListener(v -> {
-            if (uiRoomStore.calling.getValue() != Boolean.TRUE || uiRoomStore.audioOnly) return;
+            if (uiRoomStore.callingActual.getValue() != Boolean.TRUE || uiRoomStore.audioOnly) return;
             showUI(!showUI);
         });
         // 通话时间
@@ -120,7 +124,7 @@ public class SingleCallRoomFragment extends Fragment {
             if (s == null) binding.msTvTime.setVisibility(View.GONE);
             binding.msTvTime.setText(s);
         });
-        uiRoomStore.calling.observe(this, aBoolean -> {
+        uiRoomStore.callingActual.observe(this, aBoolean -> {
             // 状态提示 开使通话用状态不能判断出来 所以新加calling
             if (aBoolean) setTipText();
         });
@@ -153,10 +157,9 @@ public class SingleCallRoomFragment extends Fragment {
                         uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomRight);
                     } else {
                         // 麦克风/摄像头/切换摄像头 挂断
-                        uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionTopLeft);
-                        uiRoomStore.Action_CameraDisabled.bindView(binding.llActionTopCenter);
-                        uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionTopRight);
+                        uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
                         uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+                        uiRoomStore.Action_CameraDisabled.bindView(binding.llActionBottomRight);
                     }
                 } else {
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
@@ -193,27 +196,53 @@ public class SingleCallRoomFragment extends Fragment {
         binding.msTvTip.removeCallbacks(tipDismiss);
 
         Pair<LocalConnectState, ConversationState> localState = uiRoomStore.localState.getValue();
+        ConnectionState connectionState = target.getValue() == null ? null : target.getValue().connectionState.getValue();
+        ConversationState conversationState = target.getValue() == null ? null : target.getValue().conversationState.getValue();
 
         if (localState != null) {
-            if (localState.first == LocalConnectState.NEW || localState.first == LocalConnectState.CONNECTING) {
+            if (uiRoomStore.callingActual.getValue() == Boolean.FALSE) {
+                tip = "通话已结束";
+                showUI(true);
+            } else if (localState.first == LocalConnectState.NEW || localState.first == LocalConnectState.CONNECTING) {
                 tip = "连接中...";
             } else if (localState.first == LocalConnectState.DISCONNECTED || localState.first == LocalConnectState.RECONNECTING) {
                 tip = "重连中...";
             } else {
-                if (localState.second == ConversationState.New) {
-                    tip = "等待对方接听...";
-                } else if (localState.second == ConversationState.Invited) {
-                    tip = "待接听";
-                } else if (localState.second == ConversationState.Joined) {
-                    tip = "通话中...";
-                    delayDismissTime = 2000;
-                } else if (localState.second == ConversationState.InviteBusy
-                        || localState.second == ConversationState.Left
-                        || localState.second == ConversationState.OfflineTimeout
-                        || localState.second == ConversationState.InviteReject
-                        || localState.second == ConversationState.InviteTimeout) {
-                    tip = "通话已结束";
-                    showUI(true);
+                if (connectionState == ConnectionState.Offline) {
+                    tip = "对方重连中...";
+                } else {
+                    if (conversationState == ConversationState.Invited || conversationState == ConversationState.New) {
+                        tip = "等待接听";
+                    } else if (conversationState == ConversationState.InviteTimeout) {
+                        tip = "无人接听";
+                    } else if (conversationState == ConversationState.InviteBusy) {
+                        tip = "对方忙线";
+                    } else if (conversationState == ConversationState.InviteReject) {
+                        tip = "对方已挂断";
+                    } else if (conversationState == ConversationState.OfflineTimeout || conversationState == ConversationState.Left) {
+                        tip = "通话已结束";
+                        showUI(true);
+                    } else if (conversationState == ConversationState.Joined) {
+                        tip = "通话中...";
+                        delayDismissTime = 2000;
+                    } else {
+                        // 对方没进来时 用本地判断
+                        if (localState.second == ConversationState.New) {
+                            tip = "等待对方接听...";
+                        } else if (localState.second == ConversationState.Invited) {
+                            tip = "待接听";
+                        } else if (localState.second == ConversationState.Joined) {
+                            tip = "通话中...";
+                            delayDismissTime = 2000;
+                        } else if (localState.second == ConversationState.InviteBusy
+                                || localState.second == ConversationState.Left
+                                || localState.second == ConversationState.OfflineTimeout
+                                || localState.second == ConversationState.InviteReject
+                                || localState.second == ConversationState.InviteTimeout) {
+                            tip = "通话已结束";
+                            showUI(true);
+                        }
+                    }
                 }
             }
         }
@@ -235,7 +264,7 @@ public class SingleCallRoomFragment extends Fragment {
         showUI = show;
         binding.msLlUser.removeCallbacks(uiDismiss);
         binding.msIvMinimize.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-        binding.msLlUser.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+        binding.msLlUser.setVisibility(show && (uiRoomStore.audioOnly || uiRoomStore.callingActual.getValue() != Boolean.TRUE) ? View.VISIBLE : View.INVISIBLE);
         binding.msLlTop.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
         binding.msLlBottom.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
         binding.msTvTime.setVisibility(show && uiRoomStore.calling.getValue() == Boolean.TRUE ? View.VISIBLE : View.GONE);
