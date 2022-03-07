@@ -2,11 +2,11 @@ package com.tangrun.mslib.socket;
 
 import android.os.Handler;
 import android.os.HandlerThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import okhttp3.*;
 import okhttp3.logging.HttpLoggingInterceptor;
 import okio.ByteString;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.mediasoup.droid.Logger;
 import org.protoojs.droid.Message;
@@ -180,7 +180,7 @@ public class WebSocketTransport extends AbsWebSocketTransport {
     private class ProtooWebSocketListener extends WebSocketListener {
 
         @Override
-        public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+        public void onOpen(@NonNull WebSocket webSocket, @NonNull Response response) {
             if (mClosed) {
                 return;
             }
@@ -194,7 +194,7 @@ public class WebSocketTransport extends AbsWebSocketTransport {
         }
 
         @Override
-        public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+        public void onClosed(@NonNull WebSocket webSocket, int code, @NonNull String reason) {
             Logger.w(TAG, "onClosed() " + code + " " + reason);
             if (mClosed) {
                 return;
@@ -208,12 +208,12 @@ public class WebSocketTransport extends AbsWebSocketTransport {
         }
 
         @Override
-        public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+        public void onClosing(@NonNull WebSocket webSocket, int code, @NonNull String reason) {
             Logger.w(TAG, "onClosing() " + code + " " + reason);
         }
 
         @Override
-        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
+        public void onFailure(@NonNull WebSocket webSocket, @NonNull Throwable t, @Nullable Response response) {
             Logger.w(TAG, "onFailure() " + (response == null ? "" : response.code() + " " + response.message()));
             if (mClosed) {
                 return;
@@ -237,7 +237,7 @@ public class WebSocketTransport extends AbsWebSocketTransport {
         }
 
         @Override
-        public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
+        public void onMessage(@NonNull WebSocket webSocket, @NonNull String text) {
             Logger.d(TAG, "onMessage() "+text);
             if (mClosed) {
                 return;
@@ -252,7 +252,7 @@ public class WebSocketTransport extends AbsWebSocketTransport {
         }
 
         @Override
-        public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
+        public void onMessage(@NonNull WebSocket webSocket, @NonNull ByteString bytes) {
             Logger.d(TAG, "onMessage()");
         }
     }
