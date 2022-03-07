@@ -63,7 +63,8 @@ public class SingleCallRoomFragment extends Fragment {
             });
         });
         target.observe(this, buddyModel -> {
-            if (buddyModel == null) return;
+            // 仅在初始化时调用
+            if (buddyModel == null || target.getValue() != null) return;
             binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
             Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
                     .apply(new RequestOptions()
@@ -101,7 +102,7 @@ public class SingleCallRoomFragment extends Fragment {
             @Override
             public void onBuddyRemove(int position, BuddyModel buddyModel) {
                 if (buddyModel == target.getValue()) {
-                    target.applyPost(null);
+                    target.applySet(null);
                 }
             }
         });
@@ -159,7 +160,7 @@ public class SingleCallRoomFragment extends Fragment {
                         // 麦克风/摄像头/切换摄像头 挂断
                         uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
                         uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-                        uiRoomStore.Action_CameraDisabled.bindView(binding.llActionBottomRight);
+                        uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionBottomRight);
                     }
                 } else {
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
@@ -200,10 +201,7 @@ public class SingleCallRoomFragment extends Fragment {
         ConversationState conversationState = target.getValue() == null ? null : target.getValue().conversationState.getValue();
 
         if (localState != null) {
-            if (uiRoomStore.callingActual.getValue() == Boolean.FALSE) {
-                tip = "通话已结束";
-                showUI(true);
-            } else if (localState.first == LocalConnectState.NEW || localState.first == LocalConnectState.CONNECTING) {
+            if (localState.first == LocalConnectState.NEW || localState.first == LocalConnectState.CONNECTING) {
                 tip = "连接中...";
             } else if (localState.first == LocalConnectState.DISCONNECTED || localState.first == LocalConnectState.RECONNECTING) {
                 tip = "重连中...";

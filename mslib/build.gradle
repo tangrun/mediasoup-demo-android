@@ -1,39 +1,31 @@
 plugins {
     id 'com.android.library'
+    id 'maven-publish'
 }
-
-apply plugin: "com.github.dcendents.android-maven"
 
 group = "com.github.tangrun"
 version = "debug"
 
-//apply from:  "../mvn.gradle"
+// 1. 增加上传源码的task
+task sourceJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier = "sources"
+}
 
-//afterEvaluate {
-//    publishing {
-//        publications {
-//            // Creates a Maven publication called "release".
-//            release(MavenPublication) {
-//                // Applies the component for the release build variant.
-//                from components.release
-//
-//                // You can then customize attributes of the publication as shown below.
-//                groupId = 'com.github.tangrun'
-//                artifactId = 'mslib'
-//                version = '1.0'
-//            }
-//            // Creates a Maven publication called “debug”.
-//            debug(MavenPublication) {
-//                // Applies the component for the debug build variant.
-//                from components.debug
-//
-//                groupId = 'com.github.tangrun'
-//                artifactId = 'mslib'
-//                version = 'debug'
-//            }
-//        }
-//    }
-//}
+afterEvaluate {// components.release 只有在配置完成之后，才能拿到值
+    publishing {
+        // 配置maven 仓库
+        repositories { RepositoryHandler handler ->
+            handler.mavenLocal()
+        }
+        publications { PublicationContainer publicationContainer ->
+            mavenAar(MavenPublication) {
+                from components.release
+                artifact sourceJar // 上传源码
+            }
+        }
+    }
+}
 
 android {
     compileSdkVersion 31
@@ -62,11 +54,11 @@ android {
 
 dependencies {
 
-    api 'org.protoojs.droid:protoo-client:4.0.3+'
-    api 'org.mediasoup.droid:mediasoup-client:3.0.8-beta-3+'
-    api 'com.squareup.okhttp3:okhttp:4.9.3+'
-    api 'com.squareup.okhttp3:logging-interceptor:4.9.3+'
-    api "androidx.lifecycle:lifecycle-extensions:2.2.0+"
-    api 'io.reactivex.rxjava2:rxandroid:2.1.1+'
-    api 'io.reactivex.rxjava2:rxjava:2.2.21+'
+    api 'org.protoojs.droid:protoo-client:4.0.3'
+    api 'org.mediasoup.droid:mediasoup-client:3.0.8-beta-3'
+    api 'com.squareup.okhttp3:okhttp:3.12.13'
+    api 'com.squareup.okhttp3:logging-interceptor:3.12.13'
+    api "androidx.lifecycle:lifecycle-extensions:2.1.0"
+    api 'io.reactivex.rxjava2:rxandroid:2.1.1'
+    api 'io.reactivex.rxjava2:rxjava:2.2.21'
 }

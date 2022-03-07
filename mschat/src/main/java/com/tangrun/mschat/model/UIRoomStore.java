@@ -365,8 +365,6 @@ public class UIRoomStore {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
-                buddyModel.connectionState.applyPost(buddy.getConnectionState());
-                buddyModel.conversationState.applyPost(buddy.getConversationState());
 
                 // 第一个人进来就算开始通话
                 if (owner && !buddy.isProducer() && callStartTime == null && joinedCount > 0
@@ -375,6 +373,9 @@ public class UIRoomStore {
                     callingActual.applyPost(true);
                     calling.applyPost(true);
                 }
+
+                buddyModel.connectionState.applyPost(buddy.getConnectionState());
+                buddyModel.conversationState.applyPost(buddy.getConversationState());
 
                 // 自己在接听界面但是长时间没接
                 if (buddy.isProducer() && buddy.getConversationState() == ConversationState.InviteTimeout) {
@@ -480,14 +481,14 @@ public class UIRoomStore {
 
         @Override
         public void onLocalConnectStateChanged(LocalConnectState state) {
-            localConnectionState.applyPost(state);
-
             // 被邀请时 自己接听就算开始通话
             if (callStartTime == null && !owner && state == LocalConnectState.JOINED && joinedCount == 0) {
                 Log.d(TAG, "calling.applySet true by 房主");
                 callingActual.applyPost(true);
                 calling.applyPost(true);
             }
+
+            localConnectionState.applyPost(state);
         }
 
         @Override
@@ -814,6 +815,7 @@ public class UIRoomStore {
     }
 
     public void hangup() {
+        if (callingActual.getValue() == Boolean.FALSE) return;
         stopCallTime();
         callingActual.applyPost(false);
         if (callEndFlag == 0)
@@ -989,7 +991,7 @@ public class UIRoomStore {
                     JSONArray jsonArray = new JSONArray();
                     for (User user : list) {
                         if (buddyModelMap.get(user.getId()) == null)
-                        jsonArray.put(user.toJsonObj());
+                            jsonArray.put(user.toJsonObj());
                     }
                     getRoomClient().addPeers(jsonArray);
                 }
