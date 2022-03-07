@@ -128,7 +128,6 @@ public class RoomClient extends RoomMessageHandler {
         });
     }
 
-
     public void addPeers(JSONArray jsonArray) {
         mWorkHandler.execute(() -> {
             try {

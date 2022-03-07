@@ -22,6 +22,7 @@ import com.tangrun.mslib.enums.ConnectionState;
 import com.tangrun.mslib.enums.ConversationState;
 import com.tangrun.mslib.enums.LocalConnectState;
 import com.tangrun.mslib.lv.ChangedMutableLiveData;
+import com.tangrun.mslib.utils.ArchTaskExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.webrtc.VideoTrack;
 
@@ -62,22 +63,6 @@ public class SingleCallRoomFragment extends Fragment {
                 resetRender();
             });
         });
-        target.observe(this, buddyModel -> {
-            // 仅在初始化时调用
-            if (buddyModel == null || target.getValue() != null) return;
-            binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
-            Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
-                    .apply(new RequestOptions()
-                            .error(R.drawable.ms_default_avatar)
-                            .placeholder(R.drawable.ms_default_avatar))
-                    .into(binding.msIvUserAvatar);
-            buddyModel.videoTrack.observe(this, videoTrack -> {
-                resetRender();
-            });
-            buddyModel.state.observe(this, unused -> {
-                setTipText();
-            });
-        });
         mimeShowFullRender.observe(this, aBoolean -> {
             resetRender();
         });
@@ -95,8 +80,23 @@ public class SingleCallRoomFragment extends Fragment {
         uiRoomStore.buddyObservable.registerObserver(new IBuddyModelObserver() {
             @Override
             public void onBuddyAdd(int position, BuddyModel buddyModel) {
-                if (!buddyModel.buddy.isProducer() && target.getValue() == null)
+                if (!buddyModel.buddy.isProducer() && target.getValue() == null) {
                     target.applySet(buddyModel);
+
+                    // 仅在初始化时调用
+                    binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
+                    Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
+                            .apply(new RequestOptions()
+                                    .error(R.drawable.ms_default_avatar)
+                                    .placeholder(R.drawable.ms_default_avatar))
+                            .into(binding.msIvUserAvatar);
+                    buddyModel.videoTrack.observe(SingleCallRoomFragment.this, videoTrack -> {
+                        resetRender();
+                    });
+                    buddyModel.state.observe(SingleCallRoomFragment.this, unused -> {
+                        setTipText();
+                    });
+                }
             }
 
             @Override
@@ -109,6 +109,8 @@ public class SingleCallRoomFragment extends Fragment {
 
         binding.msVRendererFull.init(this);
         binding.msVRendererWindow.init(this);
+        binding.msVRendererWindow.setZOrderOnTop(true);
+        binding.msVRendererFull.setZOrderOnTop(false);
 
         binding.msVRendererWindow.setOnClickListener(v -> {
             mimeShowFullRender.applySet(!mimeShowFullRender.getValue());
@@ -128,6 +130,7 @@ public class SingleCallRoomFragment extends Fragment {
         uiRoomStore.callingActual.observe(this, aBoolean -> {
             // 状态提示 开使通话用状态不能判断出来 所以新加calling
             if (aBoolean) setTipText();
+            resetRender();
         });
         uiRoomStore.localState.observeForever(localState -> {
             // 状态提示
@@ -167,8 +170,6 @@ public class SingleCallRoomFragment extends Fragment {
                 }
             }
         });
-
-        binding.msVRendererWindow.setZOrderOnTop(true);
 
         showUI(true);
 
@@ -217,10 +218,16 @@ public class SingleCallRoomFragment extends Fragment {
                         tip = "对方忙线";
                     } else if (conversationState == ConversationState.InviteReject) {
                         tip = "对方已挂断";
-                    } else if (conversationState == ConversationState.OfflineTimeout || conversationState == ConversationState.Left) {
+                    } else if (conversationState == ConversationState.OfflineTimeout || conversationState == ConversationState.Left
+                            // 本地自己操作挂断
+                            || localState.second == ConversationState.InviteBusy
+                            || localState.second == ConversationState.Left
+                            || localState.second == ConversationState.OfflineTimeout
+                            || localState.second == ConversationState.InviteReject
+                            || localState.second == ConversationState.InviteTimeout) {
                         tip = "通话已结束";
                         showUI(true);
-                    } else if (conversationState == ConversationState.Joined) {
+                    } else if (conversationState == ConversationState.Joined || localState.second == ConversationState.Joined) {
                         tip = "通话中...";
                         delayDismissTime = 2000;
                     } else {
@@ -229,16 +236,6 @@ public class SingleCallRoomFragment extends Fragment {
                             tip = "等待对方接听...";
                         } else if (localState.second == ConversationState.Invited) {
                             tip = "待接听";
-                        } else if (localState.second == ConversationState.Joined) {
-                            tip = "通话中...";
-                            delayDismissTime = 2000;
-                        } else if (localState.second == ConversationState.InviteBusy
-                                || localState.second == ConversationState.Left
-                                || localState.second == ConversationState.OfflineTimeout
-                                || localState.second == ConversationState.InviteReject
-                                || localState.second == ConversationState.InviteTimeout) {
-                            tip = "通话已结束";
-                            showUI(true);
                         }
                     }
                 }
@@ -272,6 +269,10 @@ public class SingleCallRoomFragment extends Fragment {
     }
 
     private void resetRender() {
+        ArchTaskExecutor.getInstance().postToMainThread(this::resetRender_, 200);
+    }
+
+    private void resetRender_() {
         if (uiRoomStore.audioOnly) {
             binding.msVRendererWindow.setVisibility(View.GONE);
             binding.msVRendererFull.setVisibility(View.GONE);

@@ -367,11 +367,23 @@ public class UIRoomStore {
                 if (buddyModel == null) return;
 
                 // 第一个人进来就算开始通话
-                if (owner && !buddy.isProducer() && callStartTime == null && joinedCount > 0
-                        && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
+                if (owner && !buddy.isProducer() && callStartTime == null && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
                     Log.d(TAG, "calling.applySet false by 人接听");
-                    callingActual.applyPost(true);
-                    calling.applyPost(true);
+                    if (joinedCount == 0){
+                        localConnectionState.observeForever(new Observer<LocalConnectState>() {
+                            @Override
+                            public void onChanged(LocalConnectState localConnectState) {
+                                localConnectionState.removeObserver(this);
+                                if (callingActual.getValue() == null){
+                                    callingActual.applyPost(true);
+                                    calling.applyPost(true);
+                                }
+                            }
+                        });
+                    }else {
+                        callingActual.applyPost(true);
+                        calling.applyPost(true);
+                    }
                 }
 
                 buddyModel.connectionState.applyPost(buddy.getConnectionState());
