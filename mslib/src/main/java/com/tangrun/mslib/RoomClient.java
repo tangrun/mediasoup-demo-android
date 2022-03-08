@@ -92,8 +92,8 @@ public class RoomClient extends RoomMessageHandler {
     }
 
 
-    public void connect() {
-        String url = mOptions.getProtooUrl();
+    public void connect(JSONArray users) {
+        String url = mOptions.getProtooUrl(users);
         Logger.d(TAG, "connect() " + url);
         mStore.setLocalConnectionState(LocalConnectState.CONNECTING);
         mWorkHandler.execute(
@@ -104,16 +104,28 @@ public class RoomClient extends RoomMessageHandler {
     }
 
 
-    public void getPeers() {
+    public void getPeer(String peerId, androidx.core.util.Consumer<Buddy> consumer) {
+        if (consumer == null || peerId == null) return;
         mWorkHandler.execute(() -> {
             try {
-                String request = mProtoo.syncRequest("getPeers");
-                JSONArray jsonArray = JsonUtils.toJsonArray(request);
-                mStore.addBuddyForPeers(jsonArray);
-            } catch (ProtooException e) {
+                String resp = mProtoo.syncRequest("getPeer", req -> {
+                    try {
+                        req.put("peerId", peerId);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                });
+                if (resp != null && !resp.trim().isEmpty()) {
+                    consumer.accept(new Buddy(false, JsonUtils.toJsonObject(resp)));
+                    return;
+                }
+            } catch (Exception e) {
                 e.printStackTrace();
             }
+            consumer.accept(null);
         });
+
+
     }
 
 

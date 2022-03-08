@@ -20,6 +20,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.util.Consumer;
 import androidx.lifecycle.*;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.hjq.permissions.OnPermissionCallback;
@@ -145,6 +146,10 @@ public class UIRoomStore {
 
     private int connectedCount;
     private int joinedCount;
+    /**
+     * 首次连接传的用户 保存一下做判断用
+     */
+    private List<User> firstConnectUsers;
 
     /**
      * 0 单人
@@ -208,6 +213,37 @@ public class UIRoomStore {
                     || (joinedCount > 0) // 重连时自动join
             ) {
                 getRoomClient().join();
+            }
+
+            // 单聊上线 对方已经离开检测
+            if (roomType == RoomType.SingleCall && connectedCount == 0 && firstConnectUsers != null && !firstConnectUsers.isEmpty()) {
+                String targetId = firstConnectUsers.get(0).getId();
+                Observable.timer(1000, TimeUnit.MILLISECONDS)
+                        .subscribe(new DisposableObserver<Long>() {
+                            @Override
+                            public void onNext(@NotNull Long aLong) {
+                                if (buddyModelMap.get(targetId) != null) return;
+                                getRoomClient().getPeer(targetId, new Consumer<Buddy>() {
+                                    @Override
+                                    public void accept(Buddy buddy) {
+                                        if (callingActual.getValue() != null || buddyModelMap.get(targetId) != null)
+                                            return;
+                                        clientObserver.onBuddyAdd(buddy.getId(), buddy);
+                                        clientObserver.onBuddyStateChanged(buddy.getId(), buddy);
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onError(@NotNull Throwable e) {
+
+                            }
+
+                            @Override
+                            public void onComplete() {
+
+                            }
+                        });
             }
 
             connectedCount++;
@@ -292,6 +328,8 @@ public class UIRoomStore {
         @Override
         public void onBuddyAdd(String id, Buddy buddy) {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
+                Log.d(TAG, "onBuddyAdd: " + id + buddy.getConnectionState() + buddy.getConversationState());
+
                 BuddyModel buddyModel = new BuddyModel(buddy);
                 buddyModel.connectionState.applyPost(buddy.getConnectionState());
                 buddyModel.conversationState.applyPost(buddy.getConversationState());
@@ -314,6 +352,8 @@ public class UIRoomStore {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
+                Log.d(TAG, "onBuddyRemove: " + id);
+
                 int pos = buddyModels.indexOf(buddyModel);
                 buddyModels.remove(buddyModel);
                 buddyModelMap.remove(id);
@@ -333,6 +373,8 @@ public class UIRoomStore {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
+                Log.d(TAG, "onBuddyVolumeChanged: " + id + " " + buddy.getVolume());
+
                 buddyModel.volume.applyPost(buddy.getVolume());
 
                 // 延迟设置音量为0
@@ -365,22 +407,23 @@ public class UIRoomStore {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
+                Log.d(TAG, "onBuddyStateChanged: " + id + buddyModel.connectionState + buddyModel.conversationState);
 
                 // 第一个人进来就算开始通话
                 if (owner && !buddy.isProducer() && callStartTime == null && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
                     Log.d(TAG, "calling.applySet false by 人接听");
-                    if (joinedCount == 0){
+                    if (joinedCount == 0) {
                         localConnectionState.observeForever(new Observer<LocalConnectState>() {
                             @Override
                             public void onChanged(LocalConnectState localConnectState) {
                                 localConnectionState.removeObserver(this);
-                                if (callingActual.getValue() == null){
+                                if (callingActual.getValue() == null) {
                                     callingActual.applyPost(true);
                                     calling.applyPost(true);
                                 }
                             }
                         });
-                    }else {
+                    } else {
                         callingActual.applyPost(true);
                         calling.applyPost(true);
                     }
@@ -423,6 +466,8 @@ public class UIRoomStore {
         public void onProducerAdd(String id, Buddy buddy, String producerId, WrapperCommon<?> wrapperCommon) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
+            Log.d(TAG, "onProducerAdd: " + id + " " + producerId + " " + wrapperCommon.getKind());
+
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioWrapper.applyPost(wrapperCommon);
                 buddyModel.audioTrack.applyPost(wrapperCommon.getTrack());
@@ -438,6 +483,8 @@ public class UIRoomStore {
         public void onProducerRemove(String id, Buddy buddy, String producerId) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
+            Log.d(TAG, "onProducerRemove: " + id + " " + producerId);
+
             if (buddyModel.audioWrapper.getValue() != null && buddyModel.audioWrapper.getValue().getId().equals(producerId)) {
                 buddyModel.audioWrapper.applyPost(null);
                 buddyModel.audioTrack.applyPost(null);
@@ -456,6 +503,8 @@ public class UIRoomStore {
         public void onProducerResumed(String id, Buddy buddy, String producerId, WrapperCommon<?> wrapperCommon) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
+            Log.d(TAG, "onProducerResumed: " + id + " " + producerId);
+
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPaused.applyPost(false);
                 buddyModel.disabledMic.applyPost(false);
@@ -469,6 +518,8 @@ public class UIRoomStore {
         public void onProducerPaused(String id, Buddy buddy, String producerId, WrapperCommon<?> wrapperCommon) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
+            Log.d(TAG, "onProducerPaused: " + id + " " + producerId);
+
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPaused.applyPost(true);
                 buddyModel.disabledMic.applyPost(true);
@@ -482,6 +533,8 @@ public class UIRoomStore {
         public void onProducerScoreChanged(String id, Buddy buddy, String producerId, WrapperCommon<?> wrapperCommon) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
+            Log.d(TAG, "onProducerScoreChanged: " + id + " " + producerId);
+
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPScore.applyPost(wrapperCommon.getProducerScore());
                 buddyModel.audioCScore.applyPost(wrapperCommon.getConsumerScore());
@@ -493,6 +546,8 @@ public class UIRoomStore {
 
         @Override
         public void onLocalConnectStateChanged(LocalConnectState state) {
+            Log.d(TAG, "onLocalConnectStateChanged: " + state);
+
             // 被邀请时 自己接听就算开始通话
             if (callStartTime == null && !owner && state == LocalConnectState.JOINED && joinedCount == 0) {
                 Log.d(TAG, "calling.applySet true by 房主");
@@ -505,6 +560,8 @@ public class UIRoomStore {
 
         @Override
         public void onCameraStateChanged(CameraState state) {
+            Log.d(TAG, "onCameraStateChanged: " + state);
+
             cameraState.applyPost(state);
 
             // 关闭后再打开还是默认前摄 所以重置一下
@@ -515,11 +572,15 @@ public class UIRoomStore {
 
         @Override
         public void onMicrophoneStateChanged(MicrophoneState state) {
+            Log.d(TAG, "onMicrophoneStateChanged: " + state);
+
             microphoneState.applyPost(state);
         }
 
         @Override
         public void onCameraFacingChanged(CameraFacingState state) {
+            Log.d(TAG, "onCameraFacingChanged: " + state);
+
             cameraFacingState.applyPost(state);
         }
 
@@ -814,8 +875,15 @@ public class UIRoomStore {
 
     // region action功能操作
 
-    public void connect() {
-        getRoomClient().connect();
+    public void connect(List<User> users) {
+        this.firstConnectUsers = users;
+        JSONArray jsonArray = new JSONArray();
+        if (users != null) {
+            for (User user : users) {
+                jsonArray.put(user.toJsonObj());
+            }
+        }
+        getRoomClient().connect(jsonArray);
     }
 
     public void join() {
@@ -990,6 +1058,7 @@ public class UIRoomStore {
         if (uiCallback != null) uiCallback.onAddUserResult(resultCode, data);
     }
 
+    @Deprecated
     public void addUser(List<User> list) {
         if (list == null || list.isEmpty()) return;
         localConnectionState.observeForever(new Observer<LocalConnectState>() {

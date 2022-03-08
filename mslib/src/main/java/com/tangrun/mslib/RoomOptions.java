@@ -2,6 +2,7 @@ package com.tangrun.mslib;
 
 import android.net.Uri;
 import com.tangrun.mslib.model.DeviceInfo;
+import org.json.JSONArray;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +32,7 @@ public class RoomOptions {
     public boolean forceH264 = false;
     public boolean forceVP9 = false;
 
-    public String getProtooUrl() {
+    public String getProtooUrl(JSONArray peers) {
         Map<String, Object> params = new HashMap<>();
         params.put("roomId", roomId);
         params.put("peerId", mineId);
@@ -40,6 +41,8 @@ public class RoomOptions {
         params.put("forceH264", forceH264);
         params.put("forceVP9", forceVP9);
         params.put("device", DeviceInfo.androidDevice().toJSONObject().toString());
+        if (peers != null && peers.length() > 0)
+            params.put("peers", peers.toString());
 
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("wss://")

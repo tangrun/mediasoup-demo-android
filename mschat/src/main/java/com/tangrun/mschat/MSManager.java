@@ -23,6 +23,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.mediasoup.droid.Logger;
 import org.mediasoup.droid.MediasoupClient;
@@ -34,6 +35,7 @@ import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.http.conn.ssl.SSLSocketFactory.SSL;
 
@@ -64,8 +66,8 @@ public class MSManager {
         MediasoupClient.initialize(application);
     }
 
-    public static void setCallEnd(String id, RoomType roomType, boolean audioOnly, CallEnd callEnd){
-        if (uiCallback!=null) {
+    public static void setCallEnd(String id, RoomType roomType, boolean audioOnly, CallEnd callEnd) {
+        if (uiCallback != null) {
             uiCallback.onCallEnd(id, roomType, audioOnly, callEnd, null, null);
         }
     }
@@ -87,13 +89,19 @@ public class MSManager {
     public static void startCall(Context context, String roomId, User me,
                                  boolean audioOnly, boolean multi, boolean owner,
                                  List<User> inviteUser) {
+        startCall(context, HOST, PORT, roomId, me, audioOnly, multi, owner, inviteUser);
+    }
+
+    public static void startCall(Context context, String host, String port, String roomId, User me,
+                                 boolean audioOnly, boolean multi, boolean owner,
+                                 List<User> inviteUser) {
         if (getCurrent() != null) {
             Log.d(TAG, "startCall: ");
             return;
         }
         RoomOptions roomOptions = new RoomOptions();
-        roomOptions.serverHost = HOST;
-        roomOptions.serverPort = PORT;
+        roomOptions.serverHost = host;
+        roomOptions.serverPort = port;
 
         roomOptions.roomId = roomId;
 
@@ -110,9 +118,7 @@ public class MSManager {
         uiRoomStore.firstJoinedAutoProduceAudio = true;
         uiRoomStore.firstJoinedAutoProduceVideo = !audioOnly && !multi;
 
-        uiRoomStore.addUser(inviteUser);
-
-        uiRoomStore.connect();
+        uiRoomStore.connect(inviteUser);
         uiRoomStore.openCallActivity();
     }
 
