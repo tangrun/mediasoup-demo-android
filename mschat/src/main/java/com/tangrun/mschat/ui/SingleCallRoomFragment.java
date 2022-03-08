@@ -46,6 +46,7 @@ public class SingleCallRoomFragment extends Fragment {
     ChangedMutableLiveData<BuddyModel> target = new ChangedMutableLiveData<>();
     UIRoomStore uiRoomStore;
     ChangedMutableLiveData<Boolean> mimeShowFullRender = new ChangedMutableLiveData<>(false);
+    Boolean mimeShowFullRenderActual = null;
 
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         binding = MsFragmentSingleCallBinding.inflate(inflater, container, false);
@@ -115,6 +116,24 @@ public class SingleCallRoomFragment extends Fragment {
         binding.msVRendererWindow.init(this);
         binding.msVRendererWindow.setZOrderOnTop(true);
         binding.msVRendererFull.setZOrderOnTop(false);
+        uiRoomStore.sendTransportState.observe(this, state -> {
+            if (state == TransportState.disposed){
+                if (mimeShowFullRenderActual == Boolean.TRUE){
+                    binding.msVRendererFull.bind(this, true, null);
+                }else if (mimeShowFullRenderActual == Boolean.FALSE){
+                    binding.msVRendererWindow.bind(this, true, null);
+                }
+            }
+        });
+        uiRoomStore.recvTransportState.observe(this, state -> {
+            if (state == TransportState.disposed){
+                if (mimeShowFullRenderActual == Boolean.TRUE){
+                    binding.msVRendererWindow.bind(this, true, null);
+                }else if (mimeShowFullRenderActual == Boolean.FALSE){
+                    binding.msVRendererFull.bind(this, true, null);
+                }
+            }
+        });
 
         binding.msVRendererWindow.setOnClickListener(v -> {
             mimeShowFullRender.applySet(!mimeShowFullRender.getValue());
@@ -302,6 +321,9 @@ public class SingleCallRoomFragment extends Fragment {
             fullTransportClosed = windowTransportClosed;
             windowTransportClosed = temp;
         }
+
+        mimeShowFullRenderActual = mimeVideoTrack == null && targetVideoTrack == null ? null
+                : fullRenderTrack == mimeVideoTrack;
 
 
         binding.msVRendererWindow.bind(this, !windowTransportClosed, windowRenderTrack);
