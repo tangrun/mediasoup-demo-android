@@ -549,12 +549,14 @@ public class RoomClient extends RoomMessageHandler {
         Logger.d(TAG, "disposeTransportDevice()");
         // Close mediasoup Transports.
         if (mSendTransport != null) {
+            mStore.getClientObservable().getDispatcher().onTransportStateChanged(true,TransportState.disposed);
             mSendTransport.close();
             mSendTransport.dispose();
             mSendTransport = null;
         }
 
         if (mRecvTransport != null) {
+            mStore.getClientObservable().getDispatcher().onTransportStateChanged(false,TransportState.disposed);
             mRecvTransport.close();
             mRecvTransport.dispose();
             mRecvTransport = null;
@@ -886,6 +888,7 @@ public class RoomClient extends RoomMessageHandler {
         mSendTransport =
                 mMediasoupDevice.createSendTransport(
                         sendTransportListener, id, iceParameters, iceCandidates, dtlsParameters);
+        mStore.getClientObservable().getDispatcher().onTransportStateChanged(true, TransportState.created);
     }
 
     @WorkerThread
@@ -913,6 +916,7 @@ public class RoomClient extends RoomMessageHandler {
         mRecvTransport =
                 mMediasoupDevice.createRecvTransport(
                         recvTransportListener, id, iceParameters, iceCandidates, dtlsParameters, null);
+        mStore.getClientObservable().getDispatcher().onTransportStateChanged(false, TransportState.created);
     }
 
     private SendTransport.Listener sendTransportListener =

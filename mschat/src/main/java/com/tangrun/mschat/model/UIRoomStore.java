@@ -114,6 +114,8 @@ public class UIRoomStore {
     public ChangedMutableLiveData<CameraState> cameraState = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<SpeakerState> speakerState = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<CameraFacingState> cameraFacingState = new ChangedMutableLiveData<>();
+    public ChangedMutableLiveData<TransportState> sendTransportState = new ChangedMutableLiveData<>();
+    public ChangedMutableLiveData<TransportState> recvTransportState = new ChangedMutableLiveData<>();
     /**
      * 通话时间 显示 hh:mm
      */
@@ -477,7 +479,7 @@ public class UIRoomStore {
                 buddyModel.audioWrapper.applyPost(wrapperCommon);
                 buddyModel.audioTrack.applyPost(wrapperCommon.getTrack());
                 buddyModel.disabledMic.applyPost(false);
-            } else {
+            } else if (Kind.video.value.equals(wrapperCommon.getKind()))  {
                 buddyModel.videoWrapper.applyPost(wrapperCommon);
                 buddyModel.videoTrack.applyPost(wrapperCommon.getTrack());
                 buddyModel.disabledCam.applyPost(false);
@@ -513,7 +515,7 @@ public class UIRoomStore {
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPaused.applyPost(false);
                 buddyModel.disabledMic.applyPost(false);
-            } else {
+            } else if (Kind.video.value.equals(wrapperCommon.getKind()))  {
                 buddyModel.videoPaused.applyPost(false);
                 buddyModel.disabledCam.applyPost(false);
             }
@@ -589,6 +591,11 @@ public class UIRoomStore {
             cameraFacingState.applyPost(state);
         }
 
+        @Override
+        public void onTransportStateChanged(boolean sender, TransportState state) {
+            if (sender) sendTransportState.applyPost(state);
+            else recvTransportState.applyPost(state);
+        }
 
     };
 

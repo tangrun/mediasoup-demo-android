@@ -1,6 +1,7 @@
 package com.tangrun.mschat.ui;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,10 +18,7 @@ import com.tangrun.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.IBuddyModelObserver;
 import com.tangrun.mschat.model.UIRoomStore;
-import com.tangrun.mslib.enums.CameraFacingState;
-import com.tangrun.mslib.enums.ConnectionState;
-import com.tangrun.mslib.enums.ConversationState;
-import com.tangrun.mslib.enums.LocalConnectState;
+import com.tangrun.mslib.enums.*;
 import com.tangrun.mslib.lv.ChangedMutableLiveData;
 import com.tangrun.mslib.utils.ArchTaskExecutor;
 import org.jetbrains.annotations.NotNull;
@@ -34,6 +32,7 @@ import java.util.Arrays;
  * @date :2022/2/14 9:36
  */
 public class SingleCallRoomFragment extends Fragment {
+    private static final String TAG = "MS_UI_SingleCall";
     public static SingleCallRoomFragment newInstance() {
 
         Bundle args = new Bundle();
@@ -58,8 +57,9 @@ public class SingleCallRoomFragment extends Fragment {
         uiRoomStore = MSManager.getCurrent();
 
         uiRoomStore.mine.observe(this, buddyModel -> {
-
+            Log.d(TAG, "mime get : "+buddyModel);
             buddyModel.videoTrack.observe(this, videoTrack -> {
+                Log.d(TAG, "onMineVideoTrackChanged: "+videoTrack);
                 resetRender();
             });
         });
@@ -70,6 +70,24 @@ public class SingleCallRoomFragment extends Fragment {
             if (cameraFacingState == CameraFacingState.inProgress) return;
             resetRender();
         });
+        target.observe(this, buddyModel -> {
+            if (buddyModel == null)return;
+            // 仅在初始化时调用
+            binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
+            Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
+                    .apply(new RequestOptions()
+                            .error(R.drawable.ms_default_avatar)
+                            .placeholder(R.drawable.ms_default_avatar))
+                    .into(binding.msIvUserAvatar);
+            buddyModel.videoTrack.observe(SingleCallRoomFragment.this, videoTrack -> {
+                Log.d(TAG, "onTargetVideoTrackChanged: "+videoTrack);
+                resetRender();
+            });
+            buddyModel.state.observe(SingleCallRoomFragment.this, unused -> {
+                setTipText();
+            });
+        });
+
         // 重新打开界面时 人已经进入过就不会重新回调client的接口回调 所以buddyObservable就失效了 需要从list里找
         for (BuddyModel buddyModel : uiRoomStore.buddyModels) {
             if (!buddyModel.buddy.isProducer() && target.getValue() == null) {
@@ -82,20 +100,6 @@ public class SingleCallRoomFragment extends Fragment {
             public void onBuddyAdd(int position, BuddyModel buddyModel) {
                 if (!buddyModel.buddy.isProducer() && target.getValue() == null) {
                     target.applySet(buddyModel);
-
-                    // 仅在初始化时调用
-                    binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
-                    Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
-                            .apply(new RequestOptions()
-                                    .error(R.drawable.ms_default_avatar)
-                                    .placeholder(R.drawable.ms_default_avatar))
-                            .into(binding.msIvUserAvatar);
-                    buddyModel.videoTrack.observe(SingleCallRoomFragment.this, videoTrack -> {
-                        resetRender();
-                    });
-                    buddyModel.state.observe(SingleCallRoomFragment.this, unused -> {
-                        setTipText();
-                    });
                 }
             }
 
@@ -210,15 +214,7 @@ public class SingleCallRoomFragment extends Fragment {
                 if (connectionState == ConnectionState.Offline) {
                     tip = "对方重连中...";
                 } else {
-                    if (conversationState == ConversationState.Invited) {
-                        tip = "等待接听";
-                    } else if (conversationState == ConversationState.InviteTimeout) {
-                        tip = "无人接听";
-                    } else if (conversationState == ConversationState.InviteBusy) {
-                        tip = "对方忙线";
-                    } else if (conversationState == ConversationState.InviteReject) {
-                        tip = "对方已挂断";
-                    } else if (conversationState == ConversationState.OfflineTimeout || conversationState == ConversationState.Left
+                    if (conversationState == ConversationState.OfflineTimeout || conversationState == ConversationState.Left
                             // 本地自己操作挂断
                             || localState.second == ConversationState.InviteBusy
                             || localState.second == ConversationState.Left
@@ -227,7 +223,15 @@ public class SingleCallRoomFragment extends Fragment {
                             || localState.second == ConversationState.InviteTimeout) {
                         tip = "通话已结束";
                         showUI(true);
-                    } else if (conversationState == ConversationState.Joined || localState.second == ConversationState.Joined) {
+                    } else if (conversationState == ConversationState.Invited) {
+                        tip = "等待接听";
+                    } else if (conversationState == ConversationState.InviteTimeout) {
+                        tip = "无人接听";
+                    } else if (conversationState == ConversationState.InviteBusy) {
+                        tip = "对方忙线";
+                    } else if (conversationState == ConversationState.InviteReject) {
+                        tip = "对方已挂断";
+                    } else  if (conversationState == ConversationState.Joined || localState.second == ConversationState.Joined) {
                         tip = "通话中...";
                         delayDismissTime = 2000;
                     } else {
@@ -272,7 +276,7 @@ public class SingleCallRoomFragment extends Fragment {
         ArchTaskExecutor.getInstance().postToMainThread(this::resetRender_, 200);
     }
 
-    private void resetRender_() {
+    private synchronized void resetRender_() {
         if (uiRoomStore.audioOnly) {
             binding.msVRendererWindow.setVisibility(View.GONE);
             binding.msVRendererFull.setVisibility(View.GONE);
@@ -283,20 +287,28 @@ public class SingleCallRoomFragment extends Fragment {
 
         VideoTrack mimeVideoTrack = mime == null ? null : mime.videoTrack.getValue();
         VideoTrack targetVideoTrack = target == null ? null : target.videoTrack.getValue();
+        boolean mimeTransportClosed = uiRoomStore.sendTransportState.getValue() == TransportState.disposed;
+        boolean targetTransportClosed = uiRoomStore.recvTransportState.getValue() == TransportState.disposed;
 
         VideoTrack windowRenderTrack = mimeShowFullRender.getValue() ? targetVideoTrack : mimeVideoTrack;
         VideoTrack fullRenderTrack = mimeShowFullRender.getValue() ? mimeVideoTrack : targetVideoTrack;
+        boolean windowTransportClosed = mimeShowFullRender.getValue() ? targetTransportClosed : mimeTransportClosed;
+        boolean fullTransportClosed = mimeShowFullRender.getValue() ? mimeTransportClosed : targetTransportClosed;
 
         if (windowRenderTrack != null && fullRenderTrack == null) {
             fullRenderTrack = windowRenderTrack;
             windowRenderTrack = null;
+            boolean temp = fullTransportClosed;
+            fullTransportClosed = windowTransportClosed;
+            windowTransportClosed = temp;
         }
 
-        binding.msVRendererWindow.bind(this, uiRoomStore.callingActual.getValue() == Boolean.TRUE, windowRenderTrack);
+
+        binding.msVRendererWindow.bind(this, !windowTransportClosed, windowRenderTrack);
         binding.msVRendererWindow.setVisibility(windowRenderTrack == null ? View.GONE : View.VISIBLE);
         binding.msVRendererWindow.setMirror(windowRenderTrack != null && windowRenderTrack == mimeVideoTrack && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
 
-        binding.msVRendererFull.bind(this, uiRoomStore.callingActual.getValue() == Boolean.TRUE, fullRenderTrack);
+        binding.msVRendererFull.bind(this, !fullTransportClosed, fullRenderTrack);
         binding.msVRendererFull.setVisibility(fullRenderTrack == null ? View.GONE : View.VISIBLE);
         binding.msVRendererFull.setMirror(fullRenderTrack != null && fullRenderTrack == mimeVideoTrack && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
     }

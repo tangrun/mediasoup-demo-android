@@ -25,10 +25,7 @@ import com.tangrun.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.IBuddyModelObserver;
 import com.tangrun.mschat.model.UIRoomStore;
-import com.tangrun.mslib.enums.CameraFacingState;
-import com.tangrun.mslib.enums.ConnectionState;
-import com.tangrun.mslib.enums.ConversationState;
-import com.tangrun.mslib.enums.LocalConnectState;
+import com.tangrun.mslib.enums.*;
 import com.tangrun.mslib.lv.ChangedMutableLiveData;
 import org.jetbrains.annotations.NotNull;
 
@@ -253,7 +250,10 @@ public class MultiCallRoomFragment extends Fragment {
                 binding.vRenderer.setVisibility(videoTrack == null ? View.GONE : View.VISIBLE);
                 binding.ivCover.setVisibility(videoTrack != null ? View.GONE : View.VISIBLE);
                 binding.vRenderer.init(lifecycleOwner);
-                binding.vRenderer.bind(lifecycleOwner, uiRoomStore.callingActual.getValue() == Boolean.TRUE, videoTrack);
+                binding.vRenderer.bind(lifecycleOwner,
+                        !(model.buddy.isProducer() ? uiRoomStore.sendTransportState.getValue() == TransportState.disposed
+                                : uiRoomStore.recvTransportState.getValue() == TransportState.disposed)
+                        , videoTrack);
                 binding.vRenderer.setMirror(model.buddy.isProducer() && videoTrack != null && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
             });
 
