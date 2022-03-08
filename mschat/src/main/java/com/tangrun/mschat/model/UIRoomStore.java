@@ -188,9 +188,10 @@ public class UIRoomStore {
      */
     public boolean audioOnly;
     /**
-     * 通话已结束标记 0没挂断 1挂断 2超时 3客户端断开 4对方忙线
+     * 通话已结束标记 0没挂断 1手动挂断(自己) 2客户端断开（网络）
      */
     private int callEndFlag = 0;
+    private CallEnd callEnd = CallEnd.None;
 
 
     /**
@@ -274,22 +275,20 @@ public class UIRoomStore {
 
             joinedCount++;
         } else if (connectionState1 == LocalConnectState.CLOSED) {
+            // 2 4是收到服务器消息触发的 已经设置callend了
             if (callEndFlag == 1) {
-                if (owner)
+                if (owner) {
                     localConversationState.applyPost(ConversationState.Left);
-                else {
-                    if (joinedCount > 0) {
-                        localConversationState.applyPost(ConversationState.Left);
-                    } else {
-                        localConversationState.applyPost(ConversationState.InviteReject);
-                    }
+                    callEnd = joinedCount > 0 ? CallEnd.End : CallEnd.Cancel;
+                } else {
+                    localConversationState.applyPost(joinedCount > 0 ? ConversationState.Left : ConversationState.InviteReject);
+                    callEnd = joinedCount > 0 ? CallEnd.End : CallEnd.Reject;
                 }
-            } else if (callEndFlag == 2) {
-                localConversationState.applyPost(ConversationState.InviteTimeout);
             } else if (callEndFlag == 0) {
                 // 网络中断
-                callEndFlag = 3;
+                callEndFlag = 2;
                 localConversationState.applyPost(ConversationState.OfflineTimeout);
+                callEnd = CallEnd.NetError;
                 hangup();
             }
         }
@@ -434,7 +433,8 @@ public class UIRoomStore {
 
                 // 自己在接听界面但是长时间没接
                 if (buddy.isProducer() && buddy.getConversationState() == ConversationState.InviteTimeout) {
-                    callEndFlag = 2;
+                    localConversationState.applyPost(ConversationState.InviteTimeout);
+                    callEnd = CallEnd.NoAnswer;
                     hangup();
                 }
 
@@ -448,11 +448,16 @@ public class UIRoomStore {
                         }
                     }
                     if (!hasActiveBuddy) {
-                        if (roomType == RoomType.SingleCall) {
-                            if (buddyModel.conversationState.getValue() == ConversationState.InviteBusy) {
-                                callEndFlag = 4;
-                            } else if (buddyModel.conversationState.getValue() == ConversationState.InviteTimeout) {
-                                callEndFlag = 2;
+                        if (buddyModel.conversationState.getValue() == ConversationState.InviteBusy) {
+                            callEnd = CallEnd.RemoteBusy;
+                        } else if (buddyModel.conversationState.getValue() == ConversationState.InviteTimeout) {
+                            callEnd = CallEnd.RemoteNoAnswer;
+                        } else if (buddyModel.conversationState.getValue() == ConversationState.InviteReject) {
+                            callEnd = CallEnd.RemoteReject;
+                        } else if (buddyModel.conversationState.getValue() == ConversationState.Left) {
+                            // 发起者取消了
+                            if (!owner && callingActual.getValue() == null) {
+                                callEnd = CallEnd.RemoteCancel;
                             }
                         }
                         hangup();
@@ -745,24 +750,9 @@ public class UIRoomStore {
 
     private void setCallEnd() {
         if (uiCallback == null) return;
-        CallEnd callEnd = CallEnd.End;
-        if (roomType == RoomType.SingleCall) {
-            if (callEndFlag == 1) {
-                if (callStartTime == null) {
-                    if (owner)
-                        callEnd = CallEnd.Cancel;
-                    else
-                        callEnd = CallEnd.Reject;
-                } else {
-                    callEnd = CallEnd.End;
-                }
-            } else if (callEndFlag == 2) {
-                callEnd = CallEnd.NoAnswer;
-            } else if (callEndFlag == 3) {
-                callEnd = CallEnd.End;
-            } else if (callEndFlag == 4) {
-                callEnd = CallEnd.Busy;
-            }
+        CallEnd callEnd = roomType == RoomType.SingleCall ? this.callEnd : CallEnd.End;
+        if (callEnd == CallEnd.None) {
+            callEnd = CallEnd.End;
         }
 
         uiCallback.onCallEnd(getRoomOptions().roomId, roomType, audioOnly, callEnd, callStartTime, callEndTime);

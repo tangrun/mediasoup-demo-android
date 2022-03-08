@@ -210,7 +210,7 @@ public class SingleCallRoomFragment extends Fragment {
                 if (connectionState == ConnectionState.Offline) {
                     tip = "对方重连中...";
                 } else {
-                    if (conversationState == ConversationState.Invited || conversationState == ConversationState.New) {
+                    if (conversationState == ConversationState.Invited) {
                         tip = "等待接听";
                     } else if (conversationState == ConversationState.InviteTimeout) {
                         tip = "无人接听";

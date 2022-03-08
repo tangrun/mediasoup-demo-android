@@ -144,9 +144,10 @@ public class MultiCallRoomFragment extends Fragment {
                     uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomRight);
                 } else {
                     // 麦克风/摄像头/切换摄像头 挂断
-                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
+                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionTopLeft);
+                    uiRoomStore.Action_CameraDisabled.bindView(binding.llActionTopCenter);
+                    uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionTopRight);
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-                    uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionBottomRight);
                 }
             } else {
                 uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);

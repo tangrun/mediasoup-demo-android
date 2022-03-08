@@ -164,6 +164,20 @@ public class MSManager {
                 });
     }
 
+    public static void busyForUICallback(String roomId, String userId,RoomType roomType,boolean audioOnly) {
+        busy(roomId, userId, new ApiCallback<Object>() {
+            @Override
+            public void onFail(Throwable e) {
+                uiCallback.onCallEnd(roomId,roomType,audioOnly,CallEnd.Busy,null,null);
+            }
+
+            @Override
+            public void onSuccess(Object o) {
+                uiCallback.onCallEnd(roomId,roomType,audioOnly,CallEnd.Busy,null,null);
+            }
+        });
+    }
+
     public static void busy(String roomId, String userId, ApiCallback<Object> apiCallback) {
         if (apiCallback == null) return;
         Observable.create(new ObservableOnSubscribe<Object>() {
