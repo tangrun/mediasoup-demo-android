@@ -190,7 +190,7 @@ public class UIRoomStore {
      */
     public boolean audioOnly;
     /**
-     * 通话已结束标记 0没挂断 1手动挂断(自己) 2客户端断开（网络）
+     * 通话已结束标记 0没挂断 1挂断了 并且设置了callend了  2客户端断开（网络）
      */
     private int callEndFlag = 0;
     private CallEnd callEnd = CallEnd.None;
@@ -277,20 +277,9 @@ public class UIRoomStore {
 
             joinedCount++;
         } else if (connectionState1 == LocalConnectState.CLOSED) {
-            // 2 4是收到服务器消息触发的 已经设置callend了
-            if (callEndFlag == 1) {
-                if (owner) {
-                    localConversationState.applyPost(ConversationState.Left);
-                    callEnd = joinedCount > 0 ? CallEnd.End : CallEnd.Cancel;
-                } else {
-                    localConversationState.applyPost(joinedCount > 0 ? ConversationState.Left : ConversationState.InviteReject);
-                    callEnd = joinedCount > 0 ? CallEnd.End : CallEnd.Reject;
-                }
-            } else if (callEndFlag == 0) {
+            if (callEndFlag == 0) {
                 // 网络中断
                 callEndFlag = 2;
-                localConversationState.applyPost(ConversationState.OfflineTimeout);
-                callEnd = CallEnd.NetError;
                 hangup();
             }
         }
@@ -408,7 +397,7 @@ public class UIRoomStore {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
-                Log.d(TAG, "onBuddyStateChanged: " + id + buddyModel.connectionState + buddyModel.conversationState);
+                Log.d(TAG, "onBuddyStateChanged: " + id + buddy.getConnectionState()+ " "+buddy.getConversationState());
 
                 // 第一个人进来就算开始通话
                 if (owner && !buddy.isProducer() && callStartTime == null && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
@@ -437,6 +426,7 @@ public class UIRoomStore {
                 if (buddy.isProducer() && buddy.getConversationState() == ConversationState.InviteTimeout) {
                     localConversationState.applyPost(ConversationState.InviteTimeout);
                     callEnd = CallEnd.NoAnswer;
+                    callEndFlag = 1;
                     hangup();
                 }
 
@@ -450,16 +440,20 @@ public class UIRoomStore {
                         }
                     }
                     if (!hasActiveBuddy) {
-                        if (buddyModel.conversationState.getValue() == ConversationState.InviteBusy) {
+                        if (buddy.getConversationState() == ConversationState.InviteBusy) {
                             callEnd = CallEnd.RemoteBusy;
-                        } else if (buddyModel.conversationState.getValue() == ConversationState.InviteTimeout) {
+                            callEndFlag = 1;
+                        } else if (buddy.getConversationState() == ConversationState.InviteTimeout) {
                             callEnd = CallEnd.RemoteNoAnswer;
-                        } else if (buddyModel.conversationState.getValue() == ConversationState.InviteReject) {
+                            callEndFlag = 1;
+                        } else if (buddy.getConversationState() == ConversationState.InviteReject) {
                             callEnd = CallEnd.RemoteReject;
-                        } else if (buddyModel.conversationState.getValue() == ConversationState.Left) {
+                            callEndFlag = 1;
+                        } else if (buddy.getConversationState() == ConversationState.Left) {
                             // 发起者取消了
                             if (!owner && callingActual.getValue() == null) {
                                 callEnd = CallEnd.RemoteCancel;
+                                callEndFlag = 1;
                             }
                         }
                         hangup();
@@ -479,7 +473,7 @@ public class UIRoomStore {
                 buddyModel.audioWrapper.applyPost(wrapperCommon);
                 buddyModel.audioTrack.applyPost(wrapperCommon.getTrack());
                 buddyModel.disabledMic.applyPost(false);
-            } else if (Kind.video.value.equals(wrapperCommon.getKind()))  {
+            } else if (Kind.video.value.equals(wrapperCommon.getKind())) {
                 buddyModel.videoWrapper.applyPost(wrapperCommon);
                 buddyModel.videoTrack.applyPost(wrapperCommon.getTrack());
                 buddyModel.disabledCam.applyPost(false);
@@ -515,7 +509,7 @@ public class UIRoomStore {
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPaused.applyPost(false);
                 buddyModel.disabledMic.applyPost(false);
-            } else if (Kind.video.value.equals(wrapperCommon.getKind()))  {
+            } else if (Kind.video.value.equals(wrapperCommon.getKind())) {
                 buddyModel.videoPaused.applyPost(false);
                 buddyModel.disabledCam.applyPost(false);
             }
@@ -895,8 +889,21 @@ public class UIRoomStore {
         if (callingActual.getValue() == Boolean.FALSE) return;
         stopCallTime();
         callingActual.applyPost(false);
-        if (callEndFlag == 0)
+        if (callEndFlag == 0){
             callEndFlag = 1;
+            if (owner) {
+                localConversationState.applyPost(ConversationState.Left);
+                callEnd = callingActual.getValue() == null ? CallEnd.Cancel : CallEnd.End;
+            } else {
+                localConversationState.applyPost(joinedCount > 0 ? ConversationState.Left : ConversationState.InviteReject);
+                callEnd = callingActual.getValue() == null ? CallEnd.Reject : CallEnd.End;
+            }
+        }else if (callEndFlag == 2){
+            callEndFlag = 1;
+            localConversationState.applyPost(ConversationState.OfflineTimeout);
+            callEnd = CallEnd.NetError;
+        }
+
         if (localConnectionState.getValue() == LocalConnectState.JOINED
                 || localConnectionState.getValue() == LocalConnectState.CONNECTED)
             getRoomClient().hangup();
