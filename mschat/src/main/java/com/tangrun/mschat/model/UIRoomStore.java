@@ -34,6 +34,7 @@ import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.ui.CallRoomActivity;
 import com.tangrun.mschat.ui.CallWindowService;
 import com.tangrun.mschat.ui.UserSelector;
+import com.tangrun.mschat.view.InitSurfaceViewRender;
 import com.tangrun.mslib.RoomClient;
 import com.tangrun.mslib.RoomOptions;
 import com.tangrun.mslib.RoomStore;
@@ -44,11 +45,14 @@ import com.tangrun.mslib.lv.DispatcherObservable;
 import com.tangrun.mslib.model.Buddy;
 import com.tangrun.mslib.model.WrapperCommon;
 import com.tangrun.mslib.utils.ArchTaskExecutor;
+import com.tangrun.mslib.utils.PeerConnectionUtils;
 import io.reactivex.Observable;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.observers.DisposableObserver;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
+import org.webrtc.SurfaceViewRenderer;
+import org.webrtc.VideoTrack;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -114,8 +118,8 @@ public class UIRoomStore {
     public ChangedMutableLiveData<CameraState> cameraState = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<SpeakerState> speakerState = new ChangedMutableLiveData<>();
     public ChangedMutableLiveData<CameraFacingState> cameraFacingState = new ChangedMutableLiveData<>();
-    public ChangedMutableLiveData<TransportState> sendTransportState = new ChangedMutableLiveData<>();
-    public ChangedMutableLiveData<TransportState> recvTransportState = new ChangedMutableLiveData<>();
+    public TransportState sendTransportState = TransportState.none;
+    public TransportState recvTransportState = TransportState.none;
     /**
      * 通话时间 显示 hh:mm
      */
@@ -398,7 +402,7 @@ public class UIRoomStore {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
-                Log.d(TAG, "onBuddyStateChanged: " + id + buddy.getConnectionState()+ " "+buddy.getConversationState());
+                Log.d(TAG, "onBuddyStateChanged: " + id + buddy.getConnectionState() + " " + buddy.getConversationState());
 
                 // 第一个人进来就算开始通话
                 if (owner && !buddy.isProducer() && callStartTime == null && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
@@ -454,7 +458,7 @@ public class UIRoomStore {
                                 callEndFlag = 1;
                             }
                         }
-                        if (callEndFlag ==1){
+                        if (callEndFlag == 1) {
                             localConversationState.applySet(ConversationState.Left);
                         }
                         hangup();
@@ -591,8 +595,16 @@ public class UIRoomStore {
 
         @Override
         public void onTransportStateChanged(boolean sender, TransportState state) {
-            if (sender) sendTransportState.applyPost(state);
-            else recvTransportState.applyPost(state);
+            // 由于这个时间要求比较高 不能采用livedata的方式
+            if (sender) {
+                sendTransportState = state;
+                if (state == TransportState.disposed)
+                    releaseProducerBuddyRender();
+            } else {
+                recvTransportState = state;
+                if (state == TransportState.disposed)
+                    releaseConsumerBuddyRender();
+            }
         }
 
     };
@@ -608,7 +620,7 @@ public class UIRoomStore {
             } else if (event == Lifecycle.Event.ON_RESUME) {
                 // 前台时刷新一下通知 防止进入时清空消息通知把通话通知也清掉了
                 updateNotification();
-                if (activityBindCount ==0){
+                if (activityBindCount == 0) {
                     openCallActivity();
                 }
             } else if (event == Lifecycle.Event.ON_STOP) {
@@ -757,6 +769,7 @@ public class UIRoomStore {
         getRoomStore().getClientObservable().registerObserver(clientObserver);
     }
 
+
     private void setCallEnd() {
         if (uiCallback == null) return;
         CallEnd callEnd = roomType == RoomType.SingleCall ? this.callEnd : CallEnd.End;
@@ -811,6 +824,132 @@ public class UIRoomStore {
         }
         return true;
     }
+
+
+    //region 视频track和view绑定释放
+    Map<BuddyModel, Map<LifecycleOwner, TrackBinder>> buddyModelTrackBinderMap = new ConcurrentHashMap<>();
+
+    private class TrackBinder {
+        LifecycleOwner lifecycleOwner;
+        BuddyModel buddyModel;
+        InitSurfaceViewRender render;
+
+        public TrackBinder(LifecycleOwner lifecycleOwner, BuddyModel buddyModel, InitSurfaceViewRender render) {
+            this.lifecycleOwner = lifecycleOwner;
+            this.buddyModel = buddyModel;
+            this.render = render;
+            lifecycleOwner.getLifecycle().addObserver(new LifecycleEventObserver() {
+                @Override
+                public void onStateChanged(@androidx.annotation.NonNull @NotNull LifecycleOwner source, @androidx.annotation.NonNull @NotNull Lifecycle.Event event) {
+                    if (event == Lifecycle.Event.ON_DESTROY) {
+                        source.getLifecycle().removeObserver(this);
+                        release();
+                    } else if (event == Lifecycle.Event.ON_RESUME) {
+                        initRenderAndSink();
+                    } else if (event == Lifecycle.Event.ON_STOP) {
+                        release();
+                    }
+                }
+            });
+            buddyModel.videoTrack.observe(lifecycleOwner, new Observer<VideoTrack>() {
+                @Override
+                public void onChanged(VideoTrack videoTrack) {
+                    if (videoTrack == null) release();
+                    else initRenderAndSink();
+                }
+            });
+            if (buddyModel.buddy.isProducer()) {
+                cameraFacingState.observe(lifecycleOwner, new Observer<CameraFacingState>() {
+                    @Override
+                    public void onChanged(CameraFacingState cameraFacingState) {
+                        if (render != null && cameraFacingState != CameraFacingState.inProgress) {
+                            render.setMirror(cameraFacingState == CameraFacingState.front);
+                        }
+                    }
+                });
+            }
+        }
+
+        public void release() {
+            removeSink();
+            if (render != null) {
+                render.release();
+                ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        render.setVisibility(View.INVISIBLE);
+                    }
+                });
+            }
+        }
+
+        public void resetRender(InitSurfaceViewRender render) {
+            removeSink();
+            this.render = render;
+            initRenderAndSink();
+        }
+
+        private void initRenderAndSink() {
+            VideoTrack videoTrack = buddyModel.videoTrack.getValue();
+            if (videoTrack != null && (buddyModel.buddy.isProducer() ? sendTransportState : recvTransportState) != TransportState.disposed) {
+                render.init(PeerConnectionUtils.getEglContext(), null);
+                videoTrack.addSink(render);
+                ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        render.setVisibility(View.VISIBLE);
+                    }
+                });
+                render.setMirror(buddyModel.buddy.isProducer() && cameraFacingState.getValue() == CameraFacingState.front);
+            }
+        }
+
+        private void removeSink() {
+            VideoTrack videoTrack = buddyModel.videoTrack.getValue();
+            if (videoTrack != null && (buddyModel.buddy.isProducer() ? sendTransportState : recvTransportState) != TransportState.disposed) {
+                videoTrack.removeSink(render);
+            }
+        }
+    }
+
+    public void releaseProducerBuddyRender() {
+        for (Map<LifecycleOwner, TrackBinder> map : buddyModelTrackBinderMap.values()) {
+            for (TrackBinder trackBinder : map.values()) {
+                if (trackBinder.buddyModel.buddy.isProducer()) {
+                    trackBinder.release();
+                }
+            }
+        }
+    }
+
+    public void releaseConsumerBuddyRender() {
+        for (Map<LifecycleOwner, TrackBinder> map : buddyModelTrackBinderMap.values()) {
+            for (TrackBinder trackBinder : map.values()) {
+                if (!trackBinder.buddyModel.buddy.isProducer()) {
+                    trackBinder.release();
+                }
+            }
+        }
+    }
+
+    public void bindBuddyRender(LifecycleOwner lifecycleOwner, BuddyModel buddyModel, InitSurfaceViewRender render) {
+        if (buddyModel == null) return;
+        Map<LifecycleOwner, TrackBinder> map = buddyModelTrackBinderMap.get(buddyModel);
+        if (map == null) {
+            map = new ConcurrentHashMap<>();
+            buddyModelTrackBinderMap.put(buddyModel, map);
+        }
+        TrackBinder trackBinder = map.get(lifecycleOwner);
+        if (trackBinder != null) {
+            if (trackBinder.render != render) {
+                trackBinder.resetRender(render);
+            }
+        } else {
+            trackBinder = new TrackBinder(lifecycleOwner, buddyModel, render);
+            map.put(lifecycleOwner, trackBinder);
+        }
+    }
+    //endregion
 
     //region 通话组件启动
 
@@ -897,7 +1036,7 @@ public class UIRoomStore {
         if (callingActual.getValue() == Boolean.FALSE) return;
         stopCallTime();
         callingActual.applySet(false);
-        if (callEndFlag == 0){
+        if (callEndFlag == 0) {
             callEndFlag = 1;
             if (owner) {
                 callEnd = callingActual.getValue() == null ? CallEnd.Cancel : CallEnd.End;
@@ -906,12 +1045,12 @@ public class UIRoomStore {
                 callEnd = callingActual.getValue() == null ? CallEnd.Reject : CallEnd.End;
                 localConversationState.applySet(joinedCount > 0 ? ConversationState.Left : ConversationState.InviteReject);
             }
-        }else if (callEndFlag == 2){
+        } else if (callEndFlag == 2) {
             callEndFlag = 1;
             callEnd = CallEnd.NetError;
             localConversationState.applySet(ConversationState.OfflineTimeout);
         }
-        Log.d(TAG, "hangup: before "+callEndFlag+"  "+callEnd);
+        Log.d(TAG, "hangup: before " + callEndFlag + "  " + callEnd);
         if (localConnectionState.getValue() == LocalConnectState.JOINED
                 || localConnectionState.getValue() == LocalConnectState.CONNECTED)
             getRoomClient().hangup();

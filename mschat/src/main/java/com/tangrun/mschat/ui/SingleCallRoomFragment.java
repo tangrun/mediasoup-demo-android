@@ -18,10 +18,12 @@ import com.tangrun.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.IBuddyModelObserver;
 import com.tangrun.mschat.model.UIRoomStore;
+import com.tangrun.mschat.view.InitSurfaceViewRender;
 import com.tangrun.mslib.enums.*;
 import com.tangrun.mslib.lv.ChangedMutableLiveData;
 import com.tangrun.mslib.utils.ArchTaskExecutor;
 import org.jetbrains.annotations.NotNull;
+import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 
 import java.util.Arrays;
@@ -61,30 +63,24 @@ public class SingleCallRoomFragment extends Fragment {
         uiRoomStore.mine.observe(this, buddyModel -> {
             Log.d(TAG, "mime get : " + buddyModel);
             buddyModel.videoTrack.observe(this, videoTrack -> {
-                Log.d(TAG, "onMineVideoTrackChanged: " + videoTrack);
-                resetRender();
+                resetRenderBinding();
             });
         });
         mimeShowFullRender.observe(this, aBoolean -> {
-            resetRender();
-        });
-        uiRoomStore.cameraFacingState.observe(this, cameraFacingState -> {
-            if (cameraFacingState == CameraFacingState.inProgress) return;
-            resetRender();
+            resetRenderBinding();
         });
         target.observe(this, buddyModel -> {
             if (buddyModel == null) return;
             // 仅在初始化时调用
+            buddyModel.videoTrack.observe(this, videoTrack -> {
+                resetRenderBinding();
+            });
             binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
             Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
                     .apply(new RequestOptions()
                             .error(R.drawable.ms_default_avatar)
                             .placeholder(R.drawable.ms_default_avatar))
                     .into(binding.msIvUserAvatar);
-            buddyModel.videoTrack.observe(SingleCallRoomFragment.this, videoTrack -> {
-                Log.d(TAG, "onTargetVideoTrackChanged: " + videoTrack);
-                resetRender();
-            });
             buddyModel.state.observe(SingleCallRoomFragment.this, unused -> {
                 setTipText();
             });
@@ -113,28 +109,8 @@ public class SingleCallRoomFragment extends Fragment {
             }
         });
 
-        binding.msVRendererFull.init(this);
-        binding.msVRendererWindow.init(this);
         binding.msVRendererWindow.setZOrderOnTop(true);
         binding.msVRendererFull.setZOrderOnTop(false);
-        uiRoomStore.sendTransportState.observe(this, state -> {
-            if (state == TransportState.disposed) {
-                if (mimeShowFullRenderActual == Boolean.TRUE) {
-                    binding.msVRendererFull.bind(this, true, null);
-                } else if (mimeShowFullRenderActual == Boolean.FALSE) {
-                    binding.msVRendererWindow.bind(this, true, null);
-                }
-            }
-        });
-        uiRoomStore.recvTransportState.observe(this, state -> {
-            if (state == TransportState.disposed) {
-                if (mimeShowFullRenderActual == Boolean.TRUE) {
-                    binding.msVRendererWindow.bind(this, true, null);
-                } else if (mimeShowFullRenderActual == Boolean.FALSE) {
-                    binding.msVRendererFull.bind(this, true, null);
-                }
-            }
-        });
 
         binding.msVRendererWindow.setOnClickListener(v -> {
             mimeShowFullRender.applySet(!mimeShowFullRender.getValue());
@@ -154,7 +130,6 @@ public class SingleCallRoomFragment extends Fragment {
         uiRoomStore.callingActual.observe(this, aBoolean -> {
             // 状态提示 开使通话用状态不能判断出来 所以新加calling
             if (aBoolean) setTipText();
-            resetRender();
         });
         uiRoomStore.localState.observeForever(localState -> {
             Log.d(TAG, "onViewCreated: " + localState);
@@ -221,68 +196,93 @@ public class SingleCallRoomFragment extends Fragment {
     Runnable tipDismiss = () -> {
         binding.msTvTip.setVisibility(View.GONE);
     };
-
+    /**
+     * 挂断状态下 防止状态覆盖提示改变
+     */
+    boolean tipIgnoreSet = false;
     private void setTipText() {
+        if (tipIgnoreSet)return;
         String tip = null;
-        int delayDismissTime = 0;
+        int tipDelayDismissTime = 0;
+        boolean callEnded = false;
         binding.msTvTip.removeCallbacks(tipDismiss);
 
         Pair<LocalConnectState, ConversationState> localState = uiRoomStore.localState.getValue();
-        ConnectionState connectionState = target.getValue() == null ? null : target.getValue().connectionState.getValue();
-        ConversationState conversationState = target.getValue() == null ? null : target.getValue().conversationState.getValue();
-
-        if (localState != null) {
-            if (localState.first == LocalConnectState.NEW || localState.first == LocalConnectState.CONNECTING) {
-                tip = "连接中...";
-            } else if (localState.first == LocalConnectState.DISCONNECTED || localState.first == LocalConnectState.RECONNECTING) {
-                tip = "重连中...";
-            } else {
-                if (connectionState == ConnectionState.Offline) {
-                    tip = "对方重连中...";
-                } else {
-                    if (conversationState == ConversationState.OfflineTimeout || conversationState == ConversationState.Left
-                            // 本地自己操作挂断
-                            || localState.second == ConversationState.InviteBusy
-                            || localState.second == ConversationState.Left
-                            || localState.second == ConversationState.OfflineTimeout
-                            || localState.second == ConversationState.InviteReject
-                            || localState.second == ConversationState.InviteTimeout) {
-                        tip = "通话已结束";
-                        showUI(true);
-                    } else if (conversationState == ConversationState.Invited) {
-                        tip = "等待接听";
-                    } else if (conversationState == ConversationState.InviteTimeout) {
-                        tip = "无人接听";
-                    } else if (conversationState == ConversationState.InviteBusy) {
-                        tip = "对方忙线";
-                    } else if (conversationState == ConversationState.InviteReject) {
-                        tip = "对方已挂断";
-                    } else if (conversationState == ConversationState.Joined || localState.second == ConversationState.Joined) {
-                        // 都join了就是开始通话
-                        if (conversationState == ConversationState.Joined && localState.second == ConversationState.Joined) {
-                            // 只有第一次才显示
-                            if (uiRoomStore.activityBindCount == 1) {
-                                tip = "通话中...";
-                                delayDismissTime = 2000;
-                            }
-                        } else {
-                            if (uiRoomStore.owner) {
-                                tip = "等待对方接听...";
-                            } else {
-                                tip = "待接听";
-                            }
-                        }
+        LocalConnectState localConnectState = localState == null ? null : localState.first;
+        ConversationState localConversationState = localState == null ? null : localState.second;
+        ConnectionState targetConnectionState = target.getValue() == null ? null : target.getValue().connectionState.getValue();
+        ConversationState targetConversationState = target.getValue() == null ? null : target.getValue().conversationState.getValue();
+        Log.d(TAG, "setTipText: local " + localConnectState + " " + localConversationState + " target " + targetConnectionState + " " + targetConversationState);
+        // 根据优先级设置显示
+        // 自己连接时
+        if (localConnectState == LocalConnectState.NEW || localConnectState == LocalConnectState.CONNECTING) {
+            tip = "连接中...";
+        } else if (localConnectState == LocalConnectState.DISCONNECTED || localConnectState == LocalConnectState.RECONNECTING) {
+            tip = "重连中...";
+        }
+        // 对方重连
+        if (tip != null) {
+            if (targetConnectionState == ConnectionState.Offline) {
+                tip = "对方重连中...";
+            }
+        }
+        // 会话状态
+        if (tip == null) {
+            if (targetConversationState == ConversationState.InviteBusy) {
+                tip = "通话结束，对方忙线";
+                callEnded = true;
+            } else if (targetConversationState == ConversationState.OfflineTimeout) {
+                tip = "通话结束，对方重连超时";
+                callEnded = true;
+            } else if (targetConversationState == ConversationState.InviteReject) {
+                tip = "通话结束，对方已拒绝";
+                callEnded = true;
+            } else if (targetConversationState == ConversationState.InviteTimeout) {
+                tip = "通话结束，对方无人接听";
+                callEnded = true;
+            } else if (targetConversationState == ConversationState.Left) {
+                tip = "通话已结束，对方已挂断";
+            } else if (targetConversationState == ConversationState.Joined || targetConversationState == ConversationState.Invited) {
+                // 邀请界面
+                if (localConversationState == ConversationState.New && targetConversationState == ConversationState.Invited) {
+                    tip = "等待对方接听..";
+                }
+                // 都join了 通话中
+                else if (localConversationState == ConversationState.Joined && targetConversationState == ConversationState.Joined){
+                    // 只有第一次才显示
+                    if (uiRoomStore.activityBindCount == 1) {
+                        tip = "通话中...";
+                        tipDelayDismissTime = 2000;
                     }
+                }
+                // 接听界面
+                else if (localConversationState == ConversationState.Invited) {
+                    tip = "待接听";
+                } else if (localConversationState == ConversationState.InviteReject) {
+                    tip = "已拒绝";
+                    callEnded = true;
+                } else if (localConversationState == ConversationState.InviteTimeout) {
+                    tip = "未接听";
+                    callEnded = true;
+                } else if (localConversationState == ConversationState.Left) {
+                    tip = "通话已结束";
+                    callEnded = true;
                 }
             }
         }
 
+        if (callEnded) {
+            showUI(true);
+            tipIgnoreSet = true;
+        }
         if (tip != null) {
             binding.msTvTip.setText(tip);
             binding.msTvTip.setVisibility(View.VISIBLE);
+        }else {
+            binding.msTvTip.setVisibility(View.GONE);
         }
-        if (delayDismissTime > 0)
-            binding.msTvTip.postDelayed(tipDismiss, delayDismissTime);
+        if (tipDelayDismissTime > 0)
+            binding.msTvTip.postDelayed(tipDismiss, tipDelayDismissTime);
     }
 
     boolean showUI = false;
@@ -307,47 +307,27 @@ public class SingleCallRoomFragment extends Fragment {
         }
     }
 
-    private void resetRender() {
-        ArchTaskExecutor.getInstance().postToMainThread(this::resetRender_, 200);
-    }
-
-    private synchronized void resetRender_() {
-        if (uiRoomStore.audioOnly) {
-            binding.msVRendererWindow.setVisibility(View.GONE);
-            binding.msVRendererFull.setVisibility(View.GONE);
-            return;
-        }
-        BuddyModel mime = uiRoomStore.mine.getValue();
-        BuddyModel target = this.target.getValue();
-
-        VideoTrack mimeVideoTrack = mime == null ? null : mime.videoTrack.getValue();
-        VideoTrack targetVideoTrack = target == null ? null : target.videoTrack.getValue();
-        boolean mimeTransportClosed = uiRoomStore.sendTransportState.getValue() == TransportState.disposed;
-        boolean targetTransportClosed = uiRoomStore.recvTransportState.getValue() == TransportState.disposed;
-
-        VideoTrack windowRenderTrack = mimeShowFullRender.getValue() ? targetVideoTrack : mimeVideoTrack;
-        VideoTrack fullRenderTrack = mimeShowFullRender.getValue() ? mimeVideoTrack : targetVideoTrack;
-        boolean windowTransportClosed = mimeShowFullRender.getValue() ? targetTransportClosed : mimeTransportClosed;
-        boolean fullTransportClosed = mimeShowFullRender.getValue() ? mimeTransportClosed : targetTransportClosed;
-
-        if (windowRenderTrack != null && fullRenderTrack == null) {
-            fullRenderTrack = windowRenderTrack;
-            windowRenderTrack = null;
-            boolean temp = fullTransportClosed;
-            fullTransportClosed = windowTransportClosed;
-            windowTransportClosed = temp;
+    private void resetRenderBinding() {
+        if (mimeShowFullRender.getValue() == null) return;
+        InitSurfaceViewRender targetRender = mimeShowFullRender.getValue() ? binding.msVRendererWindow : binding.msVRendererFull;
+        InitSurfaceViewRender mimeRender = mimeShowFullRender.getValue() ? binding.msVRendererFull : binding.msVRendererWindow;
+        // 仅有一个视频流时 显示在全屏里
+        VideoTrack targetTrack = target.getValue() == null ? null : target.getValue().videoTrack.getValue();
+        VideoTrack mimeTrack = uiRoomStore.mine.getValue() == null ? null : uiRoomStore.mine.getValue().videoTrack.getValue();
+        if (targetTrack == null && mimeTrack != null) {
+            if (mimeRender != binding.msVRendererFull) {
+                targetRender = binding.msVRendererWindow;
+                mimeRender = binding.msVRendererFull;
+            }
+        } else if (targetTrack != null && mimeTrack == null) {
+            if (mimeRender != binding.msVRendererWindow) {
+                targetRender = binding.msVRendererFull;
+                mimeRender = binding.msVRendererWindow;
+            }
         }
 
-        mimeShowFullRenderActual = mimeVideoTrack == null && targetVideoTrack == null ? null
-                : fullRenderTrack == mimeVideoTrack;
-
-
-        binding.msVRendererWindow.bind(this, !windowTransportClosed, windowRenderTrack);
-        binding.msVRendererWindow.setVisibility(windowRenderTrack == null ? View.GONE : View.VISIBLE);
-        binding.msVRendererWindow.setMirror(windowRenderTrack != null && windowRenderTrack == mimeVideoTrack && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
-
-        binding.msVRendererFull.bind(this, !fullTransportClosed, fullRenderTrack);
-        binding.msVRendererFull.setVisibility(fullRenderTrack == null ? View.GONE : View.VISIBLE);
-        binding.msVRendererFull.setMirror(fullRenderTrack != null && fullRenderTrack == mimeVideoTrack && uiRoomStore.cameraFacingState.getValue() == CameraFacingState.front);
+        uiRoomStore.bindBuddyRender(this, target.getValue(), targetRender);
+        uiRoomStore.bindBuddyRender(this, uiRoomStore.mine.getValue(), mimeRender);
     }
+
 }

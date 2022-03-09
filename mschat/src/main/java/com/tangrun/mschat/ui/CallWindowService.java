@@ -43,15 +43,6 @@ public class CallWindowService extends LifecycleService {
         }
     };
 
-    Observer<BuddyModel> mineVideoTrackObserver = new Observer<BuddyModel>() {
-        @Override
-        public void onChanged(BuddyModel buddyModel) {
-            buddyModel.videoTrack.observe(CallWindowService.this, videoTrack -> {
-                resetCallInfoOrVideo();
-            });
-        }
-    };
-
     WindowViewDragManager windowViewDragManager;
 
     @Override
@@ -84,10 +75,10 @@ public class CallWindowService extends LifecycleService {
         layoutParams.width = dp2px(uiRoomStore.audioOnly ? 60 : 80);
         layoutParams.height = dp2px(uiRoomStore.audioOnly ? 60 : 120);
         // 显示
-        if (!uiRoomStore.audioOnly) {
-            binding.msVRender.init(CallWindowService.this);
-        }
-        uiRoomStore.mine.observe(this, mineVideoTrackObserver);
+        if (!uiRoomStore.audioOnly)
+            uiRoomStore.mine.observe(this, buddyModel -> {
+                uiRoomStore.bindBuddyRender(CallWindowService.this, buddyModel, binding.msVRender);
+            });
         uiRoomStore.localState.observe(this, localState -> {
             resetCallInfoOrVideo();
         });
@@ -114,6 +105,7 @@ public class CallWindowService extends LifecycleService {
             @Override
             public void onWindowViewClick() {
                 MSManager.openCallActivity();
+                windowViewDragManager.removeView();
             }
         };
         getLifecycle().addObserver(new LifecycleEventObserver() {
@@ -132,10 +124,8 @@ public class CallWindowService extends LifecycleService {
     void resetCallInfoOrVideo() {
         BuddyModel buddyModel = uiRoomStore.mine.getValue();
         VideoTrack videoTrack = buddyModel == null ? null : buddyModel.videoTrack.getValue();
-        Pair<LocalConnectState,ConversationState> localState = uiRoomStore.localState.getValue();
+        Pair<LocalConnectState, ConversationState> localState = uiRoomStore.localState.getValue();
 
-        binding.msVRender.bind(CallWindowService.this,uiRoomStore.callingActual.getValue() == Boolean.TRUE, videoTrack);
-        binding.msVRender.setVisibility(videoTrack == null ? View.INVISIBLE : View.VISIBLE);
         binding.msLlCallInfo.setVisibility(videoTrack == null ? View.VISIBLE : View.GONE);
 
         uiRoomStore.callTime.removeObservers(this);
