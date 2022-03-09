@@ -61,6 +61,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
     <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/bt_join_delay"
+            android:text="加入会话(延迟10s)"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/bt_busy"
             android:text="发送忙线"
             android:layout_width="match_parent"

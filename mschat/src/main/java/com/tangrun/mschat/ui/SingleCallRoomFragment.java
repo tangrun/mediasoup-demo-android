@@ -33,6 +33,7 @@ import java.util.Arrays;
  */
 public class SingleCallRoomFragment extends Fragment {
     private static final String TAG = "MS_UI_SingleCall";
+
     public static SingleCallRoomFragment newInstance() {
 
         Bundle args = new Bundle();
@@ -58,9 +59,9 @@ public class SingleCallRoomFragment extends Fragment {
         uiRoomStore = MSManager.getCurrent();
 
         uiRoomStore.mine.observe(this, buddyModel -> {
-            Log.d(TAG, "mime get : "+buddyModel);
+            Log.d(TAG, "mime get : " + buddyModel);
             buddyModel.videoTrack.observe(this, videoTrack -> {
-                Log.d(TAG, "onMineVideoTrackChanged: "+videoTrack);
+                Log.d(TAG, "onMineVideoTrackChanged: " + videoTrack);
                 resetRender();
             });
         });
@@ -72,7 +73,7 @@ public class SingleCallRoomFragment extends Fragment {
             resetRender();
         });
         target.observe(this, buddyModel -> {
-            if (buddyModel == null)return;
+            if (buddyModel == null) return;
             // 仅在初始化时调用
             binding.msTvUserName.setText(buddyModel.buddy.getDisplayName());
             Glide.with(binding.msIvUserAvatar).load(buddyModel.buddy.getAvatar())
@@ -81,7 +82,7 @@ public class SingleCallRoomFragment extends Fragment {
                             .placeholder(R.drawable.ms_default_avatar))
                     .into(binding.msIvUserAvatar);
             buddyModel.videoTrack.observe(SingleCallRoomFragment.this, videoTrack -> {
-                Log.d(TAG, "onTargetVideoTrackChanged: "+videoTrack);
+                Log.d(TAG, "onTargetVideoTrackChanged: " + videoTrack);
                 resetRender();
             });
             buddyModel.state.observe(SingleCallRoomFragment.this, unused -> {
@@ -117,19 +118,19 @@ public class SingleCallRoomFragment extends Fragment {
         binding.msVRendererWindow.setZOrderOnTop(true);
         binding.msVRendererFull.setZOrderOnTop(false);
         uiRoomStore.sendTransportState.observe(this, state -> {
-            if (state == TransportState.disposed){
-                if (mimeShowFullRenderActual == Boolean.TRUE){
+            if (state == TransportState.disposed) {
+                if (mimeShowFullRenderActual == Boolean.TRUE) {
                     binding.msVRendererFull.bind(this, true, null);
-                }else if (mimeShowFullRenderActual == Boolean.FALSE){
+                } else if (mimeShowFullRenderActual == Boolean.FALSE) {
                     binding.msVRendererWindow.bind(this, true, null);
                 }
             }
         });
         uiRoomStore.recvTransportState.observe(this, state -> {
-            if (state == TransportState.disposed){
-                if (mimeShowFullRenderActual == Boolean.TRUE){
+            if (state == TransportState.disposed) {
+                if (mimeShowFullRenderActual == Boolean.TRUE) {
                     binding.msVRendererWindow.bind(this, true, null);
-                }else if (mimeShowFullRenderActual == Boolean.FALSE){
+                } else if (mimeShowFullRenderActual == Boolean.FALSE) {
                     binding.msVRendererFull.bind(this, true, null);
                 }
             }
@@ -192,6 +193,28 @@ public class SingleCallRoomFragment extends Fragment {
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
                 }
             }
+            Log.d(TAG, "onViewCreated: "
+                    + binding.llActionTopLeft.llContent.getVisibility()
+                    + binding.llActionTopCenter.llContent.getVisibility()
+                    + binding.llActionTopRight.llContent.getVisibility()
+                    + binding.llActionBottomLeft.llContent.getVisibility()
+                    + binding.llActionBottomCenter.llContent.getVisibility()
+                    + binding.llActionBottomRight.llContent.getVisibility()
+            );
+            if (binding.llActionTopLeft.llContent.getVisibility() != View.VISIBLE
+                    && binding.llActionTopCenter.llContent.getVisibility() != View.VISIBLE
+                    && binding.llActionTopRight.llContent.getVisibility() != View.VISIBLE) {
+                binding.msLlTop.setVisibility(View.GONE);
+            } else {
+                binding.msLlTop.setVisibility(View.VISIBLE);
+            }
+            if (binding.llActionBottomLeft.llContent.getVisibility() != View.VISIBLE
+                    && binding.llActionBottomCenter.llContent.getVisibility() != View.VISIBLE
+                    && binding.llActionBottomRight.llContent.getVisibility() != View.VISIBLE) {
+                binding.msLlBottom.setVisibility(View.GONE);
+            } else {
+                binding.msLlBottom.setVisibility(View.VISIBLE);
+            }
         });
 
         showUI(true);
@@ -250,9 +273,12 @@ public class SingleCallRoomFragment extends Fragment {
                         tip = "对方忙线";
                     } else if (conversationState == ConversationState.InviteReject) {
                         tip = "对方已挂断";
-                    } else  if (conversationState == ConversationState.Joined || localState.second == ConversationState.Joined) {
-                        tip = "通话中...";
-                        delayDismissTime = 2000;
+                    } else if (conversationState == ConversationState.Joined || localState.second == ConversationState.Joined) {
+                        // 只有第一次才显示
+                        if (uiRoomStore.activityBindCount == 1) {
+                            tip = "通话中...";
+                            delayDismissTime = 2000;
+                        }
                     } else {
                         // 对方没进来时 用本地判断
                         if (localState.second == ConversationState.New) {
@@ -283,8 +309,12 @@ public class SingleCallRoomFragment extends Fragment {
         binding.msLlUser.removeCallbacks(uiDismiss);
         binding.msIvMinimize.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
         binding.msLlUser.setVisibility(show && (uiRoomStore.audioOnly || uiRoomStore.callingActual.getValue() != Boolean.TRUE) ? View.VISIBLE : View.INVISIBLE);
-        binding.msLlTop.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-        binding.msLlBottom.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+        if (binding.msLlTop.getVisibility() != View.GONE){
+            binding.msLlTop.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+        }
+        if (binding.msLlBottom.getVisibility() != View.GONE){
+            binding.msLlBottom.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+        }
         binding.msTvTime.setVisibility(show && uiRoomStore.calling.getValue() == Boolean.TRUE ? View.VISIBLE : View.GONE);
         if (show && uiRoomStore.calling.getValue() == Boolean.TRUE && !uiRoomStore.audioOnly) {
             binding.msLlUser.postDelayed(uiDismiss, 5000);

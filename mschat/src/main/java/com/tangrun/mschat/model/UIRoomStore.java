@@ -148,6 +148,7 @@ public class UIRoomStore {
 
     private int connectedCount;
     private int joinedCount;
+    public int activityBindCount;
     /**
      * 首次连接传的用户 保存一下做判断用
      */
@@ -604,6 +605,9 @@ public class UIRoomStore {
             } else if (event == Lifecycle.Event.ON_RESUME) {
                 // 前台时刷新一下通知 防止进入时清空消息通知把通话通知也清掉了
                 updateNotification();
+                if (activityBindCount ==0){
+                    openCallActivity();
+                }
             } else if (event == Lifecycle.Event.ON_STOP) {
                 showWindow.applyPost(true);
                 openWindowService();
@@ -642,6 +646,7 @@ public class UIRoomStore {
 
     public void bindLifeOwner(AppCompatActivity owner) {
         if (activity != null) return;
+        activityBindCount++;
         activity = owner;
         showActivity.applySet(true);
         activity.getLifecycle().addObserver(activityObserver);

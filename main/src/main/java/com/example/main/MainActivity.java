@@ -46,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private AppCompatButton btSelect;
     private AppCompatCheckBox cbMulti;
     private AppCompatButton btJoin;
+    private AppCompatButton btJoinDelay;
     SharedPreferences aaa;
     private AppCompatButton btBusy;
     private AppCompatButton btOpen;
@@ -84,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         });
+        btJoinDelay.setOnClickListener(v -> v.postDelayed(btJoin::performClick, 10000));
         btJoin.setOnClickListener(v -> {
             saveInfo();
             SelectUserActivity.User user = new SelectUserActivity.User();
@@ -152,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
         btSelect = (AppCompatButton) findViewById(R.id.bt_select);
         cbMulti = (AppCompatCheckBox) findViewById(R.id.cb_multi);
         btJoin = (AppCompatButton) findViewById(R.id.bt_join);
+        btJoinDelay = (AppCompatButton) findViewById(R.id.bt_join_delay);
         btBusy = (AppCompatButton) findViewById(R.id.bt_busy);
         btOpen = (AppCompatButton) findViewById(R.id.bt_open);
     }

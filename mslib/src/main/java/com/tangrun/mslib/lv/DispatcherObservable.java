@@ -17,6 +17,7 @@ public class DispatcherObservable<T> extends Observable<T> {
                 if (method.getDeclaringClass() == Object.class)
                     return method.invoke(this, args);
                 for (T mObserver : mObservers) {
+                    method.setAccessible(true);
                     method.invoke(mObserver, args);
                 }
                 return null;
