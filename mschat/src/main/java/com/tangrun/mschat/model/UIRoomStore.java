@@ -202,8 +202,7 @@ public class UIRoomStore {
      */
     Observer<LocalConnectState> localConnectStateObserver = connectionState1 -> {
         Log.d(TAG, "ConnectionState changed: " + connectionState1);
-
-        localState.postValue(new Pair<>(localConnectionState.getValue(), localConversationState.getValue()));
+        localState.setValue(new Pair<>(connectionState1, localConversationState.getValue()));
 
         // 设置本地会话状态逻辑
         if (connectionState1 == LocalConnectState.CONNECTED) {
@@ -273,7 +272,7 @@ public class UIRoomStore {
             }
 
             if (joinedCount == 0 && !owner) {
-                localConversationState.applyPost(ConversationState.Joined);
+                localConversationState.applySet(ConversationState.Joined);
             }
 
             joinedCount++;
@@ -287,7 +286,8 @@ public class UIRoomStore {
     };
 
     Observer<ConversationState> localConversationObserver = conversationState -> {
-        localState.postValue(new Pair<>(localConnectionState.getValue(), localConversationState.getValue()));
+        Log.d(TAG, "ConversationState changed: " + conversationState);
+        localState.setValue(new Pair<>(localConnectionState.getValue(), conversationState));
 
         // 铃声
         if (conversationState == ConversationState.New) {
@@ -322,8 +322,8 @@ public class UIRoomStore {
                 Log.d(TAG, "onBuddyAdd: " + id + buddy.getConnectionState() + buddy.getConversationState());
 
                 BuddyModel buddyModel = new BuddyModel(buddy);
-                buddyModel.connectionState.applyPost(buddy.getConnectionState());
-                buddyModel.conversationState.applyPost(buddy.getConversationState());
+                buddyModel.connectionState.applySet(buddy.getConnectionState());
+                buddyModel.conversationState.applySet(buddy.getConversationState());
 
                 buddyModels.add(buddyModel);
                 int pos = buddyModels.indexOf(buddyModel);
@@ -333,7 +333,7 @@ public class UIRoomStore {
 
                 // 把自己存起来
                 if (mine.getValue() == null && buddy.isProducer()) {
-                    mine.applyPost(buddyModel);
+                    mine.applySet(buddyModel);
                 }
             });
         }
@@ -366,7 +366,7 @@ public class UIRoomStore {
                 if (buddyModel == null) return;
                 Log.d(TAG, "onBuddyVolumeChanged: " + id + " " + buddy.getVolume());
 
-                buddyModel.volume.applyPost(buddy.getVolume());
+                buddyModel.volume.applySet(buddy.getVolume());
 
                 // 延迟设置音量为0
                 DisposableObserver<Long> disposableObserver = volumeDelaySilentObserverMap.get(id);
@@ -374,7 +374,7 @@ public class UIRoomStore {
                 disposableObserver = new DisposableObserver<Long>() {
                     @Override
                     public void onNext(@NotNull Long aLong) {
-                        buddyModel.volume.applyPost(0);
+                        buddyModel.volume.applySet(0);
                     }
 
                     @Override
@@ -409,23 +409,20 @@ public class UIRoomStore {
                             public void onChanged(LocalConnectState localConnectState) {
                                 localConnectionState.removeObserver(this);
                                 if (callingActual.getValue() == null) {
-                                    callingActual.applyPost(true);
-                                    calling.applyPost(true);
+                                    callingActual.applySet(true);
+                                    calling.applySet(true);
                                 }
                             }
                         });
                     } else {
-                        callingActual.applyPost(true);
-                        calling.applyPost(true);
+                        callingActual.applySet(true);
+                        calling.applySet(true);
                     }
                 }
 
-                buddyModel.connectionState.applyPost(buddy.getConnectionState());
-                buddyModel.conversationState.applyPost(buddy.getConversationState());
-
                 // 自己在接听界面但是长时间没接
                 if (buddy.isProducer() && buddy.getConversationState() == ConversationState.InviteTimeout) {
-                    localConversationState.applyPost(ConversationState.InviteTimeout);
+                    localConversationState.applySet(ConversationState.InviteTimeout);
                     callEnd = CallEnd.NoAnswer;
                     callEndFlag = 1;
                     hangup();
@@ -457,9 +454,15 @@ public class UIRoomStore {
                                 callEndFlag = 1;
                             }
                         }
+                        if (callEndFlag ==1){
+                            localConversationState.applySet(ConversationState.Left);
+                        }
                         hangup();
                     }
                 }
+
+                buddyModel.connectionState.applySet(buddy.getConnectionState());
+                buddyModel.conversationState.applySet(buddy.getConversationState());
             });
         }
 
@@ -737,15 +740,15 @@ public class UIRoomStore {
                 startCallTime();
                 // 本地会话状态 房主一直是new 直到有人进入开始通话才更改为joined 实际上连接socket状态可能已经joined
                 if (owner) {
-                    localConversationState.applyPost(ConversationState.Joined);
+                    localConversationState.applySet(ConversationState.Joined);
                 }
             } else {
                 stopCallTime();
                 release();
                 setCallEnd();
                 ArchTaskExecutor.getInstance().postToMainThread(() -> {
-                    showActivity.applyPost(false);
-                    showWindow.applyPost(false);
+                    showActivity.applySet(false);
+                    showWindow.applySet(false);
                     uiRoomStore = null;
                 }, 1500);
             }
@@ -893,22 +896,22 @@ public class UIRoomStore {
     public void hangup() {
         if (callingActual.getValue() == Boolean.FALSE) return;
         stopCallTime();
-        callingActual.applyPost(false);
+        callingActual.applySet(false);
         if (callEndFlag == 0){
             callEndFlag = 1;
             if (owner) {
-                localConversationState.applyPost(ConversationState.Left);
                 callEnd = callingActual.getValue() == null ? CallEnd.Cancel : CallEnd.End;
+                localConversationState.applySet(ConversationState.Left);
             } else {
-                localConversationState.applyPost(joinedCount > 0 ? ConversationState.Left : ConversationState.InviteReject);
                 callEnd = callingActual.getValue() == null ? CallEnd.Reject : CallEnd.End;
+                localConversationState.applySet(joinedCount > 0 ? ConversationState.Left : ConversationState.InviteReject);
             }
         }else if (callEndFlag == 2){
             callEndFlag = 1;
-            localConversationState.applyPost(ConversationState.OfflineTimeout);
             callEnd = CallEnd.NetError;
+            localConversationState.applySet(ConversationState.OfflineTimeout);
         }
-
+        Log.d(TAG, "hangup: before "+callEndFlag+"  "+callEnd);
         if (localConnectionState.getValue() == LocalConnectState.JOINED
                 || localConnectionState.getValue() == LocalConnectState.CONNECTED)
             getRoomClient().hangup();

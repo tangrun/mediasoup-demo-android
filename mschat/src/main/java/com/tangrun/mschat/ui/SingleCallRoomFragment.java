@@ -157,50 +157,34 @@ public class SingleCallRoomFragment extends Fragment {
             resetRender();
         });
         uiRoomStore.localState.observeForever(localState -> {
+            Log.d(TAG, "onViewCreated: " + localState);
             // 状态提示
             setTipText();
             showUI(showUI);
 
             // action
             hideAllAction();
-            if (localState.first == LocalConnectState.RECONNECTING
-                    || localState.first == LocalConnectState.DISCONNECTED) {
-                // 重连中
-                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-            } else if (localState.first == LocalConnectState.NEW
-                    || localState.first == LocalConnectState.CONNECTING) {
-                // 连接中
-                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-            } else {
-                if (localState.second == ConversationState.Invited) {
-                    // 接听/挂断
-                    uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomLeft);
-                    uiRoomStore.Action_JoinAction.bindView(binding.llActionBottomRight);
-                } else if (localState.second == ConversationState.Joined
-                        || (localState.second == ConversationState.New && localState.first == LocalConnectState.JOINED)) {
-                    if (uiRoomStore.audioOnly) {
-                        // 麦克风/挂断/扬声器
-                        uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
-                        uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-                        uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomRight);
-                    } else {
-                        // 麦克风/摄像头/切换摄像头 挂断
-                        uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
-                        uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
-                        uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionBottomRight);
-                    }
-                } else {
+            if (localState.second == ConversationState.Invited) {
+                // 接听/挂断
+                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomLeft);
+                uiRoomStore.Action_JoinAction.bindView(binding.llActionBottomRight);
+            } else if (localState.second == ConversationState.Joined
+                    || (localState.second == ConversationState.New && localState.first == LocalConnectState.JOINED)) {
+                if (uiRoomStore.audioOnly) {
+                    // 麦克风/挂断/扬声器
+                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
                     uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+                    uiRoomStore.Action_MicrophoneDisabled.bindView(binding.llActionBottomRight);
+                } else {
+                    // 麦克风/摄像头/切换摄像头 挂断
+                    uiRoomStore.Action_SpeakerOn.bindView(binding.llActionBottomLeft);
+                    uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
+                    uiRoomStore.Action_CameraNotFacing.bindView(binding.llActionBottomRight);
                 }
+            } else {
+                uiRoomStore.Action_HangupAction.bindView(binding.llActionBottomCenter);
             }
-            Log.d(TAG, "onViewCreated: "
-                    + binding.llActionTopLeft.llContent.getVisibility()
-                    + binding.llActionTopCenter.llContent.getVisibility()
-                    + binding.llActionTopRight.llContent.getVisibility()
-                    + binding.llActionBottomLeft.llContent.getVisibility()
-                    + binding.llActionBottomCenter.llContent.getVisibility()
-                    + binding.llActionBottomRight.llContent.getVisibility()
-            );
+
             if (binding.llActionTopLeft.llContent.getVisibility() != View.VISIBLE
                     && binding.llActionTopCenter.llContent.getVisibility() != View.VISIBLE
                     && binding.llActionTopRight.llContent.getVisibility() != View.VISIBLE) {
@@ -274,17 +258,19 @@ public class SingleCallRoomFragment extends Fragment {
                     } else if (conversationState == ConversationState.InviteReject) {
                         tip = "对方已挂断";
                     } else if (conversationState == ConversationState.Joined || localState.second == ConversationState.Joined) {
-                        // 只有第一次才显示
-                        if (uiRoomStore.activityBindCount == 1) {
-                            tip = "通话中...";
-                            delayDismissTime = 2000;
-                        }
-                    } else {
-                        // 对方没进来时 用本地判断
-                        if (localState.second == ConversationState.New) {
-                            tip = "等待对方接听...";
-                        } else if (localState.second == ConversationState.Invited) {
-                            tip = "待接听";
+                        // 都join了就是开始通话
+                        if (conversationState == ConversationState.Joined && localState.second == ConversationState.Joined) {
+                            // 只有第一次才显示
+                            if (uiRoomStore.activityBindCount == 1) {
+                                tip = "通话中...";
+                                delayDismissTime = 2000;
+                            }
+                        } else {
+                            if (uiRoomStore.owner) {
+                                tip = "等待对方接听...";
+                            } else {
+                                tip = "待接听";
+                            }
                         }
                     }
                 }
@@ -309,10 +295,10 @@ public class SingleCallRoomFragment extends Fragment {
         binding.msLlUser.removeCallbacks(uiDismiss);
         binding.msIvMinimize.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
         binding.msLlUser.setVisibility(show && (uiRoomStore.audioOnly || uiRoomStore.callingActual.getValue() != Boolean.TRUE) ? View.VISIBLE : View.INVISIBLE);
-        if (binding.msLlTop.getVisibility() != View.GONE){
+        if (binding.msLlTop.getVisibility() != View.GONE) {
             binding.msLlTop.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
         }
-        if (binding.msLlBottom.getVisibility() != View.GONE){
+        if (binding.msLlBottom.getVisibility() != View.GONE) {
             binding.msLlBottom.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
         }
         binding.msTvTime.setVisibility(show && uiRoomStore.calling.getValue() == Boolean.TRUE ? View.VISIBLE : View.GONE);
