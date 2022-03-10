@@ -21,12 +21,15 @@ import com.tangrun.mschat.model.UIRoomStore;
 import com.tangrun.mschat.view.InitSurfaceViewRender;
 import com.tangrun.mslib.enums.*;
 import com.tangrun.mslib.lv.ChangedMutableLiveData;
-import com.tangrun.mslib.utils.ArchTaskExecutor;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
 import org.jetbrains.annotations.NotNull;
-import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author RainTang
@@ -193,19 +196,37 @@ public class SingleCallRoomFragment extends Fragment {
     }
 
 
-    Runnable tipDismiss = () -> {
+    Runnable tipDismissRunnable = () -> {
         binding.msTvTip.setVisibility(View.GONE);
+    };
+    Observable<Long> remoteNoAnswerTipObservable = Observable.interval(30, 10, TimeUnit.SECONDS);
+    Disposable remoteNoAnswerTipConsumerDisposable = null;
+    Consumer<Long> remoteNoAnswerTipConsumer = new Consumer<Long>() {
+        @Override
+        public void accept(Long aLong) throws Exception {
+            binding.msTvCenterTip.setText("对方不在线或者手机不在身边");
+            binding.msTvCenterTip.setVisibility(View.VISIBLE);
+            binding.msTvCenterTip.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    binding.msTvCenterTip.setVisibility(View.GONE);
+                }
+            }, 3000);
+        }
     };
     /**
      * 挂断状态下 防止状态覆盖提示改变
      */
     boolean tipIgnoreSet = false;
+
     private void setTipText() {
-        if (tipIgnoreSet)return;
+        if (tipIgnoreSet) return;
         String tip = null;
         int tipDelayDismissTime = 0;
         boolean callEnded = false;
-        binding.msTvTip.removeCallbacks(tipDismiss);
+        boolean inWaitRemoteJoin = false;
+
+        binding.msTvTip.removeCallbacks(tipDismissRunnable);
 
         Pair<LocalConnectState, ConversationState> localState = uiRoomStore.localState.getValue();
         LocalConnectState localConnectState = localState == null ? null : localState.first;
@@ -246,12 +267,13 @@ public class SingleCallRoomFragment extends Fragment {
                 // 邀请界面
                 if (localConversationState == ConversationState.New && targetConversationState == ConversationState.Invited) {
                     tip = "等待对方接听..";
+                    inWaitRemoteJoin = true;
                 }
                 // 都join了 通话中
-                else if (localConversationState == ConversationState.Joined && targetConversationState == ConversationState.Joined){
+                else if (localConversationState == ConversationState.Joined && targetConversationState == ConversationState.Joined) {
                     // 只有第一次才显示
                     if (uiRoomStore.activityBindCount == 1) {
-                        tip = "通话中...";
+                        tip = "开始通话...";
                         tipDelayDismissTime = 2000;
                     }
                 }
@@ -271,6 +293,17 @@ public class SingleCallRoomFragment extends Fragment {
             }
         }
 
+        if (inWaitRemoteJoin) {
+            if (remoteNoAnswerTipConsumerDisposable == null || remoteNoAnswerTipConsumerDisposable.isDisposed()) {
+                remoteNoAnswerTipConsumerDisposable = remoteNoAnswerTipObservable.observeOn(AndroidSchedulers.mainThread()).subscribe(remoteNoAnswerTipConsumer);
+            }
+        } else {
+            if (remoteNoAnswerTipConsumerDisposable != null && !remoteNoAnswerTipConsumerDisposable.isDisposed()) {
+                remoteNoAnswerTipConsumerDisposable.dispose();
+                remoteNoAnswerTipConsumerDisposable = null;
+            }
+        }
+
         if (callEnded) {
             showUI(true);
             tipIgnoreSet = true;
@@ -278,11 +311,11 @@ public class SingleCallRoomFragment extends Fragment {
         if (tip != null) {
             binding.msTvTip.setText(tip);
             binding.msTvTip.setVisibility(View.VISIBLE);
-        }else {
+        } else {
             binding.msTvTip.setVisibility(View.GONE);
         }
         if (tipDelayDismissTime > 0)
-            binding.msTvTip.postDelayed(tipDismiss, tipDelayDismissTime);
+            binding.msTvTip.postDelayed(tipDismissRunnable, tipDelayDismissTime);
     }
 
     boolean showUI = false;

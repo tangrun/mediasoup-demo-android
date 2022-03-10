@@ -182,8 +182,10 @@ public class MultiCallRoomFragment extends Fragment {
                 } else if (localState.second == ConversationState.Invited) {
                     tip = "待接听";
                 } else if (localState.second == ConversationState.Joined) {
-                    tip = "通话中...";
-                    delayDismissTime = 2000;
+                    if (uiRoomStore.activityBindCount == 1) {
+                        tip = "开始通话...";
+                        delayDismissTime = 2000;
+                    }
                 } else if (localState.second == ConversationState.InviteBusy
                         || localState.second == ConversationState.Left
                         || localState.second == ConversationState.InviteReject
@@ -277,23 +279,31 @@ public class MultiCallRoomFragment extends Fragment {
                             text = "断线重连中...";
                             break;
                         }
-                        case Left: {
-                            text = "已离开";
-                            break;
-                        }
                         default: {
                             if (model.conversationState.getValue() == null) break;
                             switch (model.conversationState.getValue()) {
                                 case Invited: {
-                                    text = "等待接听...";
+                                    text = "等待对方接听...";
                                     break;
                                 }
                                 case InviteBusy: {
-                                    text = "对方忙线";
+                                    text = "对方忙线中";
                                     break;
                                 }
                                 case InviteTimeout: {
-                                    text = "无人接听";
+                                    text = "对方无人接听";
+                                    break;
+                                }
+                                case InviteReject: {
+                                    text = "对方已拒绝";
+                                    break;
+                                }
+                                case New:{
+                                    text = "连接中";
+                                    break;
+                                }
+                                case Left:{
+                                    text = "对方已挂断";
                                     break;
                                 }
                             }
