@@ -1,9 +1,13 @@
 package com.example.main;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -23,6 +27,7 @@ import java.util.List;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MS_UI_Main";
 
     private AppCompatEditText tvId;
     private AppCompatEditText tvName;
@@ -132,6 +137,29 @@ public class MainActivity extends AppCompatActivity {
         btOpen.setOnClickListener(v -> {
             MSManager.openCallActivity();
         });
+
+        {
+            TelephonyManager telephonyManager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
+            telephonyManager.listen(new PhoneStateListener(){
+                @Override
+                public void onCallStateChanged(int state, String phoneNumber) {
+                    switch (state) {
+                        case TelephonyManager.CALL_STATE_IDLE:// 电话挂断
+                            Log.d(TAG ,"电话挂断...");
+                            Toast.makeText(MainActivity.this, "电话挂断", Toast.LENGTH_SHORT).show();
+                            break;
+                        case TelephonyManager.CALL_STATE_OFFHOOK: //电话通话的状态
+                            Log.d(TAG ,"正在通话...");
+                            Toast.makeText(MainActivity.this, "正在通话", Toast.LENGTH_SHORT).show();
+                            break;
+                        case TelephonyManager.CALL_STATE_RINGING: //电话响铃的状态
+                            Log.d(TAG ,"电话响铃");
+                            Toast.makeText(MainActivity.this, "电话响铃", Toast.LENGTH_SHORT).show();
+                            break;
+                    }
+                }
+            },PhoneStateListener.LISTEN_CALL_STATE);
+        }
     }
 
     void saveInfo() {

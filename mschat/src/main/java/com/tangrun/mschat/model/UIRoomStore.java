@@ -209,10 +209,6 @@ public class UIRoomStore {
 
         // 设置本地会话状态逻辑
         if (connectionState1 == LocalConnectState.CONNECTED) {
-            // 扬声器
-            if (firstSpeakerOn && connectedCount == 0) {
-                switchSpeakerphoneEnable(true);
-            }
 
             //自动join
             if ((firstConnectedAutoJoin && connectedCount == 0) // 首次连接上
@@ -270,12 +266,12 @@ public class UIRoomStore {
                 activity.observeForever(new Observer<AppCompatActivity>() {
                     @Override
                     public void onChanged(AppCompatActivity appCompatActivity) {
-                        if (appCompatActivity!=null){
+                        if (appCompatActivity != null) {
                             activity.removeObserver(this);
                             appCompatActivity.getLifecycle().addObserver(new LifecycleEventObserver() {
                                 @Override
                                 public void onStateChanged(@androidx.annotation.NonNull @NotNull LifecycleOwner source, @androidx.annotation.NonNull @NotNull Lifecycle.Event event) {
-                                    if (event == Lifecycle.Event.ON_RESUME){
+                                    if (event == Lifecycle.Event.ON_RESUME) {
                                         if (firstJoinedAutoProduceVideo && cameraState.getValue() == CameraState.disabled)
                                             switchCamEnable(appCompatActivity);
                                         if (firstJoinedAutoProduceAudio && microphoneState.getValue() == MicrophoneState.disabled)
@@ -308,19 +304,26 @@ public class UIRoomStore {
         localState.setValue(new Pair<>(localConnectionState.getValue(), conversationState));
 
         // 铃声
-        if (conversationState == ConversationState.New) {
-            startPlayer(context, R.raw.ms_ring, true);
-        } else if (conversationState == ConversationState.Invited) {
-            startPlayer(context, R.raw.ms_inviting, true);
-        } else if (conversationState == ConversationState.Joined) {
+        // 由于状态有延时 所以实例化时就直接播放
+//        if (conversationState == ConversationState.New) {
+//            startPlayer(context, R.raw.ms_ring, true);
+//        } else if (conversationState == ConversationState.Invited) {
+//            startPlayer(context, R.raw.ms_inviting, true);
+//        } else
+        if (conversationState == ConversationState.Joined) {
             // 开始通话光靠会话状态不行 还要开始通话标记判断 在开始通话计时时调用一次
             // 最新修改 房主改为开始通话才触发状态到joined
             stopPlayer();
             vibrator.vibrate(50);
-        } else if (conversationState == ConversationState.InviteBusy) {
-            startPlayer(context, R.raw.ms_busy, false);
-        } else {
-            startPlayer(context, R.raw.ms_tone, false);
+        } else if (conversationState == ConversationState.Left
+                || conversationState == ConversationState.InviteTimeout
+                || conversationState == ConversationState.InviteReject
+                || conversationState == ConversationState.OfflineTimeout
+        ) {
+            if (callEnd == CallEnd.RemoteBusy) {
+                startPlayer(context, R.raw.ms_busy, false);
+            } else
+                startPlayer(context, R.raw.ms_tone, false);
         }
     };
 
@@ -778,6 +781,15 @@ public class UIRoomStore {
                 }, 1500);
             }
         });
+        // 扬声器
+        if (firstSpeakerOn) {
+            switchSpeakerphoneEnable(true);
+        }
+        if (owner) {
+            startPlayer(context, R.raw.ms_ring, true);
+        } else {
+            startPlayer(context, R.raw.ms_inviting, true);
+        }
 
         getRoomStore().getClientObservable().registerObserver(clientObserver);
     }
@@ -875,8 +887,8 @@ public class UIRoomStore {
                 cameraFacingState.observe(lifecycleOwner, new Observer<CameraFacingState>() {
                     @Override
                     public void onChanged(CameraFacingState cameraFacingState) {
-                        if (render != null && cameraFacingState != CameraFacingState.inProgress) {
-                            render.setMirror(cameraFacingState == CameraFacingState.front);
+                        if (TrackBinder.this.render != null && cameraFacingState != CameraFacingState.inProgress) {
+                            TrackBinder.this.render.setMirror(cameraFacingState == CameraFacingState.front);
                         }
                     }
                 });
