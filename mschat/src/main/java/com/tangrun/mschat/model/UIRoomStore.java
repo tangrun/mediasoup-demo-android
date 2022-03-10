@@ -51,7 +51,6 @@ import io.reactivex.annotations.NonNull;
 import io.reactivex.observers.DisposableObserver;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
-import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 
 import java.io.IOException;
@@ -88,7 +87,7 @@ public class UIRoomStore {
     private final AudioManager audioManager;
     private Vibrator vibrator;
     private final NotificationManagerCompat notificationManagerCompat;
-    private AppCompatActivity activity;
+    private ChangedMutableLiveData<AppCompatActivity> activity = new ChangedMutableLiveData<>();
 
     private final RoomStore roomStore;
     private final RoomClient roomClient;
@@ -268,11 +267,26 @@ public class UIRoomStore {
 
             // 首次join后 自动发送流
             if ((firstJoinedAutoProduceAudio || firstJoinedAutoProduceVideo) && joinedCount == 0) {
-                if (activity == null) return;
-                if (firstJoinedAutoProduceVideo && cameraState.getValue() == CameraState.disabled)
-                    switchCamEnable(activity);
-                if (firstJoinedAutoProduceAudio && microphoneState.getValue() == MicrophoneState.disabled)
-                    switchMicEnable(activity);
+                activity.observeForever(new Observer<AppCompatActivity>() {
+                    @Override
+                    public void onChanged(AppCompatActivity appCompatActivity) {
+                        if (appCompatActivity!=null){
+                            activity.removeObserver(this);
+                            appCompatActivity.getLifecycle().addObserver(new LifecycleEventObserver() {
+                                @Override
+                                public void onStateChanged(@androidx.annotation.NonNull @NotNull LifecycleOwner source, @androidx.annotation.NonNull @NotNull Lifecycle.Event event) {
+                                    if (event == Lifecycle.Event.ON_RESUME){
+                                        if (firstJoinedAutoProduceVideo && cameraState.getValue() == CameraState.disabled)
+                                            switchCamEnable(appCompatActivity);
+                                        if (firstJoinedAutoProduceAudio && microphoneState.getValue() == MicrophoneState.disabled)
+                                            switchMicEnable(appCompatActivity);
+                                        source.getLifecycle().removeObserver(this);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
             }
 
             if (joinedCount == 0 && !owner) {
@@ -634,8 +648,7 @@ public class UIRoomStore {
         @Override
         public void onStateChanged(@androidx.annotation.NonNull @NotNull LifecycleOwner source, @androidx.annotation.NonNull @NotNull Lifecycle.Event event) {
             if (event == Lifecycle.Event.ON_DESTROY) {
-                source.getLifecycle().removeObserver(this);
-                activity = null;
+                activity.applySet(null);
             } else if (event == Lifecycle.Event.ON_RESUME) {
                 showWindow.applyPost(false);
             }
@@ -659,17 +672,17 @@ public class UIRoomStore {
         init();
     }
 
-    public void bindLifeOwner(AppCompatActivity owner) {
-        if (activity != null) return;
+    public void bindActivity(AppCompatActivity owner) {
+        if (activity.getValue() != null) return;
         activityBindCount++;
-        activity = owner;
+        activity.applySet(owner);
         showActivity.applySet(true);
-        activity.getLifecycle().addObserver(activityObserver);
+        owner.getLifecycle().addObserver(activityObserver);
         // 因为action涉及到
-        cameraState.observe(activity, state -> Action_CameraDisabled.setChecked(state == CameraState.disabled));
-        microphoneState.observe(activity, state -> Action_MicrophoneDisabled.setChecked(state == MicrophoneState.disabled));
-        cameraFacingState.observe(activity, state -> Action_CameraNotFacing.setChecked(state == CameraFacingState.rear));
-        speakerState.observe(activity, state -> Action_SpeakerOn.setChecked(state == SpeakerState.on));
+        cameraState.observe(owner, state -> Action_CameraDisabled.setChecked(state == CameraState.disabled));
+        microphoneState.observe(owner, state -> Action_MicrophoneDisabled.setChecked(state == MicrophoneState.disabled));
+        cameraFacingState.observe(owner, state -> Action_CameraNotFacing.setChecked(state == CameraFacingState.rear));
+        speakerState.observe(owner, state -> Action_SpeakerOn.setChecked(state == SpeakerState.on));
         // 距离感应器
         if (audioOnly) {
             setDistanceSensor(owner);
@@ -1139,7 +1152,7 @@ public class UIRoomStore {
 
     private void switchSpeakerphoneEnable(boolean enable) {
         setSpeakerphoneOn(enable);
-        speakerState.setValue(enable ? SpeakerState.on : SpeakerState.off);
+        speakerState.applySet(enable ? SpeakerState.on : SpeakerState.off);
     }
 
     public void switchSpeakerphoneEnable() {

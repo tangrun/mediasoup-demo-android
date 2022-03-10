@@ -4,10 +4,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.WindowManager;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.app.ActivityManagerCompat;
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
 import com.gyf.immersionbar.BarHide;
 import com.gyf.immersionbar.ImmersionBar;
 import com.tangrun.mschat.MSManager;
@@ -40,7 +36,7 @@ public class CallRoomActivity extends AppCompatActivity {
                 .statusBarDarkFont(false)
                 .init();
 
-        uiRoomStore.bindLifeOwner(this);
+        uiRoomStore.bindActivity(this);
         uiRoomStore.showActivity.observe(this, aBoolean -> {
             if (aBoolean == Boolean.FALSE)
                 finish();

@@ -114,6 +114,7 @@ public class MSManager {
 
         final UIRoomStore uiRoomStore = new UIRoomStore(context, roomOptions, multi ? RoomType.MultiCall : RoomType.SingleCall, owner, audioOnly, uiCallback);
 
+        uiRoomStore.firstSpeakerOn = !audioOnly || multi;
         uiRoomStore.firstConnectedAutoJoin = owner;
         uiRoomStore.firstJoinedAutoProduceAudio = true;
         uiRoomStore.firstJoinedAutoProduceVideo = !audioOnly && !multi;
