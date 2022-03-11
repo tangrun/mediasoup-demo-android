@@ -30,11 +30,11 @@ afterEvaluate {// components.release 只有在配置完成之后，才能拿到�
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 29
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 31
+        targetSdkVersion 29
         versionCode 1
         versionName '1.0.0'
 

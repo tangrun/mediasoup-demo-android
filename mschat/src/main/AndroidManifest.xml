@@ -33,7 +33,7 @@
         </receiver>
         <service
                 android:name=".ui.CallNotificationService"
-                android:foregroundServiceType="microphone|camera|phoneCall"
+                android:foregroundServiceType="phoneCall"
                 android:exported="false"/>
     </application>
 

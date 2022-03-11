@@ -2,6 +2,7 @@ package com.tangrun.mschat;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 import androidx.lifecycle.Observer;
 import com.bumptech.glide.annotation.GlideOption;
