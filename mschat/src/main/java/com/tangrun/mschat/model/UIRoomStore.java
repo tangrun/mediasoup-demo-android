@@ -10,9 +10,7 @@ import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.Build;
-import android.os.PowerManager;
-import android.os.Vibrator;
+import android.os.*;
 import android.util.Log;
 import android.util.Pair;
 import android.view.View;
@@ -68,7 +66,7 @@ import java.util.concurrent.TimeUnit;
  * @description:
  * @date :2022/2/17 10:51
  */
-public class UIRoomStore {
+public class UIRoomStore implements Parcelable {
 
     private static final String TAG = "MS_UIRoomStore";
 
@@ -80,14 +78,14 @@ public class UIRoomStore {
 
 
     private Context context;
-    private final AudioManager audioManager;
+    private  AudioManager audioManager;
     private Vibrator vibrator;
 
     private ChangedMutableLiveData<AppCompatActivity> activity = new ChangedMutableLiveData<>();
 
-    private final RoomStore roomStore;
-    private final RoomClient roomClient;
-    private final RoomOptions roomOptions;
+    private  RoomStore roomStore;
+    private  RoomClient roomClient;
+    private  RoomOptions roomOptions;
 
     public UICallback uiCallback;
     /**
@@ -189,6 +187,10 @@ public class UIRoomStore {
      * @see RoomOptions
      */
     public boolean audioOnly;
+    /**
+     * 创建时间
+     */
+    public Date createTime = new Date();
     /**
      * 通话已结束标记 0没挂断 1挂断了 并且设置了callend了  2客户端断开（网络）
      */
@@ -652,15 +654,8 @@ public class UIRoomStore {
         }
     };
 
+    public UIRoomStore() {
 
-    public UIRoomStore(Context context, RoomOptions roomOptions) {
-        this.context = context;
-        this.roomClient = new RoomClient(context, roomOptions);
-        this.roomStore = roomClient.getStore();
-        this.roomOptions = roomClient.getOptions();
-        audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
-        vibrator = (Vibrator) this.context.getSystemService(Context.VIBRATOR_SERVICE);
-        uiRoomStore = new WeakReference<>(this);
     }
 
     public void bindActivity(AppCompatActivity owner) {
@@ -680,7 +675,14 @@ public class UIRoomStore {
         }
     }
 
-    public void init() {
+    public void init(Context context, RoomOptions roomOptions) {
+        this.context = context;
+        this.roomClient = new RoomClient(context, roomOptions);
+        this.roomStore = roomClient.getStore();
+        this.roomOptions = roomClient.getOptions();
+        audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
+        vibrator = (Vibrator) this.context.getSystemService(Context.VIBRATOR_SERVICE);
+        uiRoomStore = new WeakReference<>(this);
         {
             localConversationState.applyPost(owner ? ConversationState.New : ConversationState.Invited);
             localConnectionState.applyPost(getRoomStore().getLocalConnectionState());
@@ -1433,4 +1435,61 @@ public class UIRoomStore {
     }
 
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeParcelable(this.roomOptions, flags);
+        dest.writeInt(this.roomType == null ? -1 : this.roomType.ordinal());
+        dest.writeByte(this.firstSpeakerOn ? (byte) 1 : (byte) 0);
+        dest.writeByte(this.owner ? (byte) 1 : (byte) 0);
+        dest.writeByte(this.firstConnectedAutoJoin ? (byte) 1 : (byte) 0);
+        dest.writeByte(this.firstJoinedAutoProduceAudio ? (byte) 1 : (byte) 0);
+        dest.writeByte(this.firstJoinedAutoProduceVideo ? (byte) 1 : (byte) 0);
+        dest.writeByte(this.audioOnly ? (byte) 1 : (byte) 0);
+        dest.writeLong(this.createTime != null ? this.createTime.getTime() : -1);
+    }
+
+    public void readFromParcel(Parcel source) {
+        this.roomOptions = source.readParcelable(RoomOptions.class.getClassLoader());
+        int tmpRoomType = source.readInt();
+        this.roomType = tmpRoomType == -1 ? null : RoomType.values()[tmpRoomType];
+        this.firstSpeakerOn = source.readByte() != 0;
+        this.owner = source.readByte() != 0;
+        this.firstConnectedAutoJoin = source.readByte() != 0;
+        this.firstJoinedAutoProduceAudio = source.readByte() != 0;
+        this.firstJoinedAutoProduceVideo = source.readByte() != 0;
+        this.audioOnly = source.readByte() != 0;
+        long tmpCreateTime = source.readLong();
+        this.createTime = tmpCreateTime == -1 ? null : new Date(tmpCreateTime);
+    }
+
+    protected UIRoomStore(Parcel in) {
+        this.roomOptions = in.readParcelable(RoomOptions.class.getClassLoader());
+        int tmpRoomType = in.readInt();
+        this.roomType = tmpRoomType == -1 ? null : RoomType.values()[tmpRoomType];
+        this.firstSpeakerOn = in.readByte() != 0;
+        this.owner = in.readByte() != 0;
+        this.firstConnectedAutoJoin = in.readByte() != 0;
+        this.firstJoinedAutoProduceAudio = in.readByte() != 0;
+        this.firstJoinedAutoProduceVideo = in.readByte() != 0;
+        this.audioOnly = in.readByte() != 0;
+        long tmpCreateTime = in.readLong();
+        this.createTime = tmpCreateTime == -1 ? null : new Date(tmpCreateTime);
+    }
+
+    public static final Parcelable.Creator<UIRoomStore> CREATOR = new Parcelable.Creator<UIRoomStore>() {
+        @Override
+        public UIRoomStore createFromParcel(Parcel source) {
+            return new UIRoomStore(source);
+        }
+
+        @Override
+        public UIRoomStore[] newArray(int size) {
+            return new UIRoomStore[size];
+        }
+    };
 }

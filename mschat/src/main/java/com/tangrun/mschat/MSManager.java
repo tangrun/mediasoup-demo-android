@@ -3,6 +3,7 @@ package com.tangrun.mschat;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Parcel;
 import android.util.Log;
 import androidx.lifecycle.Observer;
 import com.bumptech.glide.annotation.GlideOption;
@@ -33,6 +34,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.util.List;
@@ -53,6 +57,44 @@ public class MSManager {
     private static UICallback uiCallback;
 
     private static boolean init = false;
+
+    public static void readLastCall(Context context) {
+        FileInputStream fis;
+        try {
+            fis = context.openFileInput(TAG);
+            byte[] bytes = new byte[fis.available()];
+            fis.read(bytes);
+            Parcel parcel = Parcel.obtain();
+            parcel.unmarshall(bytes, 0, bytes.length);
+            parcel.setDataPosition(0);
+            UIRoomStore uiRoomStore = new UIRoomStore();
+            UIRoomStore data = parcel.readParcelable(UIRoomStore.class.getClassLoader());
+            fis.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void setCurrentCall(Context context, UIRoomStore uiRoomStore) {
+        FileOutputStream fos;
+        try {
+            fos = context.openFileOutput(TAG,
+                    Context.MODE_PRIVATE);
+            BufferedOutputStream bos = new BufferedOutputStream(fos);
+            Parcel parcel = Parcel.obtain();
+            parcel.writeParcelable(uiRoomStore, 0);
+
+            bos.write(parcel.marshall());
+            bos.flush();
+            bos.close();
+            fos.flush();
+            fos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void init(Application application, String host, String port, boolean debug, UICallback uiCallback) {
         if (init) return;
@@ -90,12 +132,12 @@ public class MSManager {
     public static void startCall(Context context, String roomId, User me,
                                  boolean audioOnly, boolean multi, boolean owner,
                                  List<User> inviteUser) {
-        startCall(context, HOST, PORT, roomId, me, audioOnly, multi, owner, inviteUser,uiCallback);
+        startCall(context, HOST, PORT, roomId, me, audioOnly, multi, owner, inviteUser, uiCallback);
     }
 
     public static void startCall(Context context, String host, String port, String roomId, User me,
                                  boolean audioOnly, boolean multi, boolean owner,
-                                 List<User> inviteUser,UICallback uiCallback) {
+                                 List<User> inviteUser, UICallback uiCallback) {
         if (getCurrent() != null) {
             Log.d(TAG, "startCall: ");
             return;
@@ -118,7 +160,7 @@ public class MSManager {
         roomOptions.mProduceAudio = true;
         roomOptions.mProduceVideo = !audioOnly;
         // 房间信息and状态
-        UIRoomStore uiRoomStore = new UIRoomStore(context, roomOptions);
+        UIRoomStore uiRoomStore = new UIRoomStore();
         // 房间信息
         uiRoomStore.roomType = multi ? RoomType.MultiCall : RoomType.SingleCall;
         uiRoomStore.owner = owner;
@@ -131,7 +173,7 @@ public class MSManager {
         uiRoomStore.firstJoinedAutoProduceAudio = true;
         uiRoomStore.firstJoinedAutoProduceVideo = !audioOnly && !multi;
         // 初始化 开始通话
-        uiRoomStore.init();
+        uiRoomStore.init(context, roomOptions);
         uiRoomStore.connect(inviteUser);
         uiRoomStore.openCallActivity();
     }
@@ -178,16 +220,16 @@ public class MSManager {
                 });
     }
 
-    public static void busyForUICallback(String roomId, String userId,RoomType roomType,boolean audioOnly) {
+    public static void busyForUICallback(String roomId, String userId, RoomType roomType, boolean audioOnly) {
         busy(roomId, userId, new ApiCallback<Object>() {
             @Override
             public void onFail(Throwable e) {
-                uiCallback.onCallEnd(roomId,roomType,audioOnly,CallEnd.Busy,null,null);
+                uiCallback.onCallEnd(roomId, roomType, audioOnly, CallEnd.Busy, null, null);
             }
 
             @Override
             public void onSuccess(Object o) {
-                uiCallback.onCallEnd(roomId,roomType,audioOnly,CallEnd.Busy,null,null);
+                uiCallback.onCallEnd(roomId, roomType, audioOnly, CallEnd.Busy, null, null);
             }
         });
     }
