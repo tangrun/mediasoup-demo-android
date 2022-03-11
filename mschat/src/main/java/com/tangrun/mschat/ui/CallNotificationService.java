@@ -30,7 +30,7 @@ public class CallNotificationService extends LifecycleService {
 
     UIRoomStore uiRoomStore;
 
-    LifecycleEventObserver appProcessObserver =new LifecycleEventObserver() {
+    LifecycleEventObserver appProcessObserver = new LifecycleEventObserver() {
         @Override
         public void onStateChanged(@NonNull @NotNull LifecycleOwner source, @NonNull @NotNull Lifecycle.Event event) {
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -79,12 +79,18 @@ public class CallNotificationService extends LifecycleService {
         uiRoomStore.localState.observeForever(localConnectStateConversationStatePair -> {
             updateNotification();
         });
+        uiRoomStore.calling.observe(this, new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean aBoolean) {
+                if (aBoolean == Boolean.FALSE) stopSelf();
+            }
+        });
         ProcessLifecycleOwner.get().getLifecycle().addObserver(appProcessObserver);
     }
 
     private void updateNotification() {
         notificationManagerCompat
-                .notify( notificationId, getNotification());
+                .notify(notificationId, getNotification());
     }
 
     private Notification getNotification() {
