@@ -18,6 +18,7 @@ import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.appcompat.widget.AppCompatTextView;
 
+import androidx.core.app.NotificationManagerCompat;
 import com.tangrun.mschat.ApiCallback;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.model.User;
@@ -32,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private AppCompatEditText tvId;
     private AppCompatEditText tvName;
     private AppCompatButton btStart;
+    private AppCompatButton btStartDelay;
 
     public static String[] icons = {
             "https://img0.baidu.com/it/u=1056811702,4111096278&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500",
@@ -55,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     SharedPreferences aaa;
     private AppCompatButton btBusy;
     private AppCompatButton btOpen;
+    private AppCompatButton btClearNotification;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
         tvRoom.setText(aaa.getString("tvRoom", ""));
         cbAudioOnly.setChecked(aaa.getBoolean("cbAudioOnly", false));
         cbMulti.setChecked(aaa.getBoolean("cbMulti", false));
+        btStartDelay.setOnClickListener(v -> v.postDelayed(btStart::performClick, 10000));
         btStart.setOnClickListener(v -> {
             saveInfo();
             SelectUserActivity.User user = new SelectUserActivity.User();
@@ -137,29 +141,9 @@ public class MainActivity extends AppCompatActivity {
         btOpen.setOnClickListener(v -> {
             MSManager.openCallActivity();
         });
-
-        {
-            TelephonyManager telephonyManager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
-            telephonyManager.listen(new PhoneStateListener(){
-                @Override
-                public void onCallStateChanged(int state, String phoneNumber) {
-                    switch (state) {
-                        case TelephonyManager.CALL_STATE_IDLE:// 电话挂断
-                            Log.d(TAG ,"电话挂断...");
-                            Toast.makeText(MainActivity.this, "电话挂断", Toast.LENGTH_SHORT).show();
-                            break;
-                        case TelephonyManager.CALL_STATE_OFFHOOK: //电话通话的状态
-                            Log.d(TAG ,"正在通话...");
-                            Toast.makeText(MainActivity.this, "正在通话", Toast.LENGTH_SHORT).show();
-                            break;
-                        case TelephonyManager.CALL_STATE_RINGING: //电话响铃的状态
-                            Log.d(TAG ,"电话响铃");
-                            Toast.makeText(MainActivity.this, "电话响铃", Toast.LENGTH_SHORT).show();
-                            break;
-                    }
-                }
-            },PhoneStateListener.LISTEN_CALL_STATE);
-        }
+        btClearNotification.setOnClickListener(v -> {
+            NotificationManagerCompat.from(this).cancelAll();
+        });
     }
 
     void saveInfo() {
@@ -176,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
         tvId = (AppCompatEditText) findViewById(R.id.tv_id);
         tvName = (AppCompatEditText) findViewById(R.id.tv_name);
         btStart = (AppCompatButton) findViewById(R.id.bt_start);
+        btStartDelay = (AppCompatButton) findViewById(R.id.bt_start_delay);
         cbAudioOnly = findViewById(R.id.cb_audioOnly);
         tvRoom = findViewById(R.id.tv_room);
         tvUser = (AppCompatTextView) findViewById(R.id.tv_user);
@@ -185,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
         btJoinDelay = (AppCompatButton) findViewById(R.id.bt_join_delay);
         btBusy = (AppCompatButton) findViewById(R.id.bt_busy);
         btOpen = (AppCompatButton) findViewById(R.id.bt_open);
+        btClearNotification = (AppCompatButton) findViewById(R.id.bt_clear_notification);
     }
 
     public void onPick(View view) {

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.tangrun.mschat">
+<manifest
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        package="com.tangrun.mschat">
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
@@ -18,12 +20,21 @@
                 android:launchMode="singleTask"
                 android:screenOrientation="portrait"
                 android:theme="@style/CallActivity"/>
-        <service android:name="com.tangrun.mschat.ui.CallWindowService" android:exported="false"/>
-        <receiver android:name="com.tangrun.mschat.ui.CallReceiver" android:exported="false">
+
+        <service
+                android:name="com.tangrun.mschat.ui.CallWindowService"
+                android:exported="false"/>
+        <receiver
+                android:name="com.tangrun.mschat.ui.CallReceiver"
+                android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.PHONE_STATE"/>
             </intent-filter>
         </receiver>
+        <service
+                android:name=".ui.CallNotificationService"
+                android:foregroundServiceType="microphone|camera|phoneCall"
+                android:exported="false"/>
     </application>
 
 </manifest>

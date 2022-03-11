@@ -89,36 +89,48 @@ public class MSManager {
     public static void startCall(Context context, String roomId, User me,
                                  boolean audioOnly, boolean multi, boolean owner,
                                  List<User> inviteUser) {
-        startCall(context, HOST, PORT, roomId, me, audioOnly, multi, owner, inviteUser);
+        startCall(context, HOST, PORT, roomId, me, audioOnly, multi, owner, inviteUser,uiCallback);
     }
 
     public static void startCall(Context context, String host, String port, String roomId, User me,
                                  boolean audioOnly, boolean multi, boolean owner,
-                                 List<User> inviteUser) {
+                                 List<User> inviteUser,UICallback uiCallback) {
         if (getCurrent() != null) {
             Log.d(TAG, "startCall: ");
             return;
         }
         RoomOptions roomOptions = new RoomOptions();
+        // 服务器地址
         roomOptions.serverHost = host;
         roomOptions.serverPort = port;
-
+        // 房间id
         roomOptions.roomId = roomId;
-
+        // 我的信息
         roomOptions.mineAvatar = me.getAvatar();
         roomOptions.mineDisplayName = me.getDisplayName();
         roomOptions.mineId = me.getId();
-
-        roomOptions.mProduceVideo = !audioOnly;
+        // 流的开关
+        roomOptions.mConsume = true;
+        roomOptions.mConsumeAudio = true;
         roomOptions.mConsumeVideo = !audioOnly;
-
-        final UIRoomStore uiRoomStore = new UIRoomStore(context, roomOptions, multi ? RoomType.MultiCall : RoomType.SingleCall, owner, audioOnly, uiCallback);
-
+        roomOptions.mProduce = true;
+        roomOptions.mProduceAudio = true;
+        roomOptions.mProduceVideo = !audioOnly;
+        // 房间信息and状态
+        UIRoomStore uiRoomStore = new UIRoomStore(context, roomOptions);
+        // 房间信息
+        uiRoomStore.roomType = multi ? RoomType.MultiCall : RoomType.SingleCall;
+        uiRoomStore.owner = owner;
+        uiRoomStore.audioOnly = audioOnly;
+        // 回调
+        uiRoomStore.uiCallback = uiCallback;
+        // 配置
         uiRoomStore.firstSpeakerOn = !audioOnly || multi;
         uiRoomStore.firstConnectedAutoJoin = owner;
         uiRoomStore.firstJoinedAutoProduceAudio = true;
         uiRoomStore.firstJoinedAutoProduceVideo = !audioOnly && !multi;
-
+        // 初始化 开始通话
+        uiRoomStore.init();
         uiRoomStore.connect(inviteUser);
         uiRoomStore.openCallActivity();
     }

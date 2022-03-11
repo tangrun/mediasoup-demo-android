@@ -31,6 +31,7 @@ import com.tangrun.mschat.UICallback;
 import com.tangrun.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.enums.CallEnd;
 import com.tangrun.mschat.enums.RoomType;
+import com.tangrun.mschat.ui.CallNotificationService;
 import com.tangrun.mschat.ui.CallRoomActivity;
 import com.tangrun.mschat.ui.CallWindowService;
 import com.tangrun.mschat.ui.UserSelector;
@@ -77,23 +78,18 @@ public class UIRoomStore {
         return uiRoomStore == null ? null : uiRoomStore.get();
     }
 
-    private String notificationChannelId = null;
-    private final int notificationId = 1;
-    private final String notificationTag = "UIRoomStore";
-    private static final String NOTIFICATION_CHANNEL_ID = "MSCall";
-    private static final String NOTIFICATION_CHANNEL_NAME = "音视频通话";
 
     private Context context;
     private final AudioManager audioManager;
     private Vibrator vibrator;
-    private final NotificationManagerCompat notificationManagerCompat;
+
     private ChangedMutableLiveData<AppCompatActivity> activity = new ChangedMutableLiveData<>();
 
     private final RoomStore roomStore;
     private final RoomClient roomClient;
     private final RoomOptions roomOptions;
 
-    private final UICallback uiCallback;
+    public UICallback uiCallback;
     /**
      * action
      */
@@ -635,8 +631,6 @@ public class UIRoomStore {
             if (event == Lifecycle.Event.ON_DESTROY) {
                 source.getLifecycle().removeObserver(this);
             } else if (event == Lifecycle.Event.ON_RESUME) {
-                // 前台时刷新一下通知 防止进入时清空消息通知把通话通知也清掉了
-                updateNotification();
                 if (activityBindCount == 0) {
                     openCallActivity();
                 }
@@ -659,20 +653,14 @@ public class UIRoomStore {
     };
 
 
-    public UIRoomStore(Context context, RoomOptions roomOptions, RoomType roomType, boolean owner, boolean audioOnly, UICallback uiCallback) {
+    public UIRoomStore(Context context, RoomOptions roomOptions) {
         this.context = context;
         this.roomClient = new RoomClient(context, roomOptions);
         this.roomStore = roomClient.getStore();
         this.roomOptions = roomClient.getOptions();
-        this.roomType = roomType;
-        this.owner = owner;
-        this.audioOnly = audioOnly;
-        this.uiCallback = uiCallback;
         audioManager = (AudioManager) this.context.getSystemService(Context.AUDIO_SERVICE);
         vibrator = (Vibrator) this.context.getSystemService(Context.VIBRATOR_SERVICE);
-        notificationManagerCompat = NotificationManagerCompat.from(context);
         uiRoomStore = new WeakReference<>(this);
-        init();
     }
 
     public void bindActivity(AppCompatActivity owner) {
@@ -692,7 +680,7 @@ public class UIRoomStore {
         }
     }
 
-    private void init() {
+    public void init() {
         {
             localConversationState.applyPost(owner ? ConversationState.New : ConversationState.Invited);
             localConnectionState.applyPost(getRoomStore().getLocalConnectionState());
@@ -743,20 +731,6 @@ public class UIRoomStore {
                 }
             };
         }
-        // 通知
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH);
-            channel.setLightColor(0);
-            channel.setSound(null, null);
-            channel.setVibrationPattern(new long[]{});
-            channel.setShowBadge(false);
-            channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-            notificationChannelId = NOTIFICATION_CHANNEL_ID;
-            NotificationManagerCompat.from(context).createNotificationChannel(channel);
-        }
-        localState.observeForever(localConnectStateConversationStatePair -> {
-            updateNotification();
-        });
         // 设置本地会话状态 本地连接状态由client维护
         localConnectionState.observeForever(localConnectStateObserver);
         localConversationState.observeForever(localConversationObserver);
@@ -791,6 +765,8 @@ public class UIRoomStore {
             startPlayer(context, R.raw.ms_inviting, true);
         }
 
+        startNotificationService();
+
         getRoomStore().getClientObservable().registerObserver(clientObserver);
     }
 
@@ -805,30 +781,8 @@ public class UIRoomStore {
         uiCallback.onCallEnd(getRoomOptions().roomId, roomType, audioOnly, callEnd, callStartTime, callEndTime);
     }
 
-    private void updateNotification() {
-        ConversationState conversationState = localConversationState.getValue();
-        LocalConnectState connectState = localConnectionState.getValue();
-        if (conversationState == ConversationState.New) {
-            if (owner) {
-                if (connectState == LocalConnectState.JOINED)
-                    setNotification("等待对方接听");
-                else {
-                    setNotification("连接中...");
-                }
-            } else {
-                setNotification("等待对方接听");
-            }
-        } else if (conversationState == ConversationState.Invited) {
-            setNotification("待接听");
-        } else if (conversationState == ConversationState.Joined) {
-            setNotification("通话中...");
-        } else {
-            setNotification("通话已结束");
-        }
-    }
 
     private void release() {
-        cancelNotification();
         localConnectionState.removeObserver(localConnectStateObserver);
         localConversationState.removeObserver(localConversationObserver);
         ProcessLifecycleOwner.get().getLifecycle().removeObserver(appProcessObserver);
@@ -978,20 +932,30 @@ public class UIRoomStore {
 
     //region 通话组件启动
 
-    private Intent getCallActivityIntent() {
+    public Intent getCallActivityIntent() {
         return new Intent(context, CallRoomActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     }
 
-    private Intent getCallServiceIntent() {
+    public Intent getCallServiceIntent() {
         return new Intent(context, CallWindowService.class);
+    }
+
+    public Intent getNotificationService() {
+        return new Intent(context, CallNotificationService.class);
     }
 
     public void openCallActivity() {
         context.startActivity(getCallActivityIntent());
     }
 
-    private void openWindowService() {
+    public void openWindowService() {
         context.startService(getCallServiceIntent());
+    }
+
+    public void startNotificationService() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(getNotificationService());
+        } else context.startService(getNotificationService());
     }
 
     //endregion
@@ -1363,21 +1327,6 @@ public class UIRoomStore {
         }
     }
 
-    private void cancelNotification() {
-        notificationManagerCompat.cancel(notificationTag, notificationId);
-    }
-
-    private void setNotification(String content) {
-        Notification notification = new NotificationCompat.Builder(context, notificationChannelId)
-                .setOngoing(true)
-                .setSmallIcon(context.getApplicationInfo().icon)
-                .setContentIntent(PendingIntent.getActivity(context, 0, getCallActivityIntent(), PendingIntent.FLAG_UPDATE_CURRENT))
-                .setContentText(content)
-                .build();
-
-        notificationManagerCompat
-                .notify(notificationTag, notificationId, notification);
-    }
 
     private void showDialog(Context context, String title, String msg,
                             String negativeText, Runnable negative,

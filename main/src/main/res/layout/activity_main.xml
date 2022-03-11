@@ -56,6 +56,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
     <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/bt_start_delay"
+            android:text="发起会话(延迟10s)"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/bt_join"
             android:text="加入会话"
             android:layout_width="match_parent"
@@ -73,6 +78,11 @@
     <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/bt_open"
             android:text="打开通话界面"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/bt_clear_notification"
+            android:text="清除通知"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 </LinearLayout>

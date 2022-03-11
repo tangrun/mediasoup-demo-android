@@ -12,6 +12,8 @@ import androidx.core.content.res.ResourcesCompat;
 import androidx.core.widget.ImageViewCompat;
 import androidx.lifecycle.*;
 import com.google.android.flexbox.FlexDirection;
+import com.hjq.permissions.Permission;
+import com.hjq.permissions.XXPermissions;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.R;
 import com.tangrun.mschat.databinding.MsCallWindowBinding;
