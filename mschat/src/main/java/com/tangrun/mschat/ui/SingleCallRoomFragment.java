@@ -242,7 +242,7 @@ public class SingleCallRoomFragment extends Fragment {
             tip = "重连中...";
         }
         // 对方重连
-        if (tip != null) {
+        if (tip == null) {
             if (targetConnectionState == ConnectionState.Offline) {
                 tip = "对方重连中...";
             }
