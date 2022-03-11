@@ -789,6 +789,7 @@ public class UIRoomStore {
         getRoomStore().getClientObservable().unregisterAll();
         stopCallTime();
         stopPlayer();
+        setSpeakerphoneOn(false);
     }
 
     private boolean isActiveBuddy(Buddy buddy) {

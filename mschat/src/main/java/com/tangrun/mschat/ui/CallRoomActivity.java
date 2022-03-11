@@ -30,12 +30,6 @@ public class CallRoomActivity extends AppCompatActivity {
             setShowWhenLocked(true);
         }
 
-        ImmersionBar.with(this)
-                .hideBar(BarHide.FLAG_HIDE_BAR)
-                .fullScreen(true)
-                .statusBarDarkFont(false)
-                .init();
-
         uiRoomStore.bindActivity(this);
         uiRoomStore.showActivity.observe(this, aBoolean -> {
             if (aBoolean == Boolean.FALSE)

@@ -1,13 +1,18 @@
 package com.tangrun.mschat.ui;
 
+import android.content.Context;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Pair;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import androidx.annotation.Dimension;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleEventObserver;
@@ -17,6 +22,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
+import com.google.android.material.internal.ViewUtils;
+import com.gyf.immersionbar.BarHide;
+import com.gyf.immersionbar.ImmersionBar;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.R;
 import com.tangrun.mschat.databinding.MsFragmentMultiCallBinding;
@@ -51,9 +59,9 @@ public class MultiCallRoomFragment extends Fragment {
         return fragment;
     }
 
-
     MsFragmentMultiCallBinding binding;
     UIRoomStore uiRoomStore;
+    MultiAdapter adapter;
 
     @Nullable
     @Override
@@ -63,12 +71,24 @@ public class MultiCallRoomFragment extends Fragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        ImmersionBar.with(this)
+                .hideBar(BarHide.FLAG_HIDE_NAVIGATION_BAR)
+                .fullScreen(true)
+                .transparentStatusBar()
+                .statusBarView(binding.msVStatusbar)
+                .statusBarDarkFont(false)
+                .init();
+    }
+
+    @Override
     public void onViewCreated(@NonNull @NotNull View view, @Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
         // 初始化
         uiRoomStore = MSManager.getCurrent();
 
         // 列表
-        MultiAdapter adapter = new MultiAdapter(uiRoomStore, this);
+        adapter = new MultiAdapter(uiRoomStore, this);
         GridLayoutManager layoutManager = new GridLayoutManager(getContext(), 2);
         binding.msRvBuddys.setLayoutManager(layoutManager);
         binding.msRvBuddys.setAdapter(adapter);
@@ -161,13 +181,15 @@ public class MultiCallRoomFragment extends Fragment {
     }
 
     Runnable tipDismiss = () -> {
-        binding.msTvTip.setVisibility(View.GONE);
+        if (adapter.mime == null) return;
+        adapter.mime.msTvTip.setVisibility(View.GONE);
     };
 
     private void setTipText() {
+        if (adapter.mime == null) return;
         String tip = null;
         int delayDismissTime = 0;
-        binding.msTvTip.removeCallbacks(tipDismiss);
+        adapter.mime.msTvTip.removeCallbacks(tipDismiss);
 
         Pair<LocalConnectState, ConversationState> localState = uiRoomStore.localState.getValue();
 
@@ -197,11 +219,11 @@ public class MultiCallRoomFragment extends Fragment {
         }
 
         if (tip != null) {
-            binding.msTvTip.setText(tip);
-            binding.msTvTip.setVisibility(View.VISIBLE);
+            adapter.mime.msTvTip.setText(tip);
+            adapter.mime.msTvTip.setVisibility(View.VISIBLE);
         }
         if (delayDismissTime > 0)
-            binding.msTvTip.postDelayed(tipDismiss, delayDismissTime);
+            adapter.mime.msTvTip.postDelayed(tipDismiss, delayDismissTime);
     }
 
     public void hideAllAction() {
@@ -221,6 +243,7 @@ public class MultiCallRoomFragment extends Fragment {
         List<BuddyModel> list = new ArrayList<>();
         UIRoomStore uiRoomStore;
         LifecycleOwner lifecycleOwner;
+        MsItemBuddyBinding mime;
 
         public MultiAdapter(UIRoomStore uiRoomStore, LifecycleOwner lifecycleOwner) {
             this.uiRoomStore = uiRoomStore;
@@ -245,6 +268,19 @@ public class MultiCallRoomFragment extends Fragment {
                             .error(R.drawable.ms_default_avatar)
                             .placeholder(R.drawable.ms_default_avatar))
                     .into(binding.ivCover);
+            binding.tvDisplayName.setVisibility(View.GONE);
+            Runnable runnable = new Runnable() {
+                @Override
+                public void run() {
+                    binding.tvDisplayName.setVisibility(View.GONE);
+                }
+            };
+            binding.getRoot().setOnClickListener(v -> {
+                binding.tvDisplayName.setVisibility(View.VISIBLE);
+                binding.tvDisplayName.removeCallbacks(runnable);
+                binding.tvDisplayName.postDelayed(runnable, 3000);
+            });
+            binding.getRoot().performClick();
 
             model.videoTrack.removeObservers(lifecycleOwner);
             model.videoTrack.observe(lifecycleOwner, videoTrack -> {
@@ -298,11 +334,11 @@ public class MultiCallRoomFragment extends Fragment {
                                     text = "对方已拒绝";
                                     break;
                                 }
-                                case New:{
+                                case New: {
                                     text = "连接中";
                                     break;
                                 }
-                                case Left:{
+                                case Left: {
                                     text = "对方已挂断";
                                     break;
                                 }
@@ -315,6 +351,8 @@ public class MultiCallRoomFragment extends Fragment {
                     if (text != null)
                         binding.msTvTip.setText(text);
                 });
+            } else {
+                mime = binding;
             }
 
 //            Runnable stateRunnable = () -> {

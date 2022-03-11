@@ -11,6 +11,8 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
+import com.gyf.immersionbar.BarHide;
+import com.gyf.immersionbar.ImmersionBar;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.R;
 import com.tangrun.mschat.databinding.MsFragmentSingleCallBinding;
@@ -57,6 +59,16 @@ public class SingleCallRoomFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         binding = MsFragmentSingleCallBinding.inflate(inflater, container, false);
         return binding.getRoot();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        ImmersionBar.with(this)
+                .hideBar(BarHide.FLAG_HIDE_BAR)
+                .fullScreen(true)
+                .statusBarDarkFont(false)
+                .init();
     }
 
     @Override
