@@ -1,28 +1,19 @@
 package com.tangrun.mschat.ui;
 
-import android.content.Context;
-import android.content.res.Resources;
 import android.os.Bundle;
-import android.util.Log;
 import android.util.Pair;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import androidx.annotation.Dimension;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
-import com.google.android.material.internal.ViewUtils;
 import com.gyf.immersionbar.BarHide;
 import com.gyf.immersionbar.ImmersionBar;
 import com.tangrun.mschat.MSManager;
@@ -33,9 +24,13 @@ import com.tangrun.mschat.databinding.MsLayoutActionBinding;
 import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.IBuddyModelObserver;
 import com.tangrun.mschat.model.UIRoomStore;
-import com.tangrun.mslib.enums.*;
+import com.tangrun.mslib.enums.CameraFacingState;
+import com.tangrun.mslib.enums.ConnectionState;
+import com.tangrun.mslib.enums.ConversationState;
+import com.tangrun.mslib.enums.LocalConnectState;
 import com.tangrun.mslib.lv.ChangedMutableLiveData;
 import org.jetbrains.annotations.NotNull;
+import org.mediasoup.droid.Logger;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -284,7 +279,7 @@ public class MultiCallRoomFragment extends Fragment {
 
             model.videoTrack.removeObservers(lifecycleOwner);
             model.videoTrack.observe(lifecycleOwner, videoTrack -> {
-                Log.d(TAG, "onBindViewHolder: " + model.buddy.getDisplayName() + " videoTrack = " + videoTrack);
+                Logger.d(TAG, "onBindViewHolder: " + model.buddy.getDisplayName() + " videoTrack = " + videoTrack);
                 binding.vRenderer.setVisibility(videoTrack == null ? View.GONE : View.VISIBLE);
                 binding.ivCover.setVisibility(videoTrack != null ? View.GONE : View.VISIBLE);
                 uiRoomStore.bindBuddyRender(lifecycleOwner, model, binding.vRenderer);

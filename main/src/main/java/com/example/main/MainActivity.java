@@ -1,23 +1,17 @@
 package com.example.main;
 
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.telephony.PhoneStateListener;
-import android.telephony.TelephonyManager;
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
-
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.appcompat.widget.AppCompatTextView;
-
 import androidx.core.app.NotificationManagerCompat;
 import com.tangrun.mschat.ApiCallback;
 import com.tangrun.mschat.MSManager;
@@ -58,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private AppCompatButton btBusy;
     private AppCompatButton btOpen;
     private AppCompatButton btClearNotification;
+    private AppCompatButton btRestart;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,10 +134,15 @@ public class MainActivity extends AppCompatActivity {
             });
         });
         btOpen.setOnClickListener(v -> {
-            MSManager.openCallActivity();
+            if (MSManager.getCurrent() != null) {
+                MSManager.getCurrent().openCallActivity();
+            }
         });
         btClearNotification.setOnClickListener(v -> {
             NotificationManagerCompat.from(this).cancelAll();
+        });
+        btRestart.setOnClickListener(v -> {
+            MSManager.resumeLastInterruptCall(this);
         });
     }
 
@@ -171,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
         btBusy = (AppCompatButton) findViewById(R.id.bt_busy);
         btOpen = (AppCompatButton) findViewById(R.id.bt_open);
         btClearNotification = (AppCompatButton) findViewById(R.id.bt_clear_notification);
+        btRestart = (AppCompatButton) findViewById(R.id.bt_restart);
     }
 
     public void onPick(View view) {

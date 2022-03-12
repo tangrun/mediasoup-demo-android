@@ -2,47 +2,21 @@ package com.tangrun.mschat;
 
 import android.app.Application;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Parcel;
-import android.util.Log;
-import androidx.lifecycle.Observer;
-import com.bumptech.glide.annotation.GlideOption;
 import com.tangrun.mschat.enums.CallEnd;
 import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.model.UIRoomStore;
 import com.tangrun.mschat.model.User;
 import com.tangrun.mslib.RoomOptions;
-import com.tangrun.mslib.utils.JsonUtils;
-import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.annotations.NonNull;
-import io.reactivex.observers.DisposableObserver;
-import io.reactivex.schedulers.Schedulers;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.logging.HttpLoggingInterceptor;
-import org.jetbrains.annotations.NotNull;
-import org.json.JSONObject;
+import com.tangrun.mslib.utils.ArchTaskExecutor;
 import org.mediasoup.droid.Logger;
 import org.mediasoup.droid.MediasoupClient;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.security.cert.CertificateException;
+import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.http.conn.ssl.SSLSocketFactory.SSL;
 
 /**
  * @author RainTang
@@ -52,55 +26,14 @@ import static org.apache.http.conn.ssl.SSLSocketFactory.SSL;
 public class MSManager {
     private static final String TAG = "MS_UIRoomStore";
 
-    private static String HOST;
-    private static String PORT;
+    private static MSApi msApi;
     private static UICallback uiCallback;
-
     private static boolean init = false;
-
-    public static void readLastCall(Context context) {
-        FileInputStream fis;
-        try {
-            fis = context.openFileInput(TAG);
-            byte[] bytes = new byte[fis.available()];
-            fis.read(bytes);
-            Parcel parcel = Parcel.obtain();
-            parcel.unmarshall(bytes, 0, bytes.length);
-            parcel.setDataPosition(0);
-            UIRoomStore uiRoomStore = new UIRoomStore();
-            UIRoomStore data = parcel.readParcelable(UIRoomStore.class.getClassLoader());
-            fis.close();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    public static void setCurrentCall(Context context, UIRoomStore uiRoomStore) {
-        FileOutputStream fos;
-        try {
-            fos = context.openFileOutput(TAG,
-                    Context.MODE_PRIVATE);
-            BufferedOutputStream bos = new BufferedOutputStream(fos);
-            Parcel parcel = Parcel.obtain();
-            parcel.writeParcelable(uiRoomStore, 0);
-
-            bos.write(parcel.marshall());
-            bos.flush();
-            bos.close();
-            fos.flush();
-            fos.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     public static void init(Application application, String host, String port, boolean debug, UICallback uiCallback) {
         if (init) return;
         init = true;
-        HOST = host;
-        PORT = port;
+        setServer(host, port);
         MSManager.uiCallback = uiCallback;
         if (debug) {
             Logger.setLogLevel(Logger.LogLevel.LOG_DEBUG);
@@ -109,19 +42,12 @@ public class MSManager {
         MediasoupClient.initialize(application);
     }
 
-    public static void setCallEnd(String id, RoomType roomType, boolean audioOnly, CallEnd callEnd) {
-        if (uiCallback != null) {
-            uiCallback.onCallEnd(id, roomType, audioOnly, callEnd, null, null);
-        }
+    public static void setServer(String host, String port) {
+        msApi = new MSApi(host, port);
     }
 
     public static UIRoomStore getCurrent() {
         return UIRoomStore.getCurrent();
-    }
-
-
-    public static void openCallActivity() {
-        if (getCurrent() != null) getCurrent().openCallActivity();
     }
 
     public static void addUser(List<User> list) {
@@ -132,14 +58,14 @@ public class MSManager {
     public static void startCall(Context context, String roomId, User me,
                                  boolean audioOnly, boolean multi, boolean owner,
                                  List<User> inviteUser) {
-        startCall(context, HOST, PORT, roomId, me, audioOnly, multi, owner, inviteUser, uiCallback);
+        startCall(context, msApi.getHost(), msApi.getPort(), roomId, me, audioOnly, multi, owner, inviteUser, uiCallback);
     }
 
     public static void startCall(Context context, String host, String port, String roomId, User me,
                                  boolean audioOnly, boolean multi, boolean owner,
                                  List<User> inviteUser, UICallback uiCallback) {
         if (getCurrent() != null) {
-            Log.d(TAG, "startCall: ");
+            Logger.d(TAG, "startCall: ");
             return;
         }
         RoomOptions roomOptions = new RoomOptions();
@@ -176,252 +102,116 @@ public class MSManager {
         uiRoomStore.init(context, roomOptions);
         uiRoomStore.connect(inviteUser);
         uiRoomStore.openCallActivity();
+        saveCurrentCallToLocal(context, uiRoomStore);
     }
 
-
-    //region api接口
-    public static void roomExists(String id, ApiCallback<Boolean> apiCallback) {
-        if (apiCallback == null) return;
-        Observable.create(new ObservableOnSubscribe<Boolean>() {
-                    @Override
-                    public void subscribe(@NonNull ObservableEmitter<Boolean> emitter) throws Exception {
-                        Request.Builder builder = new Request.Builder();
-                        HttpUrl.Builder urlBuilder = HttpUrl.parse(getUrl() + "/roomExists").newBuilder();
-                        urlBuilder.addQueryParameter("roomId", id);
-                        builder.url(urlBuilder.build());
-                        String request = request(builder.build());
-                        JSONObject jsonObject = JsonUtils.toJsonObject(request);
-                        int code = jsonObject.optInt("code");
-                        if (code == 0) {
-                            emitter.onNext(true);
-                        } else {
-                            emitter.onNext(false);
+    //region 通话持久化
+    public static void resumeLastInterruptCall(Context context) {
+        ArchTaskExecutor.getIOThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                FileInputStream fis;
+                try {
+                    fis = context.openFileInput("MS_CALL");
+                    byte[] bytes = new byte[fis.available()];
+                    fis.read(bytes);
+                    fis.close();
+                    Parcel parcel = Parcel.obtain();
+                    parcel.unmarshall(bytes, 0, bytes.length);
+                    parcel.setDataPosition(0);
+                    UIRoomStore uiRoomStore = parcel.readParcelable(UIRoomStore.class.getClassLoader());
+                    if (uiRoomStore != null) {
+                        if (getCurrent() != null) {
+                            if (uiCallback != null)
+                                uiCallback.onCallEnd(uiRoomStore.getRoomOptions().roomId, uiRoomStore.roomType, uiRoomStore.audioOnly, CallEnd.End, null, null);
+                            return;
                         }
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new DisposableObserver<Boolean>() {
-                    @Override
-                    public void onNext(@NonNull Boolean s) {
-                        apiCallback.onSuccess(s);
-                    }
+                        new MSApi(uiRoomStore.getRoomOptions().serverHost, uiRoomStore.getRoomOptions().serverPort)
+                                .roomExists(uiRoomStore.getRoomOptions().roomId, new ApiCallback<Boolean>() {
+                                    @Override
+                                    public void onFail(Throwable e) {
+                                        uiCallback.onCallEnd(uiRoomStore.getRoomOptions().roomId, uiRoomStore.roomType, uiRoomStore.audioOnly, CallEnd.End, null, null);
+                                        saveCurrentCallToLocal(context,null);
+                                    }
 
-                    @Override
-                    public void onError(@NonNull Throwable e) {
-                        dispose();
-                        apiCallback.onFail(e);
+                                    @Override
+                                    public void onSuccess(Boolean aBoolean) {
+                                        if (aBoolean == Boolean.TRUE) {
+                                            uiRoomStore.init(context, uiRoomStore.getRoomOptions());
+                                            uiRoomStore.connect(null);
+                                            uiRoomStore.openCallActivity();
+                                        } else onFail(null);
+                                    }
+                                });
                     }
-
-                    @Override
-                    public void onComplete() {
-                        dispose();
-                    }
-                });
-    }
-
-    public static void busyForUICallback(String roomId, String userId, RoomType roomType, boolean audioOnly) {
-        busy(roomId, userId, new ApiCallback<Object>() {
-            @Override
-            public void onFail(Throwable e) {
-                uiCallback.onCallEnd(roomId, roomType, audioOnly, CallEnd.Busy, null, null);
-            }
-
-            @Override
-            public void onSuccess(Object o) {
-                uiCallback.onCallEnd(roomId, roomType, audioOnly, CallEnd.Busy, null, null);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
     }
 
-    public static void busy(String roomId, String userId, ApiCallback<Object> apiCallback) {
-        if (apiCallback == null) return;
-        Observable.create(new ObservableOnSubscribe<Object>() {
-                    @Override
-                    public void subscribe(@NonNull ObservableEmitter<Object> emitter) throws Exception {
-                        Request.Builder builder = new Request.Builder();
-                        HttpUrl.Builder urlBuilder = HttpUrl.parse(getUrl() + "/busy").newBuilder();
-                        urlBuilder.addQueryParameter("roomId", roomId)
-                                .addQueryParameter("peerId", userId);
-                        builder.url(urlBuilder.build());
-                        String request = request(builder.build());
-                        emitter.onComplete();
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new DisposableObserver<Object>() {
-                    @Override
-                    public void onNext(@NonNull Object s) {
-
-                    }
-
-                    @Override
-                    public void onError(@NonNull Throwable e) {
-                        dispose();
-                        apiCallback.onFail(e);
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        dispose();
-                        apiCallback.onSuccess(null);
-                    }
-                });
-    }
-
-    public static void createRoom(String id, ApiCallback<String> apiCallback) {
-        if (apiCallback == null) return;
-        Observable.create(new ObservableOnSubscribe<String>() {
-                    @Override
-                    public void subscribe(@NonNull ObservableEmitter<String> emitter) throws Exception {
-                        Request.Builder builder = new Request.Builder();
-                        HttpUrl.Builder urlBuilder = HttpUrl.parse(getUrl() + "/debug_createRoom").newBuilder();
-                        urlBuilder.addQueryParameter("roomId", id);
-                        builder.url(urlBuilder.build());
-                        String request = request(builder.build());
-                        JSONObject jsonObject = JsonUtils.toJsonObject(request);
-                        int code = jsonObject.optInt("code");
-                        if (code == 0) {
-                            emitter.onNext(id);
-                        } else {
-                            if (jsonObject.optString("msg", "").contains("已存在")) {
-                                emitter.onNext(id);
-                            } else {
-                                emitter.onError(new Exception(jsonObject.optString("message")));
-                            }
-                        }
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new DisposableObserver<String>() {
-                    @Override
-                    public void onNext(@NonNull String s) {
-                        apiCallback.onSuccess(s);
-                    }
-
-                    @Override
-                    public void onError(@NonNull Throwable e) {
-                        dispose();
-                        apiCallback.onFail(e);
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        dispose();
-                    }
-                });
-    }
-
-    public static void createRoom(ApiCallback<String> apiCallback) {
-        if (apiCallback == null) return;
-        Observable.create(new ObservableOnSubscribe<String>() {
-                    @Override
-                    public void subscribe(@NonNull ObservableEmitter<String> emitter) throws Exception {
-                        Request.Builder builder = new Request.Builder();
-                        HttpUrl.Builder urlBuilder = HttpUrl.parse(getUrl() + "/createRoom").newBuilder();
-                        builder.url(urlBuilder.build());
-                        String request = request(builder.build());
-                        JSONObject jsonObject = JsonUtils.toJsonObject(request);
-                        int code = jsonObject.optInt("code");
-                        if (code == 0) {
-                            emitter.onNext(jsonObject.optJSONObject("data").optString("roomId"));
-                        } else {
-                            emitter.onError(new Exception(jsonObject.optString("message")));
-                        }
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new DisposableObserver<String>() {
-                    @Override
-                    public void onNext(@NonNull String s) {
-                        apiCallback.onSuccess(s);
-                    }
-
-                    @Override
-                    public void onError(@NonNull Throwable e) {
-                        dispose();
-                        apiCallback.onFail(e);
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        dispose();
-                    }
-                });
-    }
-
-    private static OkHttpClient getUnsafeOkHttpClient() {
-        try {
-            final TrustManager[] trustAllCerts =
-                    new TrustManager[]{
-                            new X509TrustManager() {
-
-                                @Override
-                                public void checkClientTrusted(
-                                        java.security.cert.X509Certificate[] chain, String authType)
-                                        throws CertificateException {
-                                }
-
-                                @Override
-                                public void checkServerTrusted(
-                                        java.security.cert.X509Certificate[] chain, String authType)
-                                        throws CertificateException {
-                                }
-
-                                // Called reflectively by X509TrustManagerExtensions.
-                                public void checkServerTrusted(
-                                        java.security.cert.X509Certificate[] chain, String authType, String host) {
-                                }
-
-                                @Override
-                                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                                    return new java.security.cert.X509Certificate[]{};
-                                }
-                            }
-                    };
-
-            final SSLContext sslContext = SSLContext.getInstance(SSL);
-            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-
-            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-
-            HttpLoggingInterceptor httpLoggingInterceptor =
-                    new HttpLoggingInterceptor(s -> Logger.d(TAG, s));
-            httpLoggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
-
-            OkHttpClient.Builder builder =
-                    new OkHttpClient.Builder()
-                            .addInterceptor(httpLoggingInterceptor)
-                            .retryOnConnectionFailure(true);
-            builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
-
-            builder.hostnameVerifier((hostname, session) -> true);
-
-            return builder.build();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static String request(Request request) throws IOException {
-        OkHttpClient httpClient = getUnsafeOkHttpClient();
-        Response response = httpClient.newCall(request).execute();
-        return response.body().string();
-    }
-
-    private static String getUrl() {
-        StringBuilder stringBuilder = new StringBuilder()
-                .append("https://")
-                .append(HOST);
-        if (PORT != null && PORT.trim().length() > 0) {
-            stringBuilder.append(":")
-                    .append(PORT);
-        }
-        return stringBuilder.toString();
+    public static void saveCurrentCallToLocal(Context context, UIRoomStore uiRoomStore) {
+        ArchTaskExecutor.getIOThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                FileOutputStream fos;
+                try {
+                    fos = context.openFileOutput("MS_CALL", Context.MODE_PRIVATE);
+                    BufferedOutputStream bos = new BufferedOutputStream(fos);
+                    Parcel parcel = Parcel.obtain();
+                    parcel.writeParcelable(uiRoomStore, 0);
+                    bos.write(parcel.marshall());
+                    bos.flush();
+                    bos.close();
+                    fos.flush();
+                    fos.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
     //endregion
 
+
+    //region 接口调用
+    public static void roomExists(String id, ApiCallback<Boolean> apiCallback) {
+        msApi.roomExists(id, apiCallback);
+    }
+
+    public static void busy(String roomId, String userId, ApiCallback<Object> apiCallback) {
+        msApi.busy(roomId, userId, apiCallback);
+    }
+
+    public static void createRoom(String id, ApiCallback<String> apiCallback) {
+        msApi.createRoom(id, apiCallback);
+    }
+
+    public static void createRoom(ApiCallback<String> apiCallback) {
+        msApi.createRoom(apiCallback);
+    }
+    //endregion
+
+    //region 拓展方法
+    public static void setCallEnd(String id, RoomType roomType, boolean audioOnly, CallEnd callEnd) {
+        if (uiCallback != null) {
+            uiCallback.onCallEnd(id, roomType, audioOnly, callEnd, null, null);
+        }
+    }
+
+    public static void busyForUICallback(String roomId, String userId, RoomType roomType, boolean audioOnly) {
+        msApi.busy(roomId, userId, new ApiCallback<Object>() {
+            @Override
+            public void onFail(Throwable e) {
+                setCallEnd(roomId, roomType, audioOnly, CallEnd.Busy);
+            }
+
+            @Override
+            public void onSuccess(Object o) {
+                setCallEnd(roomId, roomType, audioOnly, CallEnd.Busy);
+            }
+        });
+    }
+    //endregion
 }

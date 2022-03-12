@@ -3,7 +3,6 @@ package com.tangrun.mslib;
 import android.content.Context;
 import android.os.HandlerThread;
 import android.text.TextUtils;
-import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import com.tangrun.mslib.enums.*;
@@ -573,7 +572,7 @@ public class RoomClient extends RoomMessageHandler {
             new Protoo.Listener() {
                 @Override
                 public void onOpen() {
-                    Log.d(TAG, "Protoo.Listener onOpen: ");
+                    Logger.d(TAG, "Protoo.Listener onOpen: ");
                     mWorkHandler.execute(() -> {
                         mStore.setLocalConnectionState(LocalConnectState.CONNECTED);
                     });
@@ -581,7 +580,7 @@ public class RoomClient extends RoomMessageHandler {
 
                 @Override
                 public void onFail() {
-                    Log.d(TAG, "Protoo.Listener onFail: ");
+                    Logger.d(TAG, "Protoo.Listener onFail: ");
                     mWorkHandler.execute(
                             () -> {
                                 mStore.addNotify("error", "WebSocket connection failed");
@@ -638,7 +637,7 @@ public class RoomClient extends RoomMessageHandler {
 
                 @Override
                 public void onDisconnected() {
-                    Log.d(TAG, "Protoo.Listener onDisconnected: ");
+                    Logger.d(TAG, "Protoo.Listener onDisconnected: ");
                     mWorkHandler.execute(
                             () -> {
                                 mStore.addNotify("error", "WebSocket disconnected");
@@ -652,7 +651,7 @@ public class RoomClient extends RoomMessageHandler {
 
                 @Override
                 public void onClose() {
-                    Log.d(TAG, "Protoo.Listener onClose: " + mClosed);
+                    Logger.d(TAG, "Protoo.Listener onClose: " + mClosed);
                     mWorkHandler.execute(
                             () -> {
                                 close();

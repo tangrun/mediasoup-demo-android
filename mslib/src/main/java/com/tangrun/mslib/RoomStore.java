@@ -1,6 +1,5 @@
 package com.tangrun.mslib;
 
-import android.util.Log;
 import com.tangrun.mslib.enums.*;
 import com.tangrun.mslib.lv.ClientObserver;
 import com.tangrun.mslib.lv.DispatcherObservable;
@@ -9,6 +8,7 @@ import com.tangrun.mslib.model.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
+import org.mediasoup.droid.Logger;
 import org.mediasoup.droid.Producer;
 
 import java.util.ArrayList;
@@ -37,11 +37,11 @@ public class RoomStore {
 
 
     public void addNotify(String msg) {
-        Log.d(TAG, "addNotify: " + msg);
+        Logger.d(TAG, "addNotify: " + msg);
     }
 
     public void addNotify(String tag, String msg) {
-        Log.d(TAG, "addNotify: " + tag + " : " + msg);
+        Logger.d(TAG, "addNotify: " + tag + " : " + msg);
     }
 
     public DispatcherObservable<ClientObserver> getClientObservable() {

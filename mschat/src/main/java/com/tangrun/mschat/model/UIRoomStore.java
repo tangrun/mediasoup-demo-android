@@ -1,6 +1,6 @@
 package com.tangrun.mschat.model;
 
-import android.app.*;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
@@ -11,19 +11,17 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.*;
-import android.util.Log;
 import android.util.Pair;
 import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.util.Consumer;
 import androidx.lifecycle.*;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.Permission;
 import com.hjq.permissions.XXPermissions;
+import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.R;
 import com.tangrun.mschat.UICallback;
 import com.tangrun.mschat.databinding.MsLayoutActionBinding;
@@ -50,6 +48,7 @@ import io.reactivex.annotations.NonNull;
 import io.reactivex.observers.DisposableObserver;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
+import org.mediasoup.droid.Logger;
 import org.webrtc.VideoTrack;
 
 import java.io.IOException;
@@ -78,14 +77,14 @@ public class UIRoomStore implements Parcelable {
 
 
     private Context context;
-    private  AudioManager audioManager;
+    private AudioManager audioManager;
     private Vibrator vibrator;
 
     private ChangedMutableLiveData<AppCompatActivity> activity = new ChangedMutableLiveData<>();
 
-    private  RoomStore roomStore;
-    private  RoomClient roomClient;
-    private  RoomOptions roomOptions;
+    private RoomStore roomStore;
+    private RoomClient roomClient;
+    private RoomOptions roomOptions;
 
     public UICallback uiCallback;
     /**
@@ -202,7 +201,7 @@ public class UIRoomStore implements Parcelable {
      * 连接状态改变监听
      */
     Observer<LocalConnectState> localConnectStateObserver = connectionState1 -> {
-        Log.d(TAG, "ConnectionState changed: " + connectionState1);
+        Logger.d(TAG, "ConnectionState changed: " + connectionState1);
         localState.setValue(new Pair<>(connectionState1, localConversationState.getValue()));
 
         // 设置本地会话状态逻辑
@@ -298,7 +297,7 @@ public class UIRoomStore implements Parcelable {
     };
 
     Observer<ConversationState> localConversationObserver = conversationState -> {
-        Log.d(TAG, "ConversationState changed: " + conversationState);
+        Logger.d(TAG, "ConversationState changed: " + conversationState);
         localState.setValue(new Pair<>(localConnectionState.getValue(), conversationState));
 
         // 铃声
@@ -338,7 +337,7 @@ public class UIRoomStore implements Parcelable {
         @Override
         public void onBuddyAdd(String id, Buddy buddy) {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
-                Log.d(TAG, "onBuddyAdd: " + id + buddy.getConnectionState() + buddy.getConversationState());
+                Logger.d(TAG, "onBuddyAdd: " + id + buddy.getConnectionState() + buddy.getConversationState());
 
                 BuddyModel buddyModel = new BuddyModel(buddy);
                 buddyModel.connectionState.applySet(buddy.getConnectionState());
@@ -362,7 +361,7 @@ public class UIRoomStore implements Parcelable {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
-                Log.d(TAG, "onBuddyRemove: " + id);
+                Logger.d(TAG, "onBuddyRemove: " + id);
 
                 int pos = buddyModels.indexOf(buddyModel);
                 buddyModels.remove(buddyModel);
@@ -383,7 +382,7 @@ public class UIRoomStore implements Parcelable {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
-                Log.d(TAG, "onBuddyVolumeChanged: " + id + " " + buddy.getVolume());
+                Logger.d(TAG, "onBuddyVolumeChanged: " + id + " " + buddy.getVolume());
 
                 buddyModel.volume.applySet(buddy.getVolume());
 
@@ -417,11 +416,11 @@ public class UIRoomStore implements Parcelable {
             ArchTaskExecutor.getMainThreadExecutor().execute(() -> {
                 BuddyModel buddyModel = buddyModelMap.get(id);
                 if (buddyModel == null) return;
-                Log.d(TAG, "onBuddyStateChanged: " + id + buddy.getConnectionState() + " " + buddy.getConversationState());
+                Logger.d(TAG, "onBuddyStateChanged: " + id + buddy.getConnectionState() + " " + buddy.getConversationState());
 
                 // 第一个人进来就算开始通话
                 if (owner && !buddy.isProducer() && callStartTime == null && buddy.getConnectionState() == ConnectionState.Online && buddy.getConversationState() == ConversationState.Joined) {
-                    Log.d(TAG, "calling.applySet false by 人接听");
+                    Logger.d(TAG, "calling.applySet false by 人接听");
                     if (joinedCount == 0) {
                         localConnectionState.observeForever(new Observer<LocalConnectState>() {
                             @Override
@@ -490,7 +489,7 @@ public class UIRoomStore implements Parcelable {
         public void onProducerAdd(String id, Buddy buddy, String producerId, WrapperCommon<?> wrapperCommon) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
-            Log.d(TAG, "onProducerAdd: " + id + " " + producerId + " " + wrapperCommon.getKind());
+            Logger.d(TAG, "onProducerAdd: " + id + " " + producerId + " " + wrapperCommon.getKind());
 
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioWrapper.applyPost(wrapperCommon);
@@ -507,7 +506,7 @@ public class UIRoomStore implements Parcelable {
         public void onProducerRemove(String id, Buddy buddy, String producerId) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
-            Log.d(TAG, "onProducerRemove: " + id + " " + producerId);
+            Logger.d(TAG, "onProducerRemove: " + id + " " + producerId);
 
             if (buddyModel.audioWrapper.getValue() != null && buddyModel.audioWrapper.getValue().getId().equals(producerId)) {
                 buddyModel.audioWrapper.applyPost(null);
@@ -527,7 +526,7 @@ public class UIRoomStore implements Parcelable {
         public void onProducerResumed(String id, Buddy buddy, String producerId, WrapperCommon<?> wrapperCommon) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
-            Log.d(TAG, "onProducerResumed: " + id + " " + producerId);
+            Logger.d(TAG, "onProducerResumed: " + id + " " + producerId);
 
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPaused.applyPost(false);
@@ -542,7 +541,7 @@ public class UIRoomStore implements Parcelable {
         public void onProducerPaused(String id, Buddy buddy, String producerId, WrapperCommon<?> wrapperCommon) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
-            Log.d(TAG, "onProducerPaused: " + id + " " + producerId);
+            Logger.d(TAG, "onProducerPaused: " + id + " " + producerId);
 
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPaused.applyPost(true);
@@ -557,7 +556,7 @@ public class UIRoomStore implements Parcelable {
         public void onProducerScoreChanged(String id, Buddy buddy, String producerId, WrapperCommon<?> wrapperCommon) {
             BuddyModel buddyModel = buddyModelMap.get(id);
             if (buddyModel == null) return;
-            Log.d(TAG, "onProducerScoreChanged: " + id + " " + producerId);
+            Logger.d(TAG, "onProducerScoreChanged: " + id + " " + producerId);
 
             if (Kind.audio.value.equals(wrapperCommon.getKind())) {
                 buddyModel.audioPScore.applyPost(wrapperCommon.getProducerScore());
@@ -570,11 +569,11 @@ public class UIRoomStore implements Parcelable {
 
         @Override
         public void onLocalConnectStateChanged(LocalConnectState state) {
-            Log.d(TAG, "onLocalConnectStateChanged: " + state);
+            Logger.d(TAG, "onLocalConnectStateChanged: " + state);
 
             // 被邀请时 自己接听就算开始通话
             if (callStartTime == null && !owner && state == LocalConnectState.JOINED && joinedCount == 0) {
-                Log.d(TAG, "calling.applySet true by 房主");
+                Logger.d(TAG, "calling.applySet true by 房主");
                 callingActual.applyPost(true);
                 calling.applyPost(true);
             }
@@ -584,7 +583,7 @@ public class UIRoomStore implements Parcelable {
 
         @Override
         public void onCameraStateChanged(CameraState state) {
-            Log.d(TAG, "onCameraStateChanged: " + state);
+            Logger.d(TAG, "onCameraStateChanged: " + state);
 
             cameraState.applyPost(state);
 
@@ -596,14 +595,14 @@ public class UIRoomStore implements Parcelable {
 
         @Override
         public void onMicrophoneStateChanged(MicrophoneState state) {
-            Log.d(TAG, "onMicrophoneStateChanged: " + state);
+            Logger.d(TAG, "onMicrophoneStateChanged: " + state);
 
             microphoneState.applyPost(state);
         }
 
         @Override
         public void onCameraFacingChanged(CameraFacingState state) {
-            Log.d(TAG, "onCameraFacingChanged: " + state);
+            Logger.d(TAG, "onCameraFacingChanged: " + state);
 
             cameraFacingState.applyPost(state);
         }
@@ -747,6 +746,7 @@ public class UIRoomStore implements Parcelable {
                     localConversationState.applySet(ConversationState.Joined);
                 }
             } else {
+                MSManager.saveCurrentCallToLocal(context, null);
                 stopCallTime();
                 release();
                 setCallEnd();
@@ -1042,7 +1042,7 @@ public class UIRoomStore implements Parcelable {
             callEnd = CallEnd.NetError;
             localConversationState.applySet(ConversationState.OfflineTimeout);
         }
-        Log.d(TAG, "hangup: before " + callEndFlag + "  " + callEnd);
+        Logger.d(TAG, "hangup: before " + callEndFlag + "  " + callEnd);
         if (localConnectionState.getValue() == LocalConnectState.JOINED
                 || localConnectionState.getValue() == LocalConnectState.CONNECTED)
             getRoomClient().hangup();
@@ -1052,7 +1052,7 @@ public class UIRoomStore implements Parcelable {
         ArchTaskExecutor.getInstance().postToMainThread(new Runnable() {
             @Override
             public void run() {
-                Log.d(TAG, "calling.applySet false");
+                Logger.d(TAG, "calling.applySet false");
                 calling.applySet(false);
             }
         }, 1500);
@@ -1201,7 +1201,6 @@ public class UIRoomStore implements Parcelable {
         if (uiCallback != null) uiCallback.onAddUserResult(resultCode, data);
     }
 
-    @Deprecated
     public void addUser(List<User> list) {
         if (list == null || list.isEmpty()) return;
         localConnectionState.observeForever(new Observer<LocalConnectState>() {
@@ -1279,7 +1278,7 @@ public class UIRoomStore implements Parcelable {
     private MediaPlayer player;
 
     private void stopPlayer() {
-        Log.d(TAG, "stopRing() called");
+        Logger.d(TAG, "stopRing() called");
         if (player != null) {
             try {
                 player.stop();
@@ -1295,7 +1294,7 @@ public class UIRoomStore implements Parcelable {
     }
 
     private void startPlayer(Context context, int id, boolean loop) {
-        Log.d(TAG, "startRingForType() called with: id = [" + id + "], loop = [" + loop + "]");
+        Logger.d(TAG, "startRingForType() called with: id = [" + id + "], loop = [" + loop + "]");
         Uri uri = Uri.parse("android.resource://" + context.getPackageName() + "/" + id);
         if (player == null) {
             player = new MediaPlayer();

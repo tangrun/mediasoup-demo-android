@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
-
 import android.util.Log;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.UICallback;
@@ -12,7 +11,6 @@ import com.tangrun.mschat.enums.CallEnd;
 import com.tangrun.mschat.enums.RoomType;
 import com.tangrun.mschat.model.User;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;

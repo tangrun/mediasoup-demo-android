@@ -50,7 +50,7 @@
 
             <com.tangrun.mschat.view.InitSurfaceViewRender
                     android:id="@+id/ms_v_render"
-                    android:visibility="visible"
+                    android:visibility="invisible"
                     tool:visibility="invisible"
                     android:layout_width="80dp"
                     android:layout_height="120dp"/>

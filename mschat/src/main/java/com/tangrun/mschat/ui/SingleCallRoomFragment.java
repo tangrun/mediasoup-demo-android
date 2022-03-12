@@ -1,7 +1,6 @@
 package com.tangrun.mschat.ui;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,13 +20,16 @@ import com.tangrun.mschat.model.BuddyModel;
 import com.tangrun.mschat.model.IBuddyModelObserver;
 import com.tangrun.mschat.model.UIRoomStore;
 import com.tangrun.mschat.view.InitSurfaceViewRender;
-import com.tangrun.mslib.enums.*;
+import com.tangrun.mslib.enums.ConnectionState;
+import com.tangrun.mslib.enums.ConversationState;
+import com.tangrun.mslib.enums.LocalConnectState;
 import com.tangrun.mslib.lv.ChangedMutableLiveData;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import org.jetbrains.annotations.NotNull;
+import org.mediasoup.droid.Logger;
 import org.webrtc.VideoTrack;
 
 import java.util.Arrays;
@@ -76,7 +78,7 @@ public class SingleCallRoomFragment extends Fragment {
         uiRoomStore = MSManager.getCurrent();
 
         uiRoomStore.mine.observe(this, buddyModel -> {
-            Log.d(TAG, "mime get : " + buddyModel);
+            Logger.d(TAG, "mime get : " + buddyModel);
             buddyModel.videoTrack.observe(this, videoTrack -> {
                 resetRenderBinding();
             });
@@ -147,7 +149,7 @@ public class SingleCallRoomFragment extends Fragment {
             if (aBoolean) setTipText();
         });
         uiRoomStore.localState.observeForever(localState -> {
-            Log.d(TAG, "onViewCreated: " + localState);
+            Logger.d(TAG, "onViewCreated: " + localState);
             // 状态提示
             setTipText();
             showUI(showUI);
@@ -245,7 +247,7 @@ public class SingleCallRoomFragment extends Fragment {
         ConversationState localConversationState = localState == null ? null : localState.second;
         ConnectionState targetConnectionState = target.getValue() == null ? null : target.getValue().connectionState.getValue();
         ConversationState targetConversationState = target.getValue() == null ? null : target.getValue().conversationState.getValue();
-        Log.d(TAG, "setTipText: local " + localConnectState + " " + localConversationState + " target " + targetConnectionState + " " + targetConversationState);
+        Logger.d(TAG, "setTipText: local " + localConnectState + " " + localConversationState + " target " + targetConnectionState + " " + targetConversationState);
         // 根据优先级设置显示
         // 自己连接时
         if (localConnectState == LocalConnectState.NEW || localConnectState == LocalConnectState.CONNECTING) {

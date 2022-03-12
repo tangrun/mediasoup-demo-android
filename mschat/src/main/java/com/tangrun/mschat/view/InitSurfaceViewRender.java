@@ -2,14 +2,9 @@ package com.tangrun.mschat.view;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.util.Log;
-import androidx.annotation.NonNull;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleEventObserver;
-import androidx.lifecycle.LifecycleOwner;
-import com.tangrun.mslib.utils.PeerConnectionUtils;
-import org.jetbrains.annotations.NotNull;
-import org.webrtc.*;
+import org.webrtc.EglBase;
+import org.webrtc.RendererCommon;
+import org.webrtc.SurfaceViewRenderer;
 
 /**
  * @author RainTang

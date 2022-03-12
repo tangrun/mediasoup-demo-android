@@ -4,8 +4,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.WindowManager;
 import androidx.appcompat.app.AppCompatActivity;
-import com.gyf.immersionbar.BarHide;
-import com.gyf.immersionbar.ImmersionBar;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.R;
 import com.tangrun.mschat.model.UIRoomStore;

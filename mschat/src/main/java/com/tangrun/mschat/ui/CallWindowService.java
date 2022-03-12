@@ -12,8 +12,6 @@ import androidx.core.content.res.ResourcesCompat;
 import androidx.core.widget.ImageViewCompat;
 import androidx.lifecycle.*;
 import com.google.android.flexbox.FlexDirection;
-import com.hjq.permissions.Permission;
-import com.hjq.permissions.XXPermissions;
 import com.tangrun.mschat.MSManager;
 import com.tangrun.mschat.R;
 import com.tangrun.mschat.databinding.MsCallWindowBinding;
@@ -106,7 +104,7 @@ public class CallWindowService extends LifecycleService {
 
             @Override
             public void onWindowViewClick() {
-                MSManager.openCallActivity();
+                uiRoomStore.openCallActivity();
                 windowViewDragManager.removeView();
             }
         };
@@ -126,12 +124,14 @@ public class CallWindowService extends LifecycleService {
     void resetCallInfoOrVideo() {
         BuddyModel buddyModel = uiRoomStore.mine.getValue();
         VideoTrack videoTrack = buddyModel == null ? null : buddyModel.videoTrack.getValue();
+        if (uiRoomStore.callingActual.getValue() == Boolean.FALSE)
+            videoTrack = null;
         Pair<LocalConnectState, ConversationState> localState = uiRoomStore.localState.getValue();
 
         binding.msLlCallInfo.setVisibility(videoTrack == null ? View.VISIBLE : View.GONE);
 
         uiRoomStore.callTime.removeObservers(this);
-        if (videoTrack == null) {
+        if (localState != null  && videoTrack==null) {
             String text = null;
             int tintId = 0;
             int imgId = 0;
@@ -259,7 +259,7 @@ public class CallWindowService extends LifecycleService {
                     int height = view.getHeight();
                     layoutParams.x = (int) (e2.getRawX() - (width / 2));
                     layoutParams.y = (int) (e2.getRawY() - (height / 2)) - statusBarHeight;
-                    //Log.d(TAG, "onScroll: window params xy= " + layoutParams.x + "," + layoutParams.y + " root view wh= " + width + "," + height + " event raw xy= " + e2.getRawX() + "," + e2.getRawY());
+                    //Logger.d(TAG, "onScroll: window params xy= " + layoutParams.x + "," + layoutParams.y + " root view wh= " + width + "," + height + " event raw xy= " + e2.getRawX() + "," + e2.getRawY());
                     windowManager.updateViewLayout(view, layoutParams);
                     onWindowScrolling(layoutParams.x, layoutParams.y, width, height, screenWidth, screenHeight);
                     return true;
