@@ -60,6 +60,7 @@ public class CallNotificationService extends LifecycleService {
     public void onDestroy() {
         super.onDestroy();
         stopForeground(true);
+        ProcessLifecycleOwner.get().getLifecycle().removeObserver(appProcessObserver);
     }
 
     @Override
@@ -74,7 +75,7 @@ public class CallNotificationService extends LifecycleService {
     @Override
     public void onStart(@NonNull @NotNull Intent intent, int startId) {
         super.onStart(intent, startId);
-        uiRoomStore.localState.observeForever(localConnectStateConversationStatePair -> {
+        uiRoomStore.localState.observe(this,localConnectStateConversationStatePair -> {
             updateNotification();
         });
         uiRoomStore.calling.observe(this, new Observer<Boolean>() {
